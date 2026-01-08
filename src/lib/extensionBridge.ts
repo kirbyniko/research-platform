@@ -3,7 +3,9 @@
  * Use this from your Next.js app to send document data to the extension
  */
 
-const EXTENSION_ID = 'ice-deaths-extension'; // Will be auto-detected
+// Your extension ID - get it from chrome://extensions (enable Developer Mode to see IDs)
+// This will be a long string like: "abcdefghijklmnopqrstuvwxyz123456"
+const EXTENSION_ID = process.env.NEXT_PUBLIC_EXTENSION_ID || '';
 
 interface DocumentData {
   name?: string;
@@ -33,22 +35,38 @@ interface DocumentData {
  */
 export async function isExtensionInstalled(): Promise<boolean> {
   if (typeof chrome === 'undefined' || !chrome.runtime) {
+    console.log('Extension detection: No chrome.runtime API');
     return false;
   }
+  
+  if (!EXTENSION_ID) {
+    console.log('Extension detection: No extension ID configured');
+    return false;
+  }
+  
+  console.log('Extension detection: Trying extension ID:', EXTENSION_ID);
   
   try {
     // Try to send a test message
     return new Promise((resolve) => {
       chrome.runtime.sendMessage(
-        { type: 'PING' },
+        EXTENSION_ID,
+        { type: 'GET_STATE' },
         (response) => {
-          resolve(!chrome.runtime.lastError && !!response);
+          // Check if we got a valid response (even if empty, means extension is there)
+          const hasExtension = !chrome.runtime.lastError && response !== undefined;
+          console.log('Extension detection:', hasExtension, 'Error:', chrome.runtime.lastError?.message, 'Response:', response);
+          resolve(hasExtension);
         }
       );
-      // Timeout after 500ms
-      setTimeout(() => resolve(false), 500);
+      // Timeout after 1 second
+      setTimeout(() => {
+        console.log('Extension detection: Timeout');
+        resolve(false);
+      }, 1000);
     });
-  } catch {
+  } catch (error) {
+    console.error('Extension detection error:', error);
     return false;
   }
 }
@@ -72,6 +90,7 @@ export async function loadDocumentIntoExtension(documentData: DocumentData): Pro
   try {
     return new Promise((resolve) => {
       chrome.runtime.sendMessage(
+        EXTENSION_ID,
         {
           type: 'LOAD_DOCUMENT_DATA',
           documentData

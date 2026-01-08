@@ -29,7 +29,7 @@ interface ExtensionBridgeProps {
 }
 
 export function ExtensionBridge({ documentData }: ExtensionBridgeProps) {
-  const [extensionAvailable, setExtensionAvailable] = useState(false);
+  const [extensionAvailable, setExtensionAvailable] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -66,7 +66,17 @@ export function ExtensionBridge({ documentData }: ExtensionBridgeProps) {
   };
 
   if (!extensionAvailable) {
-    return null; // Don't show button if extension not installed
+    return (
+      <div className="border border-gray-300 rounded-lg p-3 bg-gray-100 mb-3">
+        <div className="text-xs text-gray-600">
+          {extensionAvailable === null ? (
+            '🔍 Checking for extension...'
+          ) : (
+            '💡 Install the Chrome Extension to send data directly to the extension panel'
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -129,6 +129,8 @@ chrome.commands.onCommand.addListener((command, tab) => {
 
 // Message handling from content script and sidebar
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log('Background received message:', message.type, 'from:', sender);
+  
   switch (message.type) {
     case 'GET_STATE':
       sendResponse({
@@ -137,7 +139,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         verifiedQuotes: verifiedQuotes,
         sources: sources
       });
-      break;
+      return true;
       
     case 'SET_CURRENT_CASE':
       currentCase = message.case;
@@ -319,6 +321,73 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       
     default:
       console.log('Unknown message type:', message.type);
+  }
+});
+
+// Handle messages from external websites (localhost pages)
+chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
+  console.log('External message received:', message.type, 'from:', sender.url);
+  
+  switch (message.type) {
+    case 'GET_STATE':
+      sendResponse({
+        currentCase: currentCase,
+        pendingQuotes: pendingQuotes,
+        verifiedQuotes: verifiedQuotes,
+        sources: sources
+      });
+      return true;
+    
+    case 'LOAD_DOCUMENT_DATA':
+      if (message.documentData) {
+        const doc = message.documentData;
+        
+        currentCase = {
+          incidentType: doc.incidentType || 'death_in_custody',
+          name: doc.name || '',
+          dateOfDeath: doc.dateOfDeath || '',
+          age: doc.age || '',
+          country: doc.country || '',
+          facility: doc.facility || '',
+          location: doc.location || '',
+          causeOfDeath: doc.causeOfDeath || '',
+          summary: doc.summary || ''
+        };
+        
+        if (doc.quotes && Array.isArray(doc.quotes)) {
+          pendingQuotes = doc.quotes.map(q => ({
+            id: crypto.randomUUID(),
+            text: q.text || q,
+            category: q.category || 'context',
+            sourceUrl: doc.sourceUrl || '',
+            sourceTitle: doc.sourceTitle || doc.title || ''
+          }));
+        }
+        
+        if (doc.sourceUrl || doc.url) {
+          sources = [{
+            id: crypto.randomUUID(),
+            url: doc.sourceUrl || doc.url,
+            title: doc.sourceTitle || doc.title || '',
+            type: doc.sourceType || 'article',
+            date: doc.date || '',
+            author: doc.author || ''
+          }];
+        }
+        
+        saveState();
+        chrome.runtime.sendMessage({ type: 'REFRESH_QUOTES' });
+        chrome.runtime.sendMessage({ type: 'DOCUMENT_LOADED', documentData: doc });
+        
+        sendResponse({ success: true, message: 'Document loaded into extension' });
+      } else {
+        sendResponse({ success: false, error: 'No document data provided' });
+      }
+      return true;
+    
+    default:
+      sendResponse({ success: false, error: 'Unknown message type' });
+      return true;
   }
 });
 

@@ -32,6 +32,7 @@ export default function VerificationPage() {
   const { sessionToken } = useSession();
 
   const [document, setDocument] = useState<Document | null>(null);
+  const [caseData, setCaseData] = useState<any>(null);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [selectedQuoteId, setSelectedQuoteId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,6 +68,21 @@ export default function VerificationPage() {
       
       setDocument(data.document);
       setQuotes(data.document.quotes || []);
+      
+      // Load case data if document is linked to a case
+      if (data.document.case_id) {
+        try {
+          const caseResponse = await fetch(`/api/cases/${data.document.case_id}`, {
+            headers: getAuthHeaders()
+          });
+          const caseData = await caseResponse.json();
+          if (caseData.success && caseData.case) {
+            setCaseData(caseData.case);
+          }
+        } catch (err) {
+          console.error('Failed to load case data:', err);
+        }
+      }
       
       // Select first pending quote
       const firstPending = data.document.quotes?.find((q: Quote) => q.status === 'pending');
@@ -306,7 +322,17 @@ export default function VerificationPage() {
             {/* Extension Bridge */}
             <ExtensionBridge
               documentData={{
-                name: document?.case_name || '',
+                name: caseData?.name || document?.case_name || '',
+                dateOfDeath: caseData?.date_of_death || '',
+                age: caseData?.age || '',
+                country: caseData?.nationality || '',
+                facility: caseData?.facility?.name || '',
+                location: caseData?.facility?.city && caseData?.facility?.state 
+                  ? `${caseData.facility.city}, ${caseData.facility.state}`
+                  : caseData?.facility?.state || '',
+                causeOfDeath: caseData?.official_cause_of_death || '',
+                summary: caseData?.notes || '',
+                incidentType: 'death_in_custody',
                 sourceUrl: pdfUrl,
                 sourceTitle: document?.original_filename || '',
                 sourceType: 'document',
