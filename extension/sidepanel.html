@@ -358,6 +358,25 @@
       transition: background 0.2s;
     }
     
+    .quote-source {
+      font-size: 10px;
+      margin-bottom: 8px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .source-link {
+      color: #6366f1;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    
+    .source-link:hover {
+      color: #4f46e5;
+      text-decoration: underline;
+    }
+    
     .quote-page:hover {
       background: #c7d2fe;
     }
@@ -647,6 +666,27 @@
       font-size: 11px;
     }
     
+    /* Checkbox grid for agencies/violations */
+    .checkbox-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    
+    .checkbox-item input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+    
     /* Hidden */
     .hidden {
       display: none !important;
@@ -656,7 +696,7 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>📋 ICE Deaths Research</h1>
+      <h1>📋 ICE Incident Documentation</h1>
       <div class="header-actions">
         <button class="header-btn" id="settingsBtn" title="Settings">⚙️</button>
       </div>
@@ -671,28 +711,281 @@
     </div>
     
     <div class="tabs">
-      <button class="tab active" data-tab="case">Case</button>
+      <button class="tab active" data-tab="case">Incident</button>
       <button class="tab" data-tab="extract">Extract</button>
       <button class="tab" data-tab="settings">Settings</button>
     </div>
     
     <!-- Case Tab -->
     <div class="tab-content active" id="tab-case">
+      <!-- Incident Type Section -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">📌 Incident Type</span>
+        </div>
+        
+        <div class="form-group">
+          <select class="form-input" id="incidentType">
+            <optgroup label="Deaths">
+              <option value="death_in_custody">💀 Death in Custody</option>
+              <option value="death_during_operation">💀 Death During Operation</option>
+              <option value="death_at_protest">💀 Death at Protest</option>
+            </optgroup>
+            <optgroup label="Force/Violence">
+              <option value="shooting">🔫 Shooting</option>
+              <option value="excessive_force">⚡ Excessive Force</option>
+              <option value="injury">🩹 Injury</option>
+            </optgroup>
+            <optgroup label="Enforcement">
+              <option value="arrest">🚔 Arrest/Detention</option>
+              <option value="deportation">✈️ Deportation</option>
+              <option value="workplace_raid">🏭 Workplace Raid</option>
+              <option value="family_separation">👨‍👩‍👧 Family Separation</option>
+            </optgroup>
+            <optgroup label="Rights Issues">
+              <option value="rights_violation">⚖️ Rights Violation</option>
+              <option value="protest_suppression">✊ Protest Suppression</option>
+              <option value="retaliation">🎯 Retaliation</option>
+              <option value="medical_neglect">🏥 Medical Neglect</option>
+            </optgroup>
+            <option value="other">📋 Other</option>
+          </select>
+        </div>
+      </div>
+      
+      <!-- Agencies Involved Section -->
+      <div class="section">
+        <div class="collapsible-header open" id="agenciesHeader">
+          <span class="section-title">🏛️ Agencies Involved</span>
+        </div>
+        <div class="collapsible-content open" id="agenciesContent">
+          <div class="checkbox-grid">
+            <label class="checkbox-item">
+              <input type="checkbox" id="agency-ice" value="ice"> ICE
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="agency-ice_ere" value="ice_ere"> ICE ERO
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="agency-cbp" value="cbp"> CBP
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="agency-border_patrol" value="border_patrol"> Border Patrol
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="agency-local_police" value="local_police"> Local Police
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="agency-state_police" value="state_police"> State Police
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="agency-federal_marshals" value="federal_marshals"> US Marshals
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="agency-national_guard" value="national_guard"> National Guard
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="agency-dhs" value="dhs"> DHS
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="agency-private_contractor" value="private_contractor"> Private Contractor
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="agency-other" value="other"> Other
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="agency-unknown" value="unknown"> Unknown
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Violations Section -->
+      <div class="section hidden" id="violationsSection">
+        <div class="collapsible-header open" id="violationsHeader">
+          <span class="section-title">⚖️ Violations Alleged</span>
+        </div>
+        <div class="collapsible-content open" id="violationsContent">
+          <div class="checkbox-grid">
+            <label class="checkbox-item">
+              <input type="checkbox" id="violation-first_amendment" value="first_amendment"> 1st Amendment
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="violation-fourth_amendment" value="fourth_amendment"> 4th Amendment
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="violation-fifth_amendment" value="fifth_amendment"> 5th Amendment
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="violation-sixth_amendment" value="sixth_amendment"> 6th Amendment
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="violation-eighth_amendment" value="eighth_amendment"> 8th Amendment
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="violation-14th_amendment" value="14th_amendment"> 14th Amendment
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="violation-civil_rights" value="civil_rights"> Civil Rights
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="violation-excessive_force" value="excessive_force"> Excessive Force
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="violation-wrongful_death" value="wrongful_death"> Wrongful Death
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="violation-asylum_violation" value="asylum_violation"> Asylum Violation
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Shooting Details Section (for shooting type) -->
+      <div class="section hidden" id="shootingSection">
+        <div class="collapsible-header open" id="shootingHeader">
+          <span class="section-title">🔫 Shooting Details</span>
+        </div>
+        <div class="collapsible-content open" id="shootingContent">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="checkbox-item">
+                <input type="checkbox" id="shootingFatal"> Fatal
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Shots Fired</label>
+              <input type="number" class="form-input" id="shotsFired" placeholder="Number">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Weapon Type</label>
+            <select class="form-input" id="weaponType">
+              <option value="">Select...</option>
+              <option value="handgun">Handgun</option>
+              <option value="rifle">Rifle</option>
+              <option value="taser">Taser</option>
+              <option value="less_lethal">Less-lethal</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="checkbox-grid">
+            <label class="checkbox-item">
+              <input type="checkbox" id="bodycamAvailable"> Bodycam Available
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="victimArmed"> Victim Was Armed
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="warningGiven"> Warning Given
+            </label>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Context</label>
+            <textarea class="form-input" id="shootingContext" rows="2" placeholder="Brief circumstances..."></textarea>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Excessive Force Details Section -->
+      <div class="section hidden" id="excessiveForceSection">
+        <div class="collapsible-header open" id="excessiveForceHeader">
+          <span class="section-title">⚡ Excessive Force Details</span>
+        </div>
+        <div class="collapsible-content open" id="excessiveForceContent">
+          <div class="form-group">
+            <label class="form-label">Force Type(s)</label>
+            <div class="checkbox-grid">
+              <label class="checkbox-item">
+                <input type="checkbox" id="force-physical" value="physical"> Physical
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" id="force-taser" value="taser"> Taser
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" id="force-pepper_spray" value="pepper_spray"> Pepper Spray
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" id="force-baton" value="baton"> Baton
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" id="force-rubber_bullets" value="rubber_bullets"> Rubber Bullets
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" id="force-firearm" value="firearm"> Firearm
+              </label>
+            </div>
+          </div>
+          <div class="checkbox-grid">
+            <label class="checkbox-item">
+              <input type="checkbox" id="victimRestrained"> Victim Was Restrained
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="victimComplying"> Victim Was Complying
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="videoEvidence"> Video Evidence Exists
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Protest Details Section -->
+      <div class="section hidden" id="protestSection">
+        <div class="collapsible-header open" id="protestHeader">
+          <span class="section-title">✊ Protest Details</span>
+        </div>
+        <div class="collapsible-content open" id="protestContent">
+          <div class="form-group">
+            <label class="form-label">Protest Topic</label>
+            <input type="text" class="form-input" id="protestTopic" placeholder="e.g., Immigration policy, ICE protest">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Estimated Size</label>
+              <input type="number" class="form-input" id="protestSize" placeholder="Attendees">
+            </div>
+            <div class="form-group">
+              <label class="checkbox-item" style="margin-top: 28px;">
+                <input type="checkbox" id="protestPermitted"> Permitted
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Dispersal Method (if any)</label>
+            <select class="form-input" id="dispersalMethod">
+              <option value="">None/N/A</option>
+              <option value="tear_gas">Tear Gas</option>
+              <option value="rubber_bullets">Rubber Bullets</option>
+              <option value="flashbang">Flashbang</option>
+              <option value="batons">Batons/Physical Force</option>
+              <option value="water_cannon">Water Cannon</option>
+              <option value="mounted_police">Mounted Police</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Arrests Made</label>
+            <input type="number" class="form-input" id="arrestsMade" placeholder="Number">
+          </div>
+        </div>
+      </div>
+      
       <!-- Case Form Section -->
       <div class="section">
         <div class="section-header">
-          <span class="section-title">📄 Case Information</span>
+          <span class="section-title">📄 Basic Information</span>
           <button class="btn btn-sm btn-secondary" id="clearCaseBtn">Clear</button>
         </div>
         
         <div class="form-group">
-          <label class="form-label">Full Name</label>
-          <input type="text" class="form-input" id="caseName" placeholder="Last name, First name">
+          <label class="form-label">Subject Name</label>
+          <input type="text" class="form-input" id="caseName" placeholder="Last name, First name (or Anonymous)">
         </div>
         
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Date of Death</label>
+            <label class="form-label">Incident Date</label>
             <input type="date" class="form-input" id="caseDod">
           </div>
           <div class="form-group">
@@ -701,13 +994,19 @@
           </div>
         </div>
         
-        <div class="form-group">
-          <label class="form-label">Country of Origin</label>
-          <input type="text" class="form-input" id="caseCountry" placeholder="Country">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nationality</label>
+            <input type="text" class="form-input" id="caseCountry" placeholder="Country">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Occupation</label>
+            <input type="text" class="form-input" id="caseOccupation" placeholder="e.g., Journalist">
+          </div>
         </div>
         
         <div class="form-group">
-          <label class="form-label">Facility</label>
+          <label class="form-label">Facility (if applicable)</label>
           <input type="text" class="form-input" id="caseFacility" placeholder="Detention facility name">
         </div>
         
@@ -717,8 +1016,139 @@
         </div>
         
         <div class="form-group">
+          <label class="form-label">Summary</label>
+          <textarea class="form-input" id="caseCause" placeholder="Brief factual summary of what happened"></textarea>
+        </div>
+      </div>
+      
+      <!-- Death-Specific Fields -->
+      <div class="section hidden" id="deathFields">
+        <div class="section-header">
+          <span class="section-title">💀 Death Details</span>
+        </div>
+        
+        <div class="form-group">
           <label class="form-label">Cause of Death</label>
-          <textarea class="form-input" id="caseCause" placeholder="Cause of death as stated in records"></textarea>
+          <input type="text" class="form-input" id="deathCause" placeholder="As stated in records">
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Manner</label>
+            <select class="form-input" id="deathManner">
+              <option value="">Unknown</option>
+              <option value="natural">Natural</option>
+              <option value="accident">Accident</option>
+              <option value="suicide">Suicide</option>
+              <option value="homicide">Homicide</option>
+              <option value="undetermined">Undetermined</option>
+              <option value="pending">Pending</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Custody Duration</label>
+            <input type="text" class="form-input" id="deathCustodyDuration" placeholder="e.g., 6 months">
+          </div>
+        </div>
+        
+        <label class="checkbox-item" style="margin-top: 8px;">
+          <input type="checkbox" id="deathMedicalDenied"> Medical requests denied
+        </label>
+      </div>
+      
+      <!-- Injury-Specific Fields -->
+      <div class="section hidden" id="injuryFields">
+        <div class="section-header">
+          <span class="section-title">🩹 Injury Details</span>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Injury Type</label>
+          <input type="text" class="form-input" id="injuryType" placeholder="e.g., Broken wrist, taser burns">
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Severity</label>
+            <select class="form-input" id="injurySeverity">
+              <option value="minor">Minor</option>
+              <option value="moderate">Moderate</option>
+              <option value="severe">Severe</option>
+              <option value="life_threatening">Life Threatening</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Weapon Used</label>
+            <input type="text" class="form-input" id="injuryWeapon" placeholder="e.g., Taser, baton">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Cause/Context</label>
+          <input type="text" class="form-input" id="injuryCause" placeholder="e.g., During arrest">
+        </div>
+      </div>
+      
+      <!-- Arrest-Specific Fields -->
+      <div class="section hidden" id="arrestFields">
+        <div class="section-header">
+          <span class="section-title">🚔 Arrest Details</span>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Stated Reason</label>
+          <input type="text" class="form-input" id="arrestReason" placeholder="Official justification">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Actual Context</label>
+          <textarea class="form-input" id="arrestContext" placeholder="What was really happening"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Charges</label>
+          <input type="text" class="form-input" id="arrestCharges" placeholder="Comma-separated charges">
+        </div>
+        
+        <div class="checkbox-grid" style="margin-top: 8px;">
+          <label class="checkbox-item">
+            <input type="checkbox" id="arrestTimingSuspicious"> Timing suspicious
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="arrestPretext"> Pretext arrest
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="arrestSelective"> Selective enforcement
+          </label>
+        </div>
+      </div>
+      
+      <!-- Rights Violation Fields -->
+      <div class="section hidden" id="violationFields">
+        <div class="section-header">
+          <span class="section-title">⚖️ Violation Details</span>
+        </div>
+        
+        <div class="checkbox-grid">
+          <label class="checkbox-item">
+            <input type="checkbox" id="violationJournalism"> Journalism related
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="violationProtest"> Protest related
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="violationActivism"> Activism related
+          </label>
+        </div>
+        
+        <div class="form-group" style="margin-top: 12px;">
+          <label class="form-label">Speech/Activity Content</label>
+          <textarea class="form-input" id="violationSpeech" placeholder="What they said/did (quoted if possible)"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Court Ruling (if any)</label>
+          <input type="text" class="form-input" id="violationRuling" placeholder="Court decision">
         </div>
       </div>
       
@@ -843,6 +1273,13 @@
               <option value="medical">Medical Information</option>
               <option value="legal">Legal/Immigration</option>
               <option value="context">Background Context</option>
+              <option value="witness">Witness Account</option>
+              <option value="victim">Victim Statement</option>
+              <option value="family">Family Statement</option>
+              <option value="lawyer">Attorney Statement</option>
+              <option value="agency">Agency Response</option>
+              <option value="court">Court Document</option>
+              <option value="policy">Policy/Procedure</option>
             </select>
           </div>
           <button class="btn btn-primary btn-block" id="addManualQuoteBtn">Add Quote</button>
@@ -860,6 +1297,14 @@
         <div class="form-group">
           <label class="form-label">API URL</label>
           <input type="text" class="form-input" id="apiUrl" value="http://localhost:3001">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">API Key</label>
+          <input type="password" class="form-input" id="apiKey" placeholder="Enter your API key">
+          <p class="help-text" style="font-size: 11px; color: #666; margin-top: 4px;">
+            Required for saving incidents. Get key from admin.
+          </p>
         </div>
         
         <button class="btn btn-secondary btn-block" id="testConnectionBtn">Test Connection</button>
@@ -940,8 +1385,8 @@
     </div>
     
     <div class="footer">
-      <button class="btn btn-secondary" id="newCaseBtn">New Case</button>
-      <button class="btn btn-primary" id="saveCaseBtn">Save Case</button>
+      <button class="btn btn-secondary" id="newCaseBtn">New Incident</button>
+      <button class="btn btn-primary" id="saveCaseBtn">Save Incident</button>
     </div>
   </div>
   

@@ -209,9 +209,35 @@ export async function resetPassword(token: string, newPassword: string): Promise
   }
 }
 
-// Middleware helper to check authentication
+// API Key authentication for extension/external tools
+const EXTENSION_API_KEY = process.env.EXTENSION_API_KEY || 'dev-extension-key';
+
+export function validateApiKey(apiKey: string): boolean {
+  return apiKey === EXTENSION_API_KEY;
+}
+
+// Middleware helper to check authentication (supports both JWT and API Key)
 export function requireAuth(requiredRole?: 'admin' | 'editor' | 'viewer') {
   return async (request: Request): Promise<{ user: User } | { error: string; status: number }> => {
+    // Check for API key first (X-API-Key header)
+    const apiKey = request.headers.get('X-API-Key');
+    if (apiKey) {
+      if (validateApiKey(apiKey)) {
+        // API key grants editor access
+        return {
+          user: {
+            id: 0,
+            email: 'extension@local',
+            name: 'Extension User',
+            role: 'editor',
+            email_verified: true,
+          }
+        };
+      }
+      return { error: 'Invalid API key', status: 401 };
+    }
+    
+    // Fall back to Bearer token auth
     const authHeader = request.headers.get('Authorization');
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

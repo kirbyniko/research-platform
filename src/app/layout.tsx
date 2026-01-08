@@ -25,7 +25,8 @@ export default function RootLayout({
               </Link>
               <ul className="flex flex-wrap gap-6 text-sm">
                 <li><Link href="/" className="hover:underline">Home</Link></li>
-                <li><Link href="/cases" className="hover:underline">Cases</Link></li>
+                <li><Link href="/incidents" className="hover:underline">Incidents</Link></li>
+                <li><Link href="/cases" className="hover:underline">Deaths</Link></li>
                 <li><Link href="/patterns" className="hover:underline">Patterns</Link></li>
                 <li><Link href="/methodology" className="hover:underline">Methodology</Link></li>
                 <li><Link href="/data" className="hover:underline">Data</Link></li>

@@ -1,20 +1,67 @@
-// ICE Deaths Research Assistant - Sidebar Panel Script
+// ICE Incident Documentation - Sidebar Panel Script
 
 // State
 let currentCase = {
+  incidentType: 'death_in_custody',
   name: '',
   dateOfDeath: '',
   age: '',
   country: '',
+  occupation: '',
   facility: '',
   location: '',
-  causeOfDeath: ''
+  causeOfDeath: '',
+  agencies: [],
+  violations: [],
+  // Death-specific
+  deathCause: '',
+  deathManner: '',
+  deathCustodyDuration: '',
+  deathMedicalDenied: false,
+  // Injury-specific
+  injuryType: '',
+  injurySeverity: 'moderate',
+  injuryWeapon: '',
+  injuryCause: '',
+  // Arrest-specific
+  arrestReason: '',
+  arrestContext: '',
+  arrestCharges: '',
+  arrestTimingSuspicious: false,
+  arrestPretext: false,
+  arrestSelective: false,
+  // Violation-specific
+  violationJournalism: false,
+  violationProtest: false,
+  violationActivism: false,
+  violationSpeech: '',
+  violationRuling: '',
+  // Shooting-specific
+  shootingFatal: false,
+  shotsFired: '',
+  weaponType: '',
+  bodycamAvailable: false,
+  victimArmed: false,
+  warningGiven: false,
+  shootingContext: '',
+  // Excessive force-specific
+  forceTypes: [],
+  victimRestrained: false,
+  victimComplying: false,
+  videoEvidence: false,
+  // Protest-specific
+  protestTopic: '',
+  protestSize: '',
+  protestPermitted: false,
+  dispersalMethod: '',
+  arrestsMade: ''
 };
 let verifiedQuotes = [];
 let pendingQuotes = [];
 let sources = [];
 let isConnected = false;
 let apiUrl = 'http://localhost:3001';
+let apiKey = '';
 let currentSelectors = {};
 let isExtracting = false;
 
@@ -83,13 +130,47 @@ function cacheElements() {
   elements.statusDot = document.getElementById('statusDot');
   elements.statusText = document.getElementById('statusText');
   elements.pageInfo = document.getElementById('pageInfo');
+  // Incident type
+  elements.incidentType = document.getElementById('incidentType');
+  // Basic case fields
   elements.caseName = document.getElementById('caseName');
   elements.caseDod = document.getElementById('caseDod');
   elements.caseAge = document.getElementById('caseAge');
   elements.caseCountry = document.getElementById('caseCountry');
+  elements.caseOccupation = document.getElementById('caseOccupation');
   elements.caseFacility = document.getElementById('caseFacility');
   elements.caseLocation = document.getElementById('caseLocation');
   elements.caseCause = document.getElementById('caseCause');
+  // Sections that show/hide based on type
+  elements.violationsSection = document.getElementById('violationsSection');
+  elements.deathFields = document.getElementById('deathFields');
+  elements.injuryFields = document.getElementById('injuryFields');
+  elements.arrestFields = document.getElementById('arrestFields');
+  elements.violationFields = document.getElementById('violationFields');
+  // Death-specific fields
+  elements.deathCause = document.getElementById('deathCause');
+  elements.deathManner = document.getElementById('deathManner');
+  elements.deathCustodyDuration = document.getElementById('deathCustodyDuration');
+  elements.deathMedicalDenied = document.getElementById('deathMedicalDenied');
+  // Injury-specific fields
+  elements.injuryType = document.getElementById('injuryType');
+  elements.injurySeverity = document.getElementById('injurySeverity');
+  elements.injuryWeapon = document.getElementById('injuryWeapon');
+  elements.injuryCause = document.getElementById('injuryCause');
+  // Arrest-specific fields
+  elements.arrestReason = document.getElementById('arrestReason');
+  elements.arrestContext = document.getElementById('arrestContext');
+  elements.arrestCharges = document.getElementById('arrestCharges');
+  elements.arrestTimingSuspicious = document.getElementById('arrestTimingSuspicious');
+  elements.arrestPretext = document.getElementById('arrestPretext');
+  elements.arrestSelective = document.getElementById('arrestSelective');
+  // Violation-specific fields
+  elements.violationJournalism = document.getElementById('violationJournalism');
+  elements.violationProtest = document.getElementById('violationProtest');
+  elements.violationActivism = document.getElementById('violationActivism');
+  elements.violationSpeech = document.getElementById('violationSpeech');
+  elements.violationRuling = document.getElementById('violationRuling');
+  // Quote/source lists
   elements.quoteList = document.getElementById('quoteList');
   elements.quoteCount = document.getElementById('quoteCount');
   elements.pendingList = document.getElementById('pendingList');
@@ -123,6 +204,7 @@ function cacheElements() {
   elements.selectorTestResult = document.getElementById('selectorTestResult');
   // Settings elements
   elements.apiUrl = document.getElementById('apiUrl');
+  elements.apiKey = document.getElementById('apiKey');
   elements.testConnectionBtn = document.getElementById('testConnectionBtn');
   elements.exportJsonBtn = document.getElementById('exportJsonBtn');
   elements.exportMdBtn = document.getElementById('exportMdBtn');
@@ -130,15 +212,52 @@ function cacheElements() {
   elements.caseSearchInput = document.getElementById('caseSearchInput');
   elements.caseSearchResults = document.getElementById('caseSearchResults');
   elements.clearAllDataBtn = document.getElementById('clearAllDataBtn');
+  // Agency collapsible
+  elements.agenciesHeader = document.getElementById('agenciesHeader');
+  elements.agenciesContent = document.getElementById('agenciesContent');
+  elements.violationsHeader = document.getElementById('violationsHeader');
+  elements.violationsContent = document.getElementById('violationsContent');
+  // New sections for shooting/force/protest details
+  elements.shootingSection = document.getElementById('shootingSection');
+  elements.shootingHeader = document.getElementById('shootingHeader');
+  elements.shootingContent = document.getElementById('shootingContent');
+  elements.excessiveForceSection = document.getElementById('excessiveForceSection');
+  elements.excessiveForceHeader = document.getElementById('excessiveForceHeader');
+  elements.excessiveForceContent = document.getElementById('excessiveForceContent');
+  elements.protestSection = document.getElementById('protestSection');
+  elements.protestHeader = document.getElementById('protestHeader');
+  elements.protestContent = document.getElementById('protestContent');
+  // Shooting detail fields
+  elements.shootingFatal = document.getElementById('shootingFatal');
+  elements.shotsFired = document.getElementById('shotsFired');
+  elements.weaponType = document.getElementById('weaponType');
+  elements.bodycamAvailable = document.getElementById('bodycamAvailable');
+  elements.victimArmed = document.getElementById('victimArmed');
+  elements.warningGiven = document.getElementById('warningGiven');
+  elements.shootingContext = document.getElementById('shootingContext');
+  // Excessive force detail fields
+  elements.victimRestrained = document.getElementById('victimRestrained');
+  elements.victimComplying = document.getElementById('victimComplying');
+  elements.videoEvidence = document.getElementById('videoEvidence');
+  // Protest detail fields
+  elements.protestTopic = document.getElementById('protestTopic');
+  elements.protestSize = document.getElementById('protestSize');
+  elements.protestPermitted = document.getElementById('protestPermitted');
+  elements.dispersalMethod = document.getElementById('dispersalMethod');
+  elements.arrestsMade = document.getElementById('arrestsMade');
 }
 
 // Load settings from storage
 async function loadSettings() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(['apiUrl', 'customSelectors'], (result) => {
+    chrome.storage.local.get(['apiUrl', 'apiKey', 'customSelectors'], (result) => {
       if (result.apiUrl) {
         apiUrl = result.apiUrl;
         elements.apiUrl.value = apiUrl;
+      }
+      if (result.apiKey) {
+        apiKey = result.apiKey;
+        elements.apiKey.value = apiKey;
       }
       if (result.customSelectors) {
         currentSelectors = result.customSelectors;
@@ -194,12 +313,142 @@ function setupTabs() {
 
 // Setup event listeners
 function setupEventListeners() {
+  // Incident type selector - show/hide relevant fields
+  elements.incidentType.addEventListener('change', handleIncidentTypeChange);
+  
   // Form inputs - save on change
-  ['caseName', 'caseDod', 'caseAge', 'caseCountry', 'caseFacility', 'caseLocation', 'caseCause'].forEach(id => {
-    elements[id].addEventListener('input', () => {
-      updateCaseFromForm();
-    });
+  ['caseName', 'caseDod', 'caseAge', 'caseCountry', 'caseOccupation', 'caseFacility', 'caseLocation', 'caseCause'].forEach(id => {
+    if (elements[id]) {
+      elements[id].addEventListener('input', () => {
+        updateCaseFromForm();
+      });
+    }
   });
+  
+  // Death-specific fields
+  ['deathCause', 'deathManner', 'deathCustodyDuration'].forEach(id => {
+    if (elements[id]) {
+      elements[id].addEventListener('input', updateCaseFromForm);
+    }
+  });
+  if (elements.deathMedicalDenied) {
+    elements.deathMedicalDenied.addEventListener('change', updateCaseFromForm);
+  }
+  
+  // Injury-specific fields
+  ['injuryType', 'injurySeverity', 'injuryWeapon', 'injuryCause'].forEach(id => {
+    if (elements[id]) {
+      elements[id].addEventListener('input', updateCaseFromForm);
+    }
+  });
+  
+  // Arrest-specific fields
+  ['arrestReason', 'arrestContext', 'arrestCharges'].forEach(id => {
+    if (elements[id]) {
+      elements[id].addEventListener('input', updateCaseFromForm);
+    }
+  });
+  ['arrestTimingSuspicious', 'arrestPretext', 'arrestSelective'].forEach(id => {
+    if (elements[id]) {
+      elements[id].addEventListener('change', updateCaseFromForm);
+    }
+  });
+  
+  // Violation-specific fields
+  ['violationJournalism', 'violationProtest', 'violationActivism'].forEach(id => {
+    if (elements[id]) {
+      elements[id].addEventListener('change', updateCaseFromForm);
+    }
+  });
+  ['violationSpeech', 'violationRuling'].forEach(id => {
+    if (elements[id]) {
+      elements[id].addEventListener('input', updateCaseFromForm);
+    }
+  });
+  
+  // Agency checkboxes
+  document.querySelectorAll('[id^="agency-"]').forEach(checkbox => {
+    checkbox.addEventListener('change', updateCaseFromForm);
+  });
+  
+  // Violation checkboxes
+  document.querySelectorAll('[id^="violation-"]').forEach(checkbox => {
+    checkbox.addEventListener('change', updateCaseFromForm);
+  });
+  
+  // Agencies collapsible
+  if (elements.agenciesHeader) {
+    elements.agenciesHeader.addEventListener('click', () => {
+      elements.agenciesHeader.classList.toggle('open');
+      elements.agenciesContent.classList.toggle('open');
+    });
+  }
+  
+  // Violations collapsible
+  if (elements.violationsHeader) {
+    elements.violationsHeader.addEventListener('click', () => {
+      elements.violationsHeader.classList.toggle('open');
+      elements.violationsContent.classList.toggle('open');
+    });
+  }
+  
+  // Shooting section collapsible
+  if (elements.shootingHeader) {
+    elements.shootingHeader.addEventListener('click', () => {
+      elements.shootingHeader.classList.toggle('open');
+      elements.shootingContent.classList.toggle('open');
+    });
+  }
+  
+  // Excessive force section collapsible
+  if (elements.excessiveForceHeader) {
+    elements.excessiveForceHeader.addEventListener('click', () => {
+      elements.excessiveForceHeader.classList.toggle('open');
+      elements.excessiveForceContent.classList.toggle('open');
+    });
+  }
+  
+  // Protest section collapsible
+  if (elements.protestHeader) {
+    elements.protestHeader.addEventListener('click', () => {
+      elements.protestHeader.classList.toggle('open');
+      elements.protestContent.classList.toggle('open');
+    });
+  }
+  
+  // Shooting-specific field listeners
+  ['shotsFired', 'weaponType', 'shootingContext'].forEach(id => {
+    if (elements[id]) {
+      elements[id].addEventListener('input', updateCaseFromForm);
+    }
+  });
+  ['shootingFatal', 'bodycamAvailable', 'victimArmed', 'warningGiven'].forEach(id => {
+    if (elements[id]) {
+      elements[id].addEventListener('change', updateCaseFromForm);
+    }
+  });
+  
+  // Force type checkboxes
+  document.querySelectorAll('[id^="force-"]').forEach(checkbox => {
+    checkbox.addEventListener('change', updateCaseFromForm);
+  });
+  
+  // Excessive force field listeners
+  ['victimRestrained', 'victimComplying', 'videoEvidence'].forEach(id => {
+    if (elements[id]) {
+      elements[id].addEventListener('change', updateCaseFromForm);
+    }
+  });
+  
+  // Protest-specific field listeners
+  ['protestTopic', 'protestSize', 'dispersalMethod', 'arrestsMade'].forEach(id => {
+    if (elements[id]) {
+      elements[id].addEventListener('input', updateCaseFromForm);
+    }
+  });
+  if (elements.protestPermitted) {
+    elements.protestPermitted.addEventListener('change', updateCaseFromForm);
+  }
   
   // Extract button
   elements.extractBtn.addEventListener('click', extractArticle);
@@ -254,6 +503,12 @@ function setupEventListeners() {
     chrome.storage.local.set({ apiUrl });
   });
   
+  // API Key change
+  elements.apiKey.addEventListener('change', () => {
+    apiKey = elements.apiKey.value;
+    chrome.storage.local.set({ apiKey });
+  });
+  
   // Settings tab event listeners
   elements.exportJsonBtn.addEventListener('click', exportAsJson);
   elements.exportMdBtn.addEventListener('click', exportAsMarkdown);
@@ -294,7 +549,6 @@ async function updatePageInfo() {
         elements.pageInfo.textContent = isPdf ? 
           `📄 ${url.hostname} (PDF)` : 
           url.hostname;
-        elements.currentDomain.value = url.hostname;
         
         // Update extract button text based on page type
         elements.extractBtn.textContent = isPdf ? 
@@ -430,18 +684,208 @@ function populateCaseForm() {
   elements.caseFacility.value = currentCase.facility || '';
   elements.caseLocation.value = currentCase.location || '';
   elements.caseCause.value = currentCase.causeOfDeath || '';
+  
+  // Populate occupation
+  if (elements.caseOccupation) {
+    elements.caseOccupation.value = currentCase.occupation || '';
+  }
+  
+  // Populate incident type
+  if (elements.incidentType) {
+    elements.incidentType.value = currentCase.incidentType || 'death';
+    handleIncidentTypeChange();
+  }
+  
+  // Populate agencies
+  document.querySelectorAll('[id^="agency-"]').forEach(checkbox => {
+    const agency = checkbox.value;
+    checkbox.checked = currentCase.agencies && currentCase.agencies.includes(agency);
+  });
+  
+  // Populate violations
+  document.querySelectorAll('[id^="violation-"]').forEach(checkbox => {
+    const violation = checkbox.value;
+    checkbox.checked = currentCase.violations && currentCase.violations.includes(violation);
+  });
+  
+  // Populate type-specific fields
+  if (elements.deathCause) elements.deathCause.value = currentCase.deathCause || '';
+  if (elements.deathManner) elements.deathManner.value = currentCase.deathManner || '';
+  if (elements.deathCustodyDuration) elements.deathCustodyDuration.value = currentCase.deathCustodyDuration || '';
+  if (elements.deathMedicalDenied) elements.deathMedicalDenied.checked = currentCase.deathMedicalDenied || false;
+  
+  if (elements.injuryType) elements.injuryType.value = currentCase.injuryType || '';
+  if (elements.injurySeverity) elements.injurySeverity.value = currentCase.injurySeverity || 'moderate';
+  if (elements.injuryWeapon) elements.injuryWeapon.value = currentCase.injuryWeapon || '';
+  if (elements.injuryCause) elements.injuryCause.value = currentCase.injuryCause || '';
+  
+  if (elements.arrestReason) elements.arrestReason.value = currentCase.arrestReason || '';
+  if (elements.arrestContext) elements.arrestContext.value = currentCase.arrestContext || '';
+  if (elements.arrestCharges) elements.arrestCharges.value = currentCase.arrestCharges || '';
+  if (elements.arrestTimingSuspicious) elements.arrestTimingSuspicious.checked = currentCase.arrestTimingSuspicious || false;
+  if (elements.arrestPretext) elements.arrestPretext.checked = currentCase.arrestPretext || false;
+  if (elements.arrestSelective) elements.arrestSelective.checked = currentCase.arrestSelective || false;
+  
+  if (elements.violationJournalism) elements.violationJournalism.checked = currentCase.violationJournalism || false;
+  if (elements.violationProtest) elements.violationProtest.checked = currentCase.violationProtest || false;
+  if (elements.violationActivism) elements.violationActivism.checked = currentCase.violationActivism || false;
+  if (elements.violationSpeech) elements.violationSpeech.value = currentCase.violationSpeech || '';
+  if (elements.violationRuling) elements.violationRuling.value = currentCase.violationRuling || '';
+  
+  // Populate shooting-specific fields
+  if (elements.shootingFatal) elements.shootingFatal.checked = currentCase.shootingFatal || false;
+  if (elements.shotsFired) elements.shotsFired.value = currentCase.shotsFired || '';
+  if (elements.weaponType) elements.weaponType.value = currentCase.weaponType || '';
+  if (elements.bodycamAvailable) elements.bodycamAvailable.checked = currentCase.bodycamAvailable || false;
+  if (elements.victimArmed) elements.victimArmed.checked = currentCase.victimArmed || false;
+  if (elements.warningGiven) elements.warningGiven.checked = currentCase.warningGiven || false;
+  if (elements.shootingContext) elements.shootingContext.value = currentCase.shootingContext || '';
+  
+  // Populate excessive force fields
+  document.querySelectorAll('[id^="force-"]').forEach(checkbox => {
+    const forceType = checkbox.value;
+    checkbox.checked = currentCase.forceTypes && currentCase.forceTypes.includes(forceType);
+  });
+  if (elements.victimRestrained) elements.victimRestrained.checked = currentCase.victimRestrained || false;
+  if (elements.victimComplying) elements.victimComplying.checked = currentCase.victimComplying || false;
+  if (elements.videoEvidence) elements.videoEvidence.checked = currentCase.videoEvidence || false;
+  
+  // Populate protest fields
+  if (elements.protestTopic) elements.protestTopic.value = currentCase.protestTopic || '';
+  if (elements.protestSize) elements.protestSize.value = currentCase.protestSize || '';
+  if (elements.protestPermitted) elements.protestPermitted.checked = currentCase.protestPermitted || false;
+  if (elements.dispersalMethod) elements.dispersalMethod.value = currentCase.dispersalMethod || '';
+  if (elements.arrestsMade) elements.arrestsMade.value = currentCase.arrestsMade || '';
+}
+
+// Handle incident type change - show/hide relevant sections
+function handleIncidentTypeChange() {
+  const type = elements.incidentType.value;
+  
+  // Hide all type-specific sections
+  [elements.deathFields, elements.injuryFields, elements.arrestFields, elements.violationFields,
+   elements.shootingSection, elements.excessiveForceSection, elements.protestSection].forEach(el => {
+    if (el) el.classList.add('hidden');
+  });
+  
+  // Show violations section for relevant types
+  if (elements.violationsSection) {
+    const showViolations = ['rights_violation', 'arrest', 'shooting', 'excessive_force', 
+                            'death_in_custody', 'death_during_operation', 'death_at_protest',
+                            'protest_suppression', 'retaliation'].includes(type);
+    elements.violationsSection.classList.toggle('hidden', !showViolations);
+  }
+  
+  // Show type-specific section
+  switch (type) {
+    case 'death':
+    case 'death_in_custody':
+    case 'death_during_operation':
+      if (elements.deathFields) elements.deathFields.classList.remove('hidden');
+      break;
+    case 'death_at_protest':
+      if (elements.deathFields) elements.deathFields.classList.remove('hidden');
+      if (elements.protestSection) elements.protestSection.classList.remove('hidden');
+      break;
+    case 'injury':
+      if (elements.injuryFields) elements.injuryFields.classList.remove('hidden');
+      break;
+    case 'shooting':
+      if (elements.shootingSection) elements.shootingSection.classList.remove('hidden');
+      break;
+    case 'excessive_force':
+      if (elements.excessiveForceSection) elements.excessiveForceSection.classList.remove('hidden');
+      break;
+    case 'protest_suppression':
+      if (elements.protestSection) elements.protestSection.classList.remove('hidden');
+      if (elements.excessiveForceSection) elements.excessiveForceSection.classList.remove('hidden');
+      break;
+    case 'arrest':
+      if (elements.arrestFields) elements.arrestFields.classList.remove('hidden');
+      break;
+    case 'rights_violation':
+    case 'retaliation':
+      if (elements.violationFields) elements.violationFields.classList.remove('hidden');
+      break;
+  }
+  
+  updateCaseFromForm();
 }
 
 // Update case from form
 function updateCaseFromForm() {
+  // Collect agencies
+  const agencies = [];
+  document.querySelectorAll('[id^="agency-"]:checked').forEach(checkbox => {
+    agencies.push(checkbox.value);
+  });
+  
+  // Collect violations
+  const violations = [];
+  document.querySelectorAll('[id^="violation-"]:checked').forEach(checkbox => {
+    violations.push(checkbox.value);
+  });
+  
+  // Collect force types
+  const forceTypes = [];
+  document.querySelectorAll('[id^="force-"]:checked').forEach(checkbox => {
+    forceTypes.push(checkbox.value);
+  });
+  
   currentCase = {
+    incidentType: elements.incidentType ? elements.incidentType.value : 'death_in_custody',
     name: elements.caseName.value,
     dateOfDeath: elements.caseDod.value,
     age: elements.caseAge.value,
     country: elements.caseCountry.value,
+    occupation: elements.caseOccupation ? elements.caseOccupation.value : '',
     facility: elements.caseFacility.value,
     location: elements.caseLocation.value,
-    causeOfDeath: elements.caseCause.value
+    causeOfDeath: elements.caseCause.value,
+    agencies: agencies,
+    violations: violations,
+    // Death-specific
+    deathCause: elements.deathCause ? elements.deathCause.value : '',
+    deathManner: elements.deathManner ? elements.deathManner.value : '',
+    deathCustodyDuration: elements.deathCustodyDuration ? elements.deathCustodyDuration.value : '',
+    deathMedicalDenied: elements.deathMedicalDenied ? elements.deathMedicalDenied.checked : false,
+    // Injury-specific
+    injuryType: elements.injuryType ? elements.injuryType.value : '',
+    injurySeverity: elements.injurySeverity ? elements.injurySeverity.value : 'moderate',
+    injuryWeapon: elements.injuryWeapon ? elements.injuryWeapon.value : '',
+    injuryCause: elements.injuryCause ? elements.injuryCause.value : '',
+    // Arrest-specific
+    arrestReason: elements.arrestReason ? elements.arrestReason.value : '',
+    arrestContext: elements.arrestContext ? elements.arrestContext.value : '',
+    arrestCharges: elements.arrestCharges ? elements.arrestCharges.value : '',
+    arrestTimingSuspicious: elements.arrestTimingSuspicious ? elements.arrestTimingSuspicious.checked : false,
+    arrestPretext: elements.arrestPretext ? elements.arrestPretext.checked : false,
+    arrestSelective: elements.arrestSelective ? elements.arrestSelective.checked : false,
+    // Violation-specific
+    violationJournalism: elements.violationJournalism ? elements.violationJournalism.checked : false,
+    violationProtest: elements.violationProtest ? elements.violationProtest.checked : false,
+    violationActivism: elements.violationActivism ? elements.violationActivism.checked : false,
+    violationSpeech: elements.violationSpeech ? elements.violationSpeech.value : '',
+    violationRuling: elements.violationRuling ? elements.violationRuling.value : '',
+    // Shooting-specific
+    shootingFatal: elements.shootingFatal ? elements.shootingFatal.checked : false,
+    shotsFired: elements.shotsFired ? elements.shotsFired.value : '',
+    weaponType: elements.weaponType ? elements.weaponType.value : '',
+    bodycamAvailable: elements.bodycamAvailable ? elements.bodycamAvailable.checked : false,
+    victimArmed: elements.victimArmed ? elements.victimArmed.checked : false,
+    warningGiven: elements.warningGiven ? elements.warningGiven.checked : false,
+    shootingContext: elements.shootingContext ? elements.shootingContext.value : '',
+    // Excessive force-specific
+    forceTypes: forceTypes,
+    victimRestrained: elements.victimRestrained ? elements.victimRestrained.checked : false,
+    victimComplying: elements.victimComplying ? elements.victimComplying.checked : false,
+    videoEvidence: elements.videoEvidence ? elements.videoEvidence.checked : false,
+    // Protest-specific
+    protestTopic: elements.protestTopic ? elements.protestTopic.value : '',
+    protestSize: elements.protestSize ? elements.protestSize.value : '',
+    protestPermitted: elements.protestPermitted ? elements.protestPermitted.checked : false,
+    dispersalMethod: elements.dispersalMethod ? elements.dispersalMethod.value : '',
+    arrestsMade: elements.arrestsMade ? elements.arrestsMade.value : ''
   };
   
   // Save to background
@@ -509,6 +953,7 @@ function renderPendingQuotes() {
         ${quote.confidence ? `<span class="quote-confidence">${Math.round(quote.confidence * 100)}%</span>` : ''}
         ${quote.pageNumber ? `<span class="quote-page" onclick="goToPage(${quote.pageNumber})" title="Go to page">📄 Page ${quote.pageNumber}</span>` : ''}
       </div>
+      ${quote.sourceUrl ? `<div class="quote-source"><a href="${escapeHtml(quote.sourceUrl)}" target="_blank" class="source-link" title="${escapeHtml(quote.sourceUrl)}">🔗 ${escapeHtml(quote.sourceTitle || new URL(quote.sourceUrl).hostname)}</a></div>` : ''}
       <div class="quote-actions">
         <button class="btn btn-sm btn-success" onclick="acceptQuote('${quote.id}')" title="Accept">✓</button>
         <button class="btn btn-sm btn-danger" onclick="rejectQuote('${quote.id}')" title="Reject">✗</button>
@@ -537,8 +982,10 @@ async function extractArticle() {
   elements.progressFill.style.width = '10%';
   elements.progressText.textContent = 'Extracting content...';
   
-  // Get custom selectors for current domain
-  const domain = elements.currentDomain.value;
+  // Get current domain from page info
+  const domainText = elements.pageInfo.textContent || '';
+  const domain = domainText.replace('📄 ', '').replace(' (PDF)', '');
+  
   let selectors = DEFAULT_SELECTORS['*'];
   
   for (const key of Object.keys(DEFAULT_SELECTORS)) {
@@ -583,8 +1030,8 @@ async function extractArticle() {
             isPdf: true
           });
           
-          // Pass PDF sentences with page numbers
-          await classifySentences(response.sentences, true);
+          // Pass PDF sentences with page numbers and source URL
+          await classifySentences(response.sentences, true, tabs[0].url, response.title || tabs[0].title);
         } else {
           elements.progressText.textContent = 'No text extracted from PDF.';
           setTimeout(() => {
@@ -599,8 +1046,8 @@ async function extractArticle() {
         // Add current page as source
         addSourceFromResponse(tabs[0], response);
         
-        // Classify sentences (no page numbers for articles)
-        await classifySentences(response.sentences, false);
+        // Classify sentences (no page numbers for articles) with source URL
+        await classifySentences(response.sentences, false, tabs[0].url, response.headline || tabs[0].title);
       } else {
         elements.progressText.textContent = 'No content found. Try adjusting selectors.';
         setTimeout(() => {
@@ -631,7 +1078,7 @@ function addSourceFromResponse(tab, response) {
 }
 
 // Classify sentences using API
-async function classifySentences(sentences, isPdf = false) {
+async function classifySentences(sentences, isPdf = false, sourceUrl = '', sourceTitle = '') {
   try {
     // Handle array of objects (PDF with page numbers) or array of strings
     const sentenceTexts = isPdf ? sentences.map(s => s.text || s) : sentences;
@@ -688,6 +1135,8 @@ async function classifySentences(sentences, isPdf = false) {
         category: r.category,
         confidence: r.confidence,
         pageNumber: r.pageNumber,
+        sourceUrl: sourceUrl,
+        sourceTitle: sourceTitle,
         status: 'pending',
         createdAt: new Date().toISOString()
       });
@@ -718,6 +1167,8 @@ async function classifySentences(sentences, isPdf = false) {
           category: 'context',
           confidence: 0.5,
           pageNumber: s.pageNumber,
+          sourceUrl: sourceUrl,
+          sourceTitle: sourceTitle,
           status: 'pending',
           createdAt: new Date().toISOString()
         });
@@ -879,6 +1330,91 @@ function addCurrentPageAsSource() {
   });
 }
 
+// Build incident object for API
+function buildIncidentObject() {
+  const incidentType = currentCase.incidentType || 'death';
+  const date = currentCase.dateOfDeath || new Date().toISOString().split('T')[0];
+  const nameSlug = (currentCase.name || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  
+  // Parse location
+  let city = '', state = '';
+  if (currentCase.location) {
+    const parts = currentCase.location.split(',').map(p => p.trim());
+    city = parts[0] || '';
+    state = parts[1] || '';
+  }
+  
+  const incident = {
+    incident_id: `${date}-${incidentType === 'death' ? nameSlug : incidentType + '-' + (city || 'unknown').toLowerCase()}`,
+    incident_type: incidentType,
+    date: date,
+    date_precision: 'exact',
+    location: {
+      city: city,
+      state: state,
+      country: 'USA',
+      facility: currentCase.facility || undefined
+    },
+    subject: {
+      name: currentCase.name || undefined,
+      name_public: !!currentCase.name,
+      age: currentCase.age ? parseInt(currentCase.age) : undefined,
+      nationality: currentCase.country || undefined,
+      occupation: currentCase.occupation || undefined
+    },
+    summary: currentCase.causeOfDeath || '',
+    agencies_involved: currentCase.agencies || [],
+    violations_alleged: currentCase.violations || [],
+    verified: false
+  };
+  
+  // Add type-specific details
+  switch (incidentType) {
+    case 'death':
+      incident.death_details = {
+        cause_of_death: currentCase.deathCause || currentCase.causeOfDeath || '',
+        cause_source: 'unknown',
+        manner_of_death: currentCase.deathManner || undefined,
+        custody_duration: currentCase.deathCustodyDuration || undefined,
+        medical_requests_denied: currentCase.deathMedicalDenied || false
+      };
+      break;
+      
+    case 'injury':
+      incident.injury_details = {
+        injury_type: currentCase.injuryType || '',
+        severity: currentCase.injurySeverity || 'moderate',
+        cause: currentCase.injuryCause || '',
+        weapon_used: currentCase.injuryWeapon || undefined
+      };
+      break;
+      
+    case 'arrest':
+      incident.arrest_details = {
+        stated_reason: currentCase.arrestReason || '',
+        actual_context: currentCase.arrestContext || undefined,
+        charges: currentCase.arrestCharges ? currentCase.arrestCharges.split(',').map(c => c.trim()) : [],
+        timing_suspicious: currentCase.arrestTimingSuspicious || false,
+        pretext_arrest: currentCase.arrestPretext || false,
+        selective_enforcement: currentCase.arrestSelective || false
+      };
+      break;
+      
+    case 'rights_violation':
+      incident.violation_details = {
+        violation_types: currentCase.violations || [],
+        journalism_related: currentCase.violationJournalism || false,
+        protest_related: currentCase.violationProtest || false,
+        activism_related: currentCase.violationActivism || false,
+        speech_content: currentCase.violationSpeech || undefined,
+        court_ruling: currentCase.violationRuling || undefined
+      };
+      break;
+  }
+  
+  return incident;
+}
+
 // Save case to API
 async function saveCase() {
   if (!isConnected) {
@@ -886,47 +1422,87 @@ async function saveCase() {
     return;
   }
   
-  if (!currentCase.name) {
+  if (!currentCase.name && currentCase.incidentType === 'death') {
     alert('Please enter a name for the case.');
+    return;
+  }
+  
+  if (!apiKey) {
+    alert('Please enter an API key in the Settings tab.');
     return;
   }
   
   elements.saveCaseBtn.disabled = true;
   elements.saveCaseBtn.innerHTML = '<div class="spinner white"></div> Saving...';
   
-  const caseData = {
-    ...currentCase,
-    quotes: verifiedQuotes,
-    sources: sources
-  };
+  const incident = buildIncidentObject();
   
   try {
-    const response = await fetch(`${apiUrl}/api/extension/cases`, {
+    // First, create the incident
+    const response = await fetch(`${apiUrl}/api/incidents`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-API-Key': apiKey
       },
-      body: JSON.stringify(caseData)
+      body: JSON.stringify(incident)
     });
     
-    if (response.ok) {
-      const result = await response.json();
-      alert(`Case saved successfully! ID: ${result.id || 'N/A'}`);
-    } else {
-      throw new Error('Save failed');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create incident');
     }
+    
+    const result = await response.json();
+    const incidentDbId = result.id;
+    
+    // Then add sources and quotes if we have an ID
+    if (incidentDbId && (sources.length > 0 || verifiedQuotes.length > 0)) {
+      const patchData = {};
+      
+      if (sources.length > 0) {
+        patchData.sources = sources.map(s => ({
+          url: s.url,
+          title: s.title,
+          publication: s.publication || undefined,
+          source_type: 'news_article'
+        }));
+      }
+      
+      if (verifiedQuotes.length > 0) {
+        patchData.quotes = verifiedQuotes.map(q => ({
+          text: q.text,
+          category: q.category,
+          page_number: q.pageNumber || undefined,
+          confidence: q.confidence || undefined,
+          verified: false
+        }));
+      }
+      
+      await fetch(`${apiUrl}/api/incidents/${incidentDbId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey
+        },
+        body: JSON.stringify(patchData)
+      });
+    }
+    
+    alert(`Incident saved successfully! ID: ${incident.incident_id}`);
   } catch (error) {
-    alert('Failed to save case: ' + error.message);
+    console.error('Save error:', error);
+    alert('Failed to save incident: ' + error.message);
   } finally {
     elements.saveCaseBtn.disabled = false;
-    elements.saveCaseBtn.textContent = 'Save Case';
+    elements.saveCaseBtn.textContent = 'Save Incident';
   }
 }
 
 // Create new case
 function newCase() {
   if (verifiedQuotes.length > 0 || currentCase.name) {
-    if (!confirm('Start a new case? Current data will be cleared.')) {
+    if (!confirm('Start a new incident? Current data will be cleared.')) {
       return;
     }
   }
@@ -937,17 +1513,50 @@ function newCase() {
 // Clear current case
 function clearCase() {
   currentCase = {
+    incidentType: 'death',
     name: '',
     dateOfDeath: '',
     age: '',
     country: '',
+    occupation: '',
     facility: '',
     location: '',
-    causeOfDeath: ''
+    causeOfDeath: '',
+    agencies: [],
+    violations: [],
+    deathCause: '',
+    deathManner: '',
+    deathCustodyDuration: '',
+    deathMedicalDenied: false,
+    injuryType: '',
+    injurySeverity: 'moderate',
+    injuryWeapon: '',
+    injuryCause: '',
+    arrestReason: '',
+    arrestContext: '',
+    arrestCharges: '',
+    arrestTimingSuspicious: false,
+    arrestPretext: false,
+    arrestSelective: false,
+    violationJournalism: false,
+    violationProtest: false,
+    violationActivism: false,
+    violationSpeech: '',
+    violationRuling: ''
   };
   verifiedQuotes = [];
   pendingQuotes = [];
   sources = [];
+  
+  // Clear agency checkboxes
+  document.querySelectorAll('[id^="agency-"]').forEach(checkbox => {
+    checkbox.checked = false;
+  });
+  
+  // Clear violation checkboxes
+  document.querySelectorAll('[id^="violation-"]').forEach(checkbox => {
+    checkbox.checked = false;
+  });
   
   populateCaseForm();
   renderQuotes();
@@ -995,34 +1604,60 @@ window.goToPage = function(pageNumber) {
 
 // Export as JSON
 function exportAsJson() {
+  const incident = buildIncidentObject();
   const exportData = {
-    case: currentCase,
+    incident: incident,
     quotes: verifiedQuotes,
     sources: sources,
     exportedAt: new Date().toISOString()
   };
   
+  const filename = incident.incident_id || `incident-${new Date().toISOString().split('T')[0]}`;
+  
   const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `ice-case-${currentCase.name || 'unnamed'}-${new Date().toISOString().split('T')[0]}.json`;
+  a.download = `${filename}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
+// Get incident type label
+function getIncidentTypeLabel(type) {
+  const labels = {
+    death: 'Death in Custody',
+    injury: 'Injury',
+    medical_neglect: 'Medical Neglect',
+    arrest: 'Arrest/Detention',
+    rights_violation: 'Rights Violation',
+    deportation: 'Deportation',
+    family_separation: 'Family Separation',
+    workplace_raid: 'Workplace Raid',
+    other: 'Other'
+  };
+  return labels[type] || type;
+}
+
 // Export as Markdown
 function exportAsMarkdown() {
-  let md = `# ${currentCase.name || 'Unnamed Case'}\n\n`;
+  const incident = buildIncidentObject();
+  const incidentType = currentCase.incidentType || 'death';
+  
+  let md = `# ${currentCase.name || 'Subject Unknown'}\n\n`;
+  md += `**Incident Type:** ${getIncidentTypeLabel(incidentType)}\n`;
   
   if (currentCase.dateOfDeath) {
-    md += `**Date of Death:** ${currentCase.dateOfDeath}\n`;
+    md += `**Date:** ${currentCase.dateOfDeath}\n`;
   }
   if (currentCase.age) {
     md += `**Age:** ${currentCase.age}\n`;
   }
   if (currentCase.country) {
-    md += `**Country of Origin:** ${currentCase.country}\n`;
+    md += `**Nationality:** ${currentCase.country}\n`;
+  }
+  if (currentCase.occupation) {
+    md += `**Occupation:** ${currentCase.occupation}\n`;
   }
   if (currentCase.facility) {
     md += `**Facility:** ${currentCase.facility}\n`;
@@ -1030,8 +1665,47 @@ function exportAsMarkdown() {
   if (currentCase.location) {
     md += `**Location:** ${currentCase.location}\n`;
   }
+  
+  // Agencies involved
+  if (currentCase.agencies && currentCase.agencies.length > 0) {
+    md += `**Agencies Involved:** ${currentCase.agencies.join(', ')}\n`;
+  }
+  
+  // Violations alleged
+  if (currentCase.violations && currentCase.violations.length > 0) {
+    md += `**Violations Alleged:** ${currentCase.violations.join(', ')}\n`;
+  }
+  
   if (currentCase.causeOfDeath) {
-    md += `**Cause of Death:** ${currentCase.causeOfDeath}\n`;
+    md += `\n## Summary\n\n${currentCase.causeOfDeath}\n`;
+  }
+  
+  // Type-specific details
+  if (incidentType === 'death' && incident.death_details) {
+    md += `\n## Death Details\n\n`;
+    if (incident.death_details.cause_of_death) md += `- **Cause:** ${incident.death_details.cause_of_death}\n`;
+    if (incident.death_details.manner_of_death) md += `- **Manner:** ${incident.death_details.manner_of_death}\n`;
+    if (incident.death_details.custody_duration) md += `- **Custody Duration:** ${incident.death_details.custody_duration}\n`;
+    if (incident.death_details.medical_requests_denied) md += `- **Medical Requests Denied:** Yes\n`;
+  }
+  
+  if (incidentType === 'arrest' && incident.arrest_details) {
+    md += `\n## Arrest Details\n\n`;
+    if (incident.arrest_details.stated_reason) md += `- **Stated Reason:** ${incident.arrest_details.stated_reason}\n`;
+    if (incident.arrest_details.actual_context) md += `- **Actual Context:** ${incident.arrest_details.actual_context}\n`;
+    if (incident.arrest_details.charges?.length) md += `- **Charges:** ${incident.arrest_details.charges.join(', ')}\n`;
+    if (incident.arrest_details.timing_suspicious) md += `- ⚠️ **Timing Suspicious**\n`;
+    if (incident.arrest_details.pretext_arrest) md += `- ⚠️ **Pretext Arrest Indicators**\n`;
+    if (incident.arrest_details.selective_enforcement) md += `- ⚠️ **Selective Enforcement**\n`;
+  }
+  
+  if (incidentType === 'rights_violation' && incident.violation_details) {
+    md += `\n## Violation Details\n\n`;
+    if (incident.violation_details.journalism_related) md += `- 📰 **Journalism Related**\n`;
+    if (incident.violation_details.protest_related) md += `- ✊ **Protest Related**\n`;
+    if (incident.violation_details.activism_related) md += `- 📢 **Activism Related**\n`;
+    if (incident.violation_details.speech_content) md += `- **Speech/Activity:** ${incident.violation_details.speech_content}\n`;
+    if (incident.violation_details.court_ruling) md += `- **Court Ruling:** ${incident.violation_details.court_ruling}\n`;
   }
   
   if (verifiedQuotes.length > 0) {
@@ -1062,11 +1736,13 @@ function exportAsMarkdown() {
   
   md += `\n---\n*Exported on ${new Date().toLocaleString()}*\n`;
   
+  const filename = incident.incident_id || `incident-${new Date().toISOString().split('T')[0]}`;
+  
   const blob = new Blob([md], { type: 'text/markdown' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `ice-case-${currentCase.name || 'unnamed'}-${new Date().toISOString().split('T')[0]}.md`;
+  a.download = `${filename}.md`;
   a.click();
   URL.revokeObjectURL(url);
 }
