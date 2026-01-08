@@ -1,0 +1,82 @@
+/* ICE Deaths Research Assistant - Content Script Styles */
+
+/* Highlight styles for quotes */
+.ice-deaths-highlight-mark {
+  background-color: #fef08a !important;
+  color: #000 !important;
+  padding: 2px 4px;
+  border-radius: 2px;
+  box-shadow: 0 0 0 2px #fef08a;
+  animation: ice-deaths-pulse 1s ease-in-out;
+}
+
+@keyframes ice-deaths-pulse {
+  0% { box-shadow: 0 0 0 2px #fef08a, 0 0 0 4px rgba(254, 240, 138, 0.5); }
+  50% { box-shadow: 0 0 0 2px #fef08a, 0 0 0 8px rgba(254, 240, 138, 0); }
+  100% { box-shadow: 0 0 0 2px #fef08a; }
+}
+
+/* Category-specific highlights */
+.ice-deaths-highlight-mark.timeline {
+  background-color: #dbeafe !important;
+  box-shadow: 0 0 0 2px #dbeafe;
+}
+
+.ice-deaths-highlight-mark.official {
+  background-color: #fef3c7 !important;
+  box-shadow: 0 0 0 2px #fef3c7;
+}
+
+.ice-deaths-highlight-mark.medical {
+  background-color: #dcfce7 !important;
+  box-shadow: 0 0 0 2px #dcfce7;
+}
+
+.ice-deaths-highlight-mark.legal {
+  background-color: #f3e8ff !important;
+  box-shadow: 0 0 0 2px #f3e8ff;
+}
+
+/* Toast notification */
+#ice-deaths-toast {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Selection highlight overlay */
+.ice-deaths-selection-overlay {
+  position: absolute;
+  background-color: rgba(59, 130, 246, 0.2);
+  border: 2px solid #3b82f6;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 999998;
+}
+
+/* Quick action button that appears on selection */
+.ice-deaths-quick-add {
+  position: absolute;
+  background: #1a1a1a;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  transition: transform 0.1s ease, background 0.2s ease;
+}
+
+.ice-deaths-quick-add:hover {
+  background: #333;
+  transform: scale(1.05);
+}
+
+.ice-deaths-quick-add svg {
+  width: 14px;
+  height: 14px;
+}

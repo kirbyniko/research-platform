@@ -1,0 +1,37 @@
+{
+  "id": "2025-12-01-brutus",
+  "name": "Jean Wilson Brutus",
+  "age": 0,
+  "nationality": "Haiti",
+  "date_of_death": "2025-12-01",
+  "facility": {
+    "name": "Delaney Hall",
+    "state": "NJ",
+    "type": "ICE-contracted jail"
+  },
+  "custody_status": "Detained",
+  "category": [],
+  "official_cause_of_death": "Unknown - pending investigation",
+  "timeline": [
+    {
+      "date": "2025-12-01",
+      "event": "Died at Delaney Hall detention facility"
+    }
+  ],
+  "discrepancies": [],
+  "sources": [
+    {
+      "title": "ICE Detention Deaths Tracker",
+      "publisher": "Austin Kocher / Detention Reports",
+      "date": "2025-12-01",
+      "url": "https://austinkocher.substack.com"
+    },
+    {
+      "title": "Detention Reports Database",
+      "publisher": "Detention Reports",
+      "date": "2025-12-01",
+      "url": "https://detentionreports.com"
+    }
+  ],
+  "notes": "Age unknown at time of documentation. Exact date of death may need verification. Haitian national who died at Delaney Hall. Limited information available - further documentation needed."
+}

@@ -1,0 +1,46 @@
+{
+  "id": "2025-09-18-banegas-reyes",
+  "name": "Santos Banegas Reyes",
+  "age": 42,
+  "nationality": "Honduras",
+  "date_of_death": "2025-09-18",
+  "facility": {
+    "name": "Nassau County Correctional Center",
+    "state": "NY",
+    "type": "ICE-contracted jail"
+  },
+  "custody_status": "Detained",
+  "category": [
+    "Medical neglect"
+  ],
+  "official_cause_of_death": "Liver failure (ICE statement)",
+  "timeline": [
+    {
+      "date": "2025-08-29",
+      "event": "Transferred to ICE custody"
+    },
+    {
+      "date": "2025-09-10",
+      "event": "Reported abdominal pain"
+    },
+    {
+      "date": "2025-09-18",
+      "event": "Found unresponsive in cell"
+    }
+  ],
+  "discrepancies": [
+    {
+      "ice_claim": "Death due to natural causes",
+      "counter_evidence": "Family reports untreated symptoms and delayed care"
+    }
+  ],
+  "sources": [
+    {
+      "title": "Guardian investigation",
+      "publisher": "The Guardian",
+      "date": "2026-01-04",
+      "url": "https://www.theguardian.com/example"
+    }
+  ],
+  "notes": "Autopsy pending at time of reporting"
+}

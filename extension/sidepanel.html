@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ICE Deaths Research</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      background: #fafafa;
+      color: #1a1a1a;
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    .container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    
+    /* Header */
+    .header {
+      background: #1a1a1a;
+      color: white;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    
+    .header h1 {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .header-btn {
+      background: transparent;
+      border: none;
+      color: white;
+      cursor: pointer;
+      padding: 4px;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+    
+    .header-btn:hover {
+      opacity: 1;
+    }
+    
+    /* Status bar */
+    .status-bar {
+      background: #f0f0f0;
+      padding: 8px 16px;
+      font-size: 11px;
+      color: #666;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid #e0e0e0;
+      flex-shrink: 0;
+    }
+    
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+    }
+    
+    .status-dot.disconnected {
+      background: #ef4444;
+    }
+    
+    /* Tabs */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #e0e0e0;
+      background: white;
+      flex-shrink: 0;
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 10px 16px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #666;
+      background: none;
+      border: none;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: all 0.2s;
+    }
+    
+    .tab:hover {
+      color: #333;
+      background: #f8f8f8;
+    }
+    
+    .tab.active {
+      color: #1a1a1a;
+      border-bottom-color: #1a1a1a;
+    }
+    
+    /* Tab content */
+    .tab-content {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    /* Section styles */
+    .section {
+      margin-bottom: 20px;
+    }
+    
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    /* Form styles */
+    .form-group {
+      margin-bottom: 12px;
+    }
+    
+    .form-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 500;
+      color: #666;
+      margin-bottom: 4px;
+    }
+    
+    .form-input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    
+    .form-input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .form-input::placeholder {
+      color: #aaa;
+    }
+    
+    textarea.form-input {
+      resize: vertical;
+      min-height: 60px;
+    }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    
+    /* Button styles */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .btn-primary {
+      background: #1a1a1a;
+      color: white;
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+      background: #333;
+    }
+    
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #1a1a1a;
+    }
+    
+    .btn-secondary:hover:not(:disabled) {
+      background: #e0e0e0;
+    }
+    
+    .btn-success {
+      background: #22c55e;
+      color: white;
+    }
+    
+    .btn-success:hover:not(:disabled) {
+      background: #16a34a;
+    }
+    
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+    
+    .btn-danger:hover:not(:disabled) {
+      background: #dc2626;
+    }
+    
+    .btn-sm {
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+    
+    .btn-icon {
+      padding: 6px;
+      background: transparent;
+      border: 1px solid #ddd;
+    }
+    
+    .btn-icon:hover:not(:disabled) {
+      background: #f0f0f0;
+    }
+    
+    .btn-block {
+      width: 100%;
+    }
+    
+    /* Quote card styles */
+    .quote-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .quote-card {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 12px;
+      transition: border-color 0.2s;
+    }
+    
+    .quote-card:hover {
+      border-color: #ccc;
+    }
+    
+    .quote-card.verified {
+      border-left: 3px solid #22c55e;
+    }
+    
+    .quote-card.pending {
+      border-left: 3px solid #f59e0b;
+    }
+    
+    .quote-text {
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 8px;
+      color: #333;
+    }
+    
+    .quote-text.truncated {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    
+    .quote-text.expanded {
+      display: block;
+    }
+    
+    .quote-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: #666;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    
+    .quote-category {
+      background: #f0f0f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    
+    .quote-category.timeline { background: #dbeafe; color: #1e40af; }
+    .quote-category.official { background: #fef3c7; color: #92400e; }
+    .quote-category.medical { background: #dcfce7; color: #166534; }
+    .quote-category.legal { background: #f3e8ff; color: #6b21a8; }
+    .quote-category.context { background: #fce7f3; color: #9d174d; }
+    
+    .quote-confidence {
+      color: #999;
+    }
+    
+    .quote-page {
+      background: #e0e7ff;
+      color: #3730a3;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .quote-page:hover {
+      background: #c7d2fe;
+    }
+    
+    .quote-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    
+    /* Source list */
+    .source-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .source-item {
+      font-size: 12px;
+      color: #3b82f6;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      background: #f8fafc;
+      border-radius: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .source-item:hover {
+      background: #f0f7ff;
+    }
+    
+    /* Footer */
+    .footer {
+      padding: 12px 16px;
+      background: white;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    
+    .footer .btn {
+      flex: 1;
+    }
+    
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 32px 16px;
+      color: #999;
+    }
+    
+    .empty-state-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+    
+    /* Loading spinner */
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #e0e0e0;
+      border-top-color: #1a1a1a;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+    
+    .spinner.white {
+      border-color: rgba(255,255,255,0.3);
+      border-top-color: white;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Progress bar */
+    .progress-container {
+      margin: 16px 0;
+    }
+    
+    .progress-bar {
+      height: 4px;
+      background: #e0e0e0;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: #3b82f6;
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+    
+    .progress-text {
+      font-size: 11px;
+      color: #666;
+      margin-top: 6px;
+      text-align: center;
+    }
+    
+    /* Selector config */
+    .selector-group {
+      background: #f8f8f8;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    
+    .selector-group-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .selector-group-title {
+      font-weight: 600;
+      font-size: 12px;
+    }
+    
+    .selector-test-btn {
+      font-size: 10px;
+      padding: 2px 6px;
+    }
+    
+    .selector-input {
+      font-family: monospace;
+      font-size: 11px;
+    }
+    
+    .selector-match-count {
+      font-size: 10px;
+      color: #22c55e;
+      margin-top: 4px;
+    }
+    
+    .selector-match-count.error {
+      color: #ef4444;
+    }
+    
+    /* Alert */
+    .alert {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 12px;
+    }
+    
+    .alert-info {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    
+    .alert-success {
+      background: #dcfce7;
+      color: #166534;
+    }
+    
+    .alert-error {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    
+    /* Collapsible */
+    .collapsible-header {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .collapsible-header::before {
+      content: '▶';
+      font-size: 10px;
+      transition: transform 0.2s;
+    }
+    
+    .collapsible-header.open::before {
+      transform: rotate(90deg);
+    }
+    
+    .collapsible-content {
+      display: none;
+      margin-top: 12px;
+    }
+    
+    .collapsible-content.open {
+      display: block;
+    }
+    
+    /* Bulk actions */
+    .bulk-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 8px;
+      background: #f8f8f8;
+      border-radius: 6px;
+    }
+    
+    /* Keyboard shortcuts */
+    .shortcuts-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .shortcut-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: #f8f8f8;
+      border-radius: 6px;
+    }
+    
+    .shortcut-desc {
+      font-size: 12px;
+      color: #333;
+    }
+    
+    kbd {
+      background: #1a1a1a;
+      color: white;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11px;
+    }
+    
+    /* Search results */
+    .search-results {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .search-result-item {
+      padding: 10px 12px;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .search-result-item:hover {
+      background: #f0f0f0;
+      border-color: #ccc;
+    }
+    
+    .search-result-name {
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+    
+    .search-result-meta {
+      font-size: 11px;
+      color: #666;
+      margin-top: 4px;
+    }
+    
+    .search-empty {
+      text-align: center;
+      color: #999;
+      padding: 20px;
+      font-size: 12px;
+    }
+    
+    /* Help text */
+    .help-text {
+      font-size: 12px;
+      color: #666;
+    }
+    
+    .help-text code {
+      background: #f0f0f0;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+    }
+    
+    /* Hidden */
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📋 ICE Deaths Research</h1>
+      <div class="header-actions">
+        <button class="header-btn" id="settingsBtn" title="Settings">⚙️</button>
+      </div>
+    </div>
+    
+    <div class="status-bar">
+      <div class="status-indicator">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Connected</span>
+      </div>
+      <span id="pageInfo">-</span>
+    </div>
+    
+    <div class="tabs">
+      <button class="tab active" data-tab="case">Case</button>
+      <button class="tab" data-tab="extract">Extract</button>
+      <button class="tab" data-tab="settings">Settings</button>
+    </div>
+    
+    <!-- Case Tab -->
+    <div class="tab-content active" id="tab-case">
+      <!-- Case Form Section -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">📄 Case Information</span>
+          <button class="btn btn-sm btn-secondary" id="clearCaseBtn">Clear</button>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" class="form-input" id="caseName" placeholder="Last name, First name">
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Date of Death</label>
+            <input type="date" class="form-input" id="caseDod">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Age</label>
+            <input type="number" class="form-input" id="caseAge" placeholder="Age">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Country of Origin</label>
+          <input type="text" class="form-input" id="caseCountry" placeholder="Country">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Facility</label>
+          <input type="text" class="form-input" id="caseFacility" placeholder="Detention facility name">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Location</label>
+          <input type="text" class="form-input" id="caseLocation" placeholder="City, State">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Cause of Death</label>
+          <textarea class="form-input" id="caseCause" placeholder="Cause of death as stated in records"></textarea>
+        </div>
+      </div>
+      
+      <!-- Quotes Section -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">💬 Verified Quotes (<span id="quoteCount">0</span>)</span>
+        </div>
+        
+        <div class="quote-list" id="quoteList">
+          <div class="empty-state">
+            <div class="empty-state-icon">📝</div>
+            <p>No verified quotes yet</p>
+            <p style="font-size: 11px; margin-top: 4px;">
+              Go to Extract tab to pull quotes from the page
+            </p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Sources Section -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">🔗 Sources (<span id="sourceCount">0</span>)</span>
+          <button class="btn btn-sm btn-secondary" id="addSourceBtn">+ Add Page</button>
+        </div>
+        
+        <div class="source-list" id="sourceList">
+          <!-- Sources will be populated here -->
+        </div>
+      </div>
+    </div>
+    
+    <!-- Extract Tab -->
+    <div class="tab-content" id="tab-extract">
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">🔍 Extract from Page</span>
+        </div>
+        
+        <p style="font-size: 12px; color: #666; margin-bottom: 12px;">
+          Extract sentences from the current page and classify them using AI.
+        </p>
+        
+        <button class="btn btn-primary btn-block" id="extractBtn">
+          Extract Article Content
+        </button>
+        
+        <div class="progress-container hidden" id="extractProgress">
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+          </div>
+          <div class="progress-text" id="progressText">Extracting...</div>
+        </div>
+      </div>
+      
+      <!-- Custom Selector Section -->
+      <div class="section">
+        <div class="collapsible-header" id="customSelectorHeader">
+          <span class="section-title">🎯 Custom Element Selection</span>
+        </div>
+        <div class="collapsible-content" id="customSelectorContent">
+          <div class="alert alert-info" style="margin-bottom: 12px;">
+            Enter a CSS selector to extract specific content, or click "Pick Element" to visually select an element on the page.
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">CSS Selector</label>
+            <input type="text" class="form-input" id="customSelector" placeholder="article, .main-content, #article-body">
+          </div>
+          
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" id="pickElementBtn" style="flex: 1;">👆 Pick Element</button>
+            <button class="btn btn-secondary" id="testSelectorBtn" style="flex: 1;">🧪 Test Selector</button>
+          </div>
+          
+          <div id="selectorTestResult" class="help-text" style="margin-top: 8px; display: none;"></div>
+          
+          <button class="btn btn-primary btn-block" id="extractCustomBtn" style="margin-top: 12px;">
+            Extract from Selector
+          </button>
+        </div>
+      </div>
+      
+      <!-- Pending Quotes Section -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">📋 Pending Review (<span id="pendingCount">0</span>)</span>
+        </div>
+        
+        <div class="bulk-actions hidden" id="bulkActions">
+          <button class="btn btn-sm btn-success" id="acceptAllBtn">✓ Accept All</button>
+          <button class="btn btn-sm btn-danger" id="rejectAllBtn">✗ Clear All</button>
+        </div>
+        
+        <div class="quote-list" id="pendingList">
+          <div class="empty-state">
+            <div class="empty-state-icon">🔍</div>
+            <p>No pending quotes</p>
+            <p style="font-size: 11px; margin-top: 4px;">
+              Click "Extract Article Content" to find quotes
+            </p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Manual Add Section -->
+      <div class="section">
+        <div class="collapsible-header" id="manualAddHeader">
+          <span class="section-title">➕ Add Quote Manually</span>
+        </div>
+        <div class="collapsible-content" id="manualAddContent">
+          <div class="form-group">
+            <label class="form-label">Quote Text</label>
+            <textarea class="form-input" id="manualQuoteText" placeholder="Paste or type the exact quote..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select class="form-input" id="manualQuoteCategory">
+              <option value="timeline">Timeline Event</option>
+              <option value="official">Official Statement</option>
+              <option value="medical">Medical Information</option>
+              <option value="legal">Legal/Immigration</option>
+              <option value="context">Background Context</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-block" id="addManualQuoteBtn">Add Quote</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Settings Tab -->
+    <div class="tab-content" id="tab-settings">
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">🔌 API Connection</span>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">API URL</label>
+          <input type="text" class="form-input" id="apiUrl" value="http://localhost:3001">
+        </div>
+        
+        <button class="btn btn-secondary btn-block" id="testConnectionBtn">Test Connection</button>
+      </div>
+      
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">⌨️ Keyboard Shortcuts</span>
+        </div>
+        
+        <div class="shortcuts-list">
+          <div class="shortcut-item">
+            <span class="shortcut-desc">Open Sidebar</span>
+            <kbd>Alt + Shift + S</kbd>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">Add Selected Quote</span>
+            <kbd>Alt + Q</kbd>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">Extract Article</span>
+            <kbd>Alt + E</kbd>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">Save Case</span>
+            <kbd>Alt + S</kbd>
+          </div>
+        </div>
+        
+        <p class="help-text" style="margin-top: 12px; font-size: 11px; color: #666;">
+          Customize shortcuts in Chrome: <code>chrome://extensions/shortcuts</code>
+        </p>
+      </div>
+      
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">📤 Export Data</span>
+        </div>
+        
+        <p class="help-text" style="margin-bottom: 12px;">
+          Export the current case with all quotes and sources.
+        </p>
+        
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-secondary" id="exportJsonBtn" style="flex: 1;">Export JSON</button>
+          <button class="btn btn-secondary" id="exportMdBtn" style="flex: 1;">Export Markdown</button>
+        </div>
+        
+        <button class="btn btn-secondary btn-block" id="copyAllQuotesBtn" style="margin-top: 8px;">
+          📋 Copy All Quotes
+        </button>
+      </div>
+      
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">🔍 Search Existing Cases</span>
+        </div>
+        
+        <div class="form-group">
+          <input type="text" class="form-input" id="caseSearchInput" placeholder="Search by name, facility, date...">
+        </div>
+        
+        <div id="caseSearchResults" class="search-results"></div>
+      </div>
+      
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">🗑️ Data Management</span>
+        </div>
+        
+        <button class="btn btn-danger btn-block" id="clearAllDataBtn">
+          Clear All Extension Data
+        </button>
+        <p class="help-text" style="margin-top: 8px; font-size: 11px; color: #999;">
+          This removes all unsaved cases, quotes, and custom selectors.
+        </p>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <button class="btn btn-secondary" id="newCaseBtn">New Case</button>
+      <button class="btn btn-primary" id="saveCaseBtn">Save Case</button>
+    </div>
+  </div>
+  
+  <script src="sidepanel.js"></script>
+</body>
+</html>

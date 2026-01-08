@@ -1,0 +1,37 @@
+{
+  "id": "2025-12-05-abdulkadir",
+  "name": "Fouad Saeed Abdulkadir",
+  "age": 0,
+  "nationality": "Eritrea",
+  "date_of_death": "2025-12-05",
+  "facility": {
+    "name": "Unknown ICE Detention Facility",
+    "state": "Unknown",
+    "type": "Other"
+  },
+  "custody_status": "Detained",
+  "category": [],
+  "official_cause_of_death": "Unknown - pending investigation",
+  "timeline": [
+    {
+      "date": "2025-12-05",
+      "event": "Died in ICE custody"
+    }
+  ],
+  "discrepancies": [],
+  "sources": [
+    {
+      "title": "ICE Detention Deaths Tracker",
+      "publisher": "Austin Kocher / Detention Reports",
+      "date": "2025-12-01",
+      "url": "https://austinkocher.substack.com"
+    },
+    {
+      "title": "Detention Reports Database",
+      "publisher": "Detention Reports",
+      "date": "2025-12-01",
+      "url": "https://detentionreports.com"
+    }
+  ],
+  "notes": "Age unknown at time of documentation. Exact date and facility location need verification. Eritrean national who died in ICE custody. Limited information available - further documentation needed."
+}

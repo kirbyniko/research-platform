@@ -1,0 +1,71 @@
+{
+  "id": "2024-03-07-daniel",
+  "name": "Charles Leo Daniel",
+  "age": 61,
+  "nationality": "Trinidad and Tobago",
+  "date_of_death": "2024-03-07",
+  "facility": {
+    "name": "Northwest ICE Processing Center",
+    "state": "WA",
+    "type": "ICE-contracted jail"
+  },
+  "custody_status": "Detained",
+  "category": [
+    "Medical neglect",
+    "Solitary confinement"
+  ],
+  "official_cause_of_death": "Hypertensive and atherosclerotic cardiovascular disease (ruled natural causes by Pierce County Medical Examiner)",
+  "timeline": [
+    {
+      "date": "2020-01-01",
+      "event": "Taken into ICE custody after serving approximately 16-year sentence for second-degree murder"
+    },
+    {
+      "date": "2020-01-15",
+      "event": "Placed in solitary confinement due to mental health issues"
+    },
+    {
+      "date": "2024-03-07",
+      "event": "Found unresponsive by staff at 10:43 AM"
+    },
+    {
+      "date": "2024-03-07",
+      "event": "Pronounced dead approximately one hour after being found"
+    },
+    {
+      "date": "2024-06-10",
+      "event": "Pierce County Medical Examiner releases cause of death"
+    }
+  ],
+  "discrepancies": [
+    {
+      "ice_claim": "Death ruled natural causes",
+      "counter_evidence": "Daniel was held in solitary confinement for nearly 4 years - one of the longest stays in isolation at any U.S. immigration facility. UN considers solitary confinement over 15 days to constitute torture."
+    },
+    {
+      "ice_claim": "Daniel received appropriate care",
+      "counter_evidence": "Daniel had documented mental health issues including hearing voices, visual hallucinations, and delusions. He often refused medications. His prolonged isolation may have exacerbated his conditions."
+    }
+  ],
+  "sources": [
+    {
+      "title": "Police find man dead at Northwest ICE Processing Center in Tacoma",
+      "publisher": "KNKX",
+      "date": "2024-03-08",
+      "url": "https://www.knkx.org/tacoma/2024-03-08/police-find-man-dead-northwest-ice-processing-center-tacoma-immigration-detention"
+    },
+    {
+      "title": "Medical examiner says death of ICE detainee at Tacoma facility was due to natural causes",
+      "publisher": "KNKX",
+      "date": "2024-06-10",
+      "url": "https://www.knkx.org/social-justice/2024-06-10/piece-county-medical-examiner-tacoma-ice-detainee-charles-leo-daniel-death-natural-causes-solitary-confinement"
+    },
+    {
+      "title": "Trinidad and Tobago National in ICE Custody Dies at NWIPC",
+      "publisher": "ICE",
+      "date": "2024-03-08",
+      "url": "https://www.ice.gov/news/releases/trinidad-and-tobago-national-ice-custody-dies-nwipc"
+    }
+  ],
+  "notes": "Death sparked hunger strikes by more than 160 detainees at the facility. ICE Detainee Death Report available at https://www.ice.gov/doclib/foia/reports/ddrDanielCharlesLeo.pdf"
+}

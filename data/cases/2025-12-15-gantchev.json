@@ -1,0 +1,37 @@
+{
+  "id": "2025-12-15-gantchev",
+  "name": "Nenko Stanev Gantchev",
+  "age": 0,
+  "nationality": "Bulgaria",
+  "date_of_death": "2025-12-15",
+  "facility": {
+    "name": "North Lake Processing Center",
+    "state": "MI",
+    "type": "ICE-contracted jail"
+  },
+  "custody_status": "Detained",
+  "category": [],
+  "official_cause_of_death": "Unknown - pending investigation",
+  "timeline": [
+    {
+      "date": "2025-12-15",
+      "event": "Died at North Lake Processing Center"
+    }
+  ],
+  "discrepancies": [],
+  "sources": [
+    {
+      "title": "ICE Detention Deaths Tracker",
+      "publisher": "Austin Kocher / Detention Reports",
+      "date": "2025-12-01",
+      "url": "https://austinkocher.substack.com"
+    },
+    {
+      "title": "Detention Reports Database",
+      "publisher": "Detention Reports",
+      "date": "2025-12-01",
+      "url": "https://detentionreports.com"
+    }
+  ],
+  "notes": "Age unknown at time of documentation. Bulgarian national who died at North Lake Processing Center. Limited information available - further documentation needed."
+}

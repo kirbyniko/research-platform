@@ -1,0 +1,33 @@
+{
+  "id": "2025-02-20-chernyak",
+  "name": "Maksym Chernyak",
+  "age": 0,
+  "nationality": "Ukraine",
+  "date_of_death": "2025-02-20",
+  "facility": {
+    "name": "Krome Service and Processing Center",
+    "state": "FL",
+    "type": "ICE facility"
+  },
+  "custody_status": "Detained",
+  "category": [
+    "Medical neglect"
+  ],
+  "official_cause_of_death": "Not specified by ICE",
+  "timeline": [
+    {
+      "date": "2025-02-20",
+      "event": "Died at Krome Service and Processing Center"
+    }
+  ],
+  "discrepancies": [],
+  "sources": [
+    {
+      "title": "ICE's Deadly December: Record-Setting Deaths in Immigration Detention",
+      "publisher": "Austin Kocher Substack",
+      "date": "2025-12-20",
+      "url": "https://austinkocher.substack.com/p/ices-deadly-december-record-setting"
+    }
+  ],
+  "notes": "Age unknown at time of documentation. Death coincided with sudden spike in detained population at Krome facility."
+}

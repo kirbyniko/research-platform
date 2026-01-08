@@ -1,0 +1,58 @@
+{
+  "id": "2025-09-29-xie",
+  "name": "Huabing Xie",
+  "age": 0,
+  "nationality": "China",
+  "date_of_death": "2025-09-29",
+  "facility": {
+    "name": "Imperial Regional Detention Facility",
+    "state": "CA",
+    "type": "ICE-contracted jail"
+  },
+  "custody_status": "Detained",
+  "category": [
+    "Medical neglect"
+  ],
+  "official_cause_of_death": "Seizure (died at nearby hospital)",
+  "timeline": [
+    {
+      "date": "2023-01-01",
+      "event": "Arrested along U.S.-Mexico border"
+    },
+    {
+      "date": "2023-01-15",
+      "event": "Released on order of recognizance after initial arrest"
+    },
+    {
+      "date": "2025-09-01",
+      "event": "Detained at Imperial Regional Detention Facility"
+    },
+    {
+      "date": "2025-09-29",
+      "event": "Had seizure while detained"
+    },
+    {
+      "date": "2025-09-29",
+      "event": "Died at nearby hospital"
+    },
+    {
+      "date": "2025-12-29",
+      "event": "ICE missed congressionally-mandated 90-day deadline to release death report"
+    }
+  ],
+  "discrepancies": [
+    {
+      "ice_claim": "Death report to be released per congressional mandate",
+      "counter_evidence": "ICE missed the congressionally-mandated 90-day deadline to release the death report"
+    }
+  ],
+  "sources": [
+    {
+      "title": "ICE misses deadline to release report on in-custody death in Imperial County",
+      "publisher": "KPBS",
+      "date": "2026-01-05",
+      "url": "https://www.kpbs.org/news/border-immigration/2026/01/05/ice-misses-deadline-to-release-report-on-in-custody-death-in-imperial-county"
+    }
+  ],
+  "notes": "Age unknown at time of documentation. ICE failed to comply with congressionally-mandated reporting deadline."
+}

@@ -1,0 +1,38 @@
+{
+  "id": "YYYY-MM-DD-lastname",
+  "name": "[Full Name]",
+  "age": 0,
+  "nationality": "[Country]",
+  "date_of_death": "YYYY-MM-DD",
+  "facility": {
+    "name": "[Facility Name]",
+    "state": "[State Code]",
+    "type": "[ICE facility | ICE-contracted jail | Other]"
+  },
+  "custody_status": "[Detained | Released | Other]",
+  "category": [
+    "[Medical neglect | Suicide | Use of force | COVID-19 | Other]"
+  ],
+  "official_cause_of_death": "[Official statement]",
+  "timeline": [
+    {
+      "date": "YYYY-MM-DD",
+      "event": "[Event description]"
+    }
+  ],
+  "discrepancies": [
+    {
+      "ice_claim": "[ICE official statement]",
+      "counter_evidence": "[Contradicting evidence or testimony]"
+    }
+  ],
+  "sources": [
+    {
+      "title": "[Article/Document title]",
+      "publisher": "[Publication name]",
+      "date": "YYYY-MM-DD",
+      "url": "[URL]"
+    }
+  ],
+  "notes": "[Additional context - optional]"
+}

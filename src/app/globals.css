@@ -1,0 +1,180 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --death-red: #b91c1c;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: #ffffff;
+  color: #000000;
+}
+
+/* PDF Viewer styles */
+.react-pdf__Page__canvas {
+  display: block;
+  margin: 0 auto;
+}
+
+.react-pdf__Page__textContent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  opacity: 0.2;
+  line-height: 1.0;
+  pointer-events: auto;
+}
+
+.react-pdf__Page__textContent span {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  transform-origin: 0% 0%;
+}
+
+.react-pdf__Page__textContent span::selection {
+  background: rgba(59, 130, 246, 0.5);
+}
+
+/* PDF Annotation Layer */
+.react-pdf__Page__annotations {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.react-pdf__Page__annotations section {
+  position: absolute;
+  pointer-events: auto;
+}
+
+.react-pdf__Page__annotations a {
+  display: block;
+}
+
+/* Timeline styles */
+.timeline {
+  position: relative;
+  padding-left: 2rem;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 0.5rem;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #e5e5e5;
+}
+
+.timeline-item {
+  position: relative;
+  padding-bottom: 1.5rem;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -1.75rem;
+  top: 0.25rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background-color: #000;
+}
+
+.timeline-item.death::before {
+  background-color: var(--death-red);
+}
+
+/* Discrepancy comparison styles */
+.discrepancy-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .discrepancy-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Stat card */
+.stat-card {
+  border: 1px solid #e5e5e5;
+  padding: 1.5rem;
+}
+
+.stat-number {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #666;
+  margin-top: 0.5rem;
+}
+
+/* Case list item */
+.case-list-item {
+  border-bottom: 1px solid #e5e5e5;
+  padding: 1rem 0;
+}
+
+.case-list-item:last-child {
+  border-bottom: none;
+}
+
+/* Source list */
+.source-item {
+  font-size: 0.875rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.source-item:last-child {
+  border-bottom: none;
+}
+
+/* Red accent for death dates */
+.death-date {
+  color: var(--death-red);
+}
+
+/* Filter controls */
+.filter-select {
+  padding: 0.5rem 1rem;
+  border: 1px solid #e5e5e5;
+  background-color: #fff;
+  font-size: 0.875rem;
+}
+
+/* Expandable section */
+.expandable-header {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid #e5e5e5;
+  background-color: #fafafa;
+}
+
+.expandable-content {
+  padding: 1rem;
+  border: 1px solid #e5e5e5;
+  border-top: none;
+}

@@ -1,0 +1,40 @@
+{
+  "id": "2025-12-03-gaspar-andres",
+  "name": "Francisco Gaspar-Andres",
+  "age": 21,
+  "nationality": "Guatemala",
+  "date_of_death": "2025-12-03",
+  "facility": {
+    "name": "Fort Bliss",
+    "state": "TX",
+    "type": "Other"
+  },
+  "custody_status": "Detained",
+  "category": [
+    "Medical neglect",
+    "Death in military detention facility"
+  ],
+  "official_cause_of_death": "Liver and kidney failure",
+  "timeline": [
+    {
+      "date": "2025-12-03",
+      "event": "Died at Fort Bliss from liver and kidney failure"
+    }
+  ],
+  "discrepancies": [],
+  "sources": [
+    {
+      "title": "ICE Detention Deaths Tracker",
+      "publisher": "Austin Kocher / Detention Reports",
+      "date": "2025-12-01",
+      "url": "https://austinkocher.substack.com"
+    },
+    {
+      "title": "Detention Reports Database",
+      "publisher": "Detention Reports",
+      "date": "2025-12-01",
+      "url": "https://detentionreports.com"
+    }
+  ],
+  "notes": "21-year-old Guatemalan national who died at Fort Bliss military facility. Limited information available - further documentation needed."
+}

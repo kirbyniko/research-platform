@@ -1,0 +1,593 @@
+[
+  {
+    "id": "2025-12-15-gantchev",
+    "name": "Nenko Stanev Gantchev",
+    "age": 0,
+    "nationality": "Bulgaria",
+    "date_of_death": "2025-12-15",
+    "facility": {
+      "name": "North Lake Processing Center",
+      "state": "MI",
+      "type": "ICE-contracted jail"
+    },
+    "custody_status": "Detained",
+    "category": [],
+    "official_cause_of_death": "Unknown - pending investigation",
+    "timeline": [
+      {
+        "date": "2025-12-15",
+        "event": "Died at North Lake Processing Center"
+      }
+    ],
+    "discrepancies": [],
+    "sources": [
+      {
+        "title": "ICE Detention Deaths Tracker",
+        "publisher": "Austin Kocher / Detention Reports",
+        "date": "2025-12-01",
+        "url": "https://austinkocher.substack.com"
+      },
+      {
+        "title": "Detention Reports Database",
+        "publisher": "Detention Reports",
+        "date": "2025-12-01",
+        "url": "https://detentionreports.com"
+      }
+    ],
+    "notes": "Age unknown at time of documentation. Bulgarian national who died at North Lake Processing Center. Limited information available - further documentation needed."
+  },
+  {
+    "id": "2025-12-14-rodriguez",
+    "name": "Dalvin Francisco Rodriguez",
+    "age": 0,
+    "nationality": "Nicaragua",
+    "date_of_death": "2025-12-14",
+    "facility": {
+      "name": "Adams County Correctional Center",
+      "state": "MS",
+      "type": "ICE-contracted jail"
+    },
+    "custody_status": "Detained",
+    "category": [],
+    "official_cause_of_death": "Unknown - pending investigation",
+    "timeline": [
+      {
+        "date": "2025-12-14",
+        "event": "Died at Adams County Correctional Center"
+      }
+    ],
+    "discrepancies": [],
+    "sources": [
+      {
+        "title": "ICE Detention Deaths Tracker",
+        "publisher": "Austin Kocher / Detention Reports",
+        "date": "2025-12-01",
+        "url": "https://austinkocher.substack.com"
+      },
+      {
+        "title": "Detention Reports Database",
+        "publisher": "Detention Reports",
+        "date": "2025-12-01",
+        "url": "https://detentionreports.com"
+      }
+    ],
+    "notes": "Age unknown at time of documentation. Nicaraguan national who died at Adams County Correctional Center. Limited information available - further documentation needed."
+  },
+  {
+    "id": "2025-12-10-sachwani",
+    "name": "Shiraz Fatehali Sachwani",
+    "age": 0,
+    "nationality": "Pakistan",
+    "date_of_death": "2025-12-10",
+    "facility": {
+      "name": "Prairieland Detention Center",
+      "city": "Alvarado",
+      "state": "TX",
+      "type": "ICE-contracted jail"
+    },
+    "custody_status": "Detained",
+    "category": [],
+    "official_cause_of_death": "Unknown - pending investigation",
+    "timeline": [
+      {
+        "date": "2025-12-10",
+        "event": "Died at detention facility in Fort Worth area"
+      }
+    ],
+    "discrepancies": [],
+    "sources": [
+      {
+        "title": "ICE Detention Deaths Tracker",
+        "publisher": "Austin Kocher / Detention Reports",
+        "date": "2025-12-01",
+        "url": "https://austinkocher.substack.com"
+      },
+      {
+        "title": "Detention Reports Database",
+        "publisher": "Detention Reports",
+        "date": "2025-12-01",
+        "url": "https://detentionreports.com"
+      }
+    ],
+    "notes": "Age unknown at time of documentation. Exact date may need verification. Pakistani national who died at a detention facility in the Fort Worth, Texas area. Limited information available - further documentation needed."
+  },
+  {
+    "id": "2025-12-05-abdulkadir",
+    "name": "Fouad Saeed Abdulkadir",
+    "age": 0,
+    "nationality": "Eritrea",
+    "date_of_death": "2025-12-05",
+    "facility": {
+      "name": "Unknown ICE Detention Facility",
+      "state": "Unknown",
+      "type": "Other"
+    },
+    "custody_status": "Detained",
+    "category": [],
+    "official_cause_of_death": "Unknown - pending investigation",
+    "timeline": [
+      {
+        "date": "2025-12-05",
+        "event": "Died in ICE custody"
+      }
+    ],
+    "discrepancies": [],
+    "sources": [
+      {
+        "title": "ICE Detention Deaths Tracker",
+        "publisher": "Austin Kocher / Detention Reports",
+        "date": "2025-12-01",
+        "url": "https://austinkocher.substack.com"
+      },
+      {
+        "title": "Detention Reports Database",
+        "publisher": "Detention Reports",
+        "date": "2025-12-01",
+        "url": "https://detentionreports.com"
+      }
+    ],
+    "notes": "Age unknown at time of documentation. Exact date and facility location need verification. Eritrean national who died in ICE custody. Limited information available - further documentation needed."
+  },
+  {
+    "id": "2025-12-03-gaspar-andres",
+    "name": "Francisco Gaspar-Andres",
+    "age": 21,
+    "nationality": "Guatemala",
+    "date_of_death": "2025-12-03",
+    "facility": {
+      "name": "Fort Bliss",
+      "state": "TX",
+      "type": "Other"
+    },
+    "custody_status": "Detained",
+    "category": [
+      "Medical neglect",
+      "Death in military detention facility"
+    ],
+    "official_cause_of_death": "Liver and kidney failure",
+    "timeline": [
+      {
+        "date": "2025-12-03",
+        "event": "Died at Fort Bliss from liver and kidney failure"
+      }
+    ],
+    "discrepancies": [],
+    "sources": [
+      {
+        "title": "ICE Detention Deaths Tracker",
+        "publisher": "Austin Kocher / Detention Reports",
+        "date": "2025-12-01",
+        "url": "https://austinkocher.substack.com"
+      },
+      {
+        "title": "Detention Reports Database",
+        "publisher": "Detention Reports",
+        "date": "2025-12-01",
+        "url": "https://detentionreports.com"
+      }
+    ],
+    "notes": "21-year-old Guatemalan national who died at Fort Bliss military facility. Limited information available - further documentation needed."
+  },
+  {
+    "id": "2025-12-01-brutus",
+    "name": "Jean Wilson Brutus",
+    "age": 0,
+    "nationality": "Haiti",
+    "date_of_death": "2025-12-01",
+    "facility": {
+      "name": "Delaney Hall",
+      "state": "NJ",
+      "type": "ICE-contracted jail"
+    },
+    "custody_status": "Detained",
+    "category": [],
+    "official_cause_of_death": "Unknown - pending investigation",
+    "timeline": [
+      {
+        "date": "2025-12-01",
+        "event": "Died at Delaney Hall detention facility"
+      }
+    ],
+    "discrepancies": [],
+    "sources": [
+      {
+        "title": "ICE Detention Deaths Tracker",
+        "publisher": "Austin Kocher / Detention Reports",
+        "date": "2025-12-01",
+        "url": "https://austinkocher.substack.com"
+      },
+      {
+        "title": "Detention Reports Database",
+        "publisher": "Detention Reports",
+        "date": "2025-12-01",
+        "url": "https://detentionreports.com"
+      }
+    ],
+    "notes": "Age unknown at time of documentation. Exact date of death may need verification. Haitian national who died at Delaney Hall. Limited information available - further documentation needed."
+  },
+  {
+    "id": "2025-09-29-xie",
+    "name": "Huabing Xie",
+    "age": 0,
+    "nationality": "China",
+    "date_of_death": "2025-09-29",
+    "facility": {
+      "name": "Imperial Regional Detention Facility",
+      "state": "CA",
+      "type": "ICE-contracted jail"
+    },
+    "custody_status": "Detained",
+    "category": [
+      "Medical neglect"
+    ],
+    "official_cause_of_death": "Seizure (died at nearby hospital)",
+    "timeline": [
+      {
+        "date": "2023-01-01",
+        "event": "Arrested along U.S.-Mexico border"
+      },
+      {
+        "date": "2023-01-15",
+        "event": "Released on order of recognizance after initial arrest"
+      },
+      {
+        "date": "2025-09-01",
+        "event": "Detained at Imperial Regional Detention Facility"
+      },
+      {
+        "date": "2025-09-29",
+        "event": "Had seizure while detained"
+      },
+      {
+        "date": "2025-09-29",
+        "event": "Died at nearby hospital"
+      },
+      {
+        "date": "2025-12-29",
+        "event": "ICE missed congressionally-mandated 90-day deadline to release death report"
+      }
+    ],
+    "discrepancies": [
+      {
+        "ice_claim": "Death report to be released per congressional mandate",
+        "counter_evidence": "ICE missed the congressionally-mandated 90-day deadline to release the death report"
+      }
+    ],
+    "sources": [
+      {
+        "title": "ICE misses deadline to release report on in-custody death in Imperial County",
+        "publisher": "KPBS",
+        "date": "2026-01-05",
+        "url": "https://www.kpbs.org/news/border-immigration/2026/01/05/ice-misses-deadline-to-release-report-on-in-custody-death-in-imperial-county"
+      }
+    ],
+    "notes": "Age unknown at time of documentation. ICE failed to comply with congressionally-mandated reporting deadline."
+  },
+  {
+    "id": "2025-09-22-ayala-uribe",
+    "name": "Ismael Ayala-Uribe",
+    "age": 39,
+    "nationality": "Mexico",
+    "date_of_death": "2025-09-22",
+    "facility": {
+      "name": "Adelanto ICE Processing Center",
+      "state": "CA",
+      "type": "ICE-contracted jail"
+    },
+    "custody_status": "Detained",
+    "category": [
+      "Medical neglect"
+    ],
+    "official_cause_of_death": "Not specified (died at nearby hospital)",
+    "timeline": [
+      {
+        "date": "2025-09-21",
+        "event": "Referred to local hospital"
+      },
+      {
+        "date": "2025-09-22",
+        "event": "Died at nearby hospital"
+      }
+    ],
+    "discrepancies": [
+      {
+        "ice_claim": "Detainee was referred to local hospital day prior to death",
+        "counter_evidence": "Ayala-Uribe was a former DACA recipient, raising questions about his detention circumstances"
+      }
+    ],
+    "sources": [
+      {
+        "title": "DACA Recipient Dies in Adelanto Detention",
+        "publisher": "Austin Kocher Substack",
+        "date": "2025-09-24",
+        "url": "https://austinkocher.substack.com/p/daca-recipient-dies-in-adelanto-detention"
+      },
+      {
+        "title": "Mexican National Dies in ICE Custody After Being Referred to Local Hospital Day Prior",
+        "publisher": "ICE",
+        "date": "2025-09-23",
+        "url": "https://www.ice.gov/news/releases/mexican-national-dies-ice-custody-after-being-referred-local-hospital-day-prior"
+      }
+    ],
+    "notes": "Former DACA recipient. 14th death in ICE custody in 2025 at time of death. Adelanto facility operated by GEO Group."
+  },
+  {
+    "id": "2025-09-18-banegas-reyes",
+    "name": "Santos Banegas Reyes",
+    "age": 42,
+    "nationality": "Honduras",
+    "date_of_death": "2025-09-18",
+    "facility": {
+      "name": "Nassau County Correctional Center",
+      "state": "NY",
+      "type": "ICE-contracted jail"
+    },
+    "custody_status": "Detained",
+    "category": [
+      "Medical neglect"
+    ],
+    "official_cause_of_death": "Liver failure (ICE statement)",
+    "timeline": [
+      {
+        "date": "2025-08-29",
+        "event": "Transferred to ICE custody"
+      },
+      {
+        "date": "2025-09-10",
+        "event": "Reported abdominal pain"
+      },
+      {
+        "date": "2025-09-18",
+        "event": "Found unresponsive in cell"
+      }
+    ],
+    "discrepancies": [
+      {
+        "ice_claim": "Death due to natural causes",
+        "counter_evidence": "Family reports untreated symptoms and delayed care"
+      }
+    ],
+    "sources": [
+      {
+        "title": "Guardian investigation",
+        "publisher": "The Guardian",
+        "date": "2026-01-04",
+        "url": "https://www.theguardian.com/example"
+      }
+    ],
+    "notes": "Autopsy pending at time of reporting"
+  },
+  {
+    "id": "2025-07-19-phan",
+    "name": "Tien Xuan Phan",
+    "age": 0,
+    "nationality": "Vietnam",
+    "date_of_death": "2025-07-19",
+    "facility": {
+      "name": "Karnes County Residential Center",
+      "state": "TX",
+      "type": "ICE-contracted jail"
+    },
+    "custody_status": "Detained",
+    "category": [],
+    "official_cause_of_death": "Unknown - pending investigation",
+    "timeline": [
+      {
+        "date": "2025-07-19",
+        "event": "Died at Karnes County Residential Center"
+      }
+    ],
+    "discrepancies": [],
+    "sources": [
+      {
+        "title": "ICE Detention Deaths Tracker",
+        "publisher": "Austin Kocher / Detention Reports",
+        "date": "2025-12-01",
+        "url": "https://austinkocher.substack.com"
+      },
+      {
+        "title": "Detention Reports Database",
+        "publisher": "Detention Reports",
+        "date": "2025-12-01",
+        "url": "https://detentionreports.com"
+      }
+    ],
+    "notes": "Age unknown at time of documentation. Vietnamese national who died at Karnes County Residential Center. Limited information available - further documentation needed."
+  },
+  {
+    "id": "2025-02-20-chernyak",
+    "name": "Maksym Chernyak",
+    "age": 0,
+    "nationality": "Ukraine",
+    "date_of_death": "2025-02-20",
+    "facility": {
+      "name": "Krome Service and Processing Center",
+      "state": "FL",
+      "type": "ICE facility"
+    },
+    "custody_status": "Detained",
+    "category": [
+      "Medical neglect"
+    ],
+    "official_cause_of_death": "Not specified by ICE",
+    "timeline": [
+      {
+        "date": "2025-02-20",
+        "event": "Died at Krome Service and Processing Center"
+      }
+    ],
+    "discrepancies": [],
+    "sources": [
+      {
+        "title": "ICE's Deadly December: Record-Setting Deaths in Immigration Detention",
+        "publisher": "Austin Kocher Substack",
+        "date": "2025-12-20",
+        "url": "https://austinkocher.substack.com/p/ices-deadly-december-record-setting"
+      }
+    ],
+    "notes": "Age unknown at time of documentation. Death coincided with sudden spike in detained population at Krome facility."
+  },
+  {
+    "id": "2024-10-27-sanchez-castro",
+    "name": "Jose Manuel Sanchez-Castro",
+    "age": 36,
+    "nationality": "Mexico",
+    "date_of_death": "2024-10-27",
+    "facility": {
+      "name": "Northwest ICE Processing Center",
+      "state": "WA",
+      "type": "ICE-contracted jail"
+    },
+    "custody_status": "Detained",
+    "category": [
+      "Medical neglect"
+    ],
+    "official_cause_of_death": "Under investigation by Pierce County Medical Examiner (suspected fentanyl withdrawal complications)",
+    "timeline": [
+      {
+        "date": "2009-08-01",
+        "event": "First entered U.S. illegally"
+      },
+      {
+        "date": "2009-08-08",
+        "event": "Voluntarily deported to Mexico one week after first arrest"
+      },
+      {
+        "date": "2024-07-01",
+        "event": "Caught illegally entering the country (8th time between 2009 and July 2024)"
+      },
+      {
+        "date": "2024-10-22",
+        "event": "Arrived at Northwest ICE Processing Center, placed in medical isolation for fentanyl withdrawal"
+      },
+      {
+        "date": "2024-10-27",
+        "event": "911 call at 7:05 AM for medical services - reported unresponsive but breathing"
+      },
+      {
+        "date": "2024-10-27",
+        "event": "Pronounced dead"
+      },
+      {
+        "date": "2024-10-30",
+        "event": "ICE releases identity of deceased"
+      }
+    ],
+    "discrepancies": [
+      {
+        "ice_claim": "Detainee was placed in medical isolation for fentanyl withdrawal",
+        "counter_evidence": "Advocacy group La Resistencia alleged ICE violated its own detention standards requiring immediate transfer to appropriate medical facility for 'severe, life-threatening intoxication or withdrawal symptoms'"
+      },
+      {
+        "ice_claim": "Detainee received medical care",
+        "counter_evidence": "Only 5 days elapsed between arrival at facility and death, raising questions about adequacy of withdrawal treatment protocols"
+      }
+    ],
+    "sources": [
+      {
+        "title": "ICE releases identity of latest death at Tacoma detention center",
+        "publisher": "KNKX",
+        "date": "2024-10-30",
+        "url": "https://www.knkx.org/social-justice/2024-10-30/immigration-customs-enforcement-releases-identity-second-death-tacoma-nw-processing-detention-center"
+      },
+      {
+        "title": "Mexican National in ICE Custody Dies at NWIPC",
+        "publisher": "ICE",
+        "date": "2024-10-28",
+        "url": "https://www.ice.gov/news/releases/mexican-national-ice-custody-dies-nwipc"
+      }
+    ],
+    "notes": "Had prior convictions for resisting arrest and manufacture/delivery of methamphetamine in Yakima County. This was the second death at Northwest ICE Processing Center in 2024."
+  },
+  {
+    "id": "2024-03-07-daniel",
+    "name": "Charles Leo Daniel",
+    "age": 61,
+    "nationality": "Trinidad and Tobago",
+    "date_of_death": "2024-03-07",
+    "facility": {
+      "name": "Northwest ICE Processing Center",
+      "state": "WA",
+      "type": "ICE-contracted jail"
+    },
+    "custody_status": "Detained",
+    "category": [
+      "Medical neglect",
+      "Solitary confinement"
+    ],
+    "official_cause_of_death": "Hypertensive and atherosclerotic cardiovascular disease (ruled natural causes by Pierce County Medical Examiner)",
+    "timeline": [
+      {
+        "date": "2020-01-01",
+        "event": "Taken into ICE custody after serving approximately 16-year sentence for second-degree murder"
+      },
+      {
+        "date": "2020-01-15",
+        "event": "Placed in solitary confinement due to mental health issues"
+      },
+      {
+        "date": "2024-03-07",
+        "event": "Found unresponsive by staff at 10:43 AM"
+      },
+      {
+        "date": "2024-03-07",
+        "event": "Pronounced dead approximately one hour after being found"
+      },
+      {
+        "date": "2024-06-10",
+        "event": "Pierce County Medical Examiner releases cause of death"
+      }
+    ],
+    "discrepancies": [
+      {
+        "ice_claim": "Death ruled natural causes",
+        "counter_evidence": "Daniel was held in solitary confinement for nearly 4 years - one of the longest stays in isolation at any U.S. immigration facility. UN considers solitary confinement over 15 days to constitute torture."
+      },
+      {
+        "ice_claim": "Daniel received appropriate care",
+        "counter_evidence": "Daniel had documented mental health issues including hearing voices, visual hallucinations, and delusions. He often refused medications. His prolonged isolation may have exacerbated his conditions."
+      }
+    ],
+    "sources": [
+      {
+        "title": "Police find man dead at Northwest ICE Processing Center in Tacoma",
+        "publisher": "KNKX",
+        "date": "2024-03-08",
+        "url": "https://www.knkx.org/tacoma/2024-03-08/police-find-man-dead-northwest-ice-processing-center-tacoma-immigration-detention"
+      },
+      {
+        "title": "Medical examiner says death of ICE detainee at Tacoma facility was due to natural causes",
+        "publisher": "KNKX",
+        "date": "2024-06-10",
+        "url": "https://www.knkx.org/social-justice/2024-06-10/piece-county-medical-examiner-tacoma-ice-detainee-charles-leo-daniel-death-natural-causes-solitary-confinement"
+      },
+      {
+        "title": "Trinidad and Tobago National in ICE Custody Dies at NWIPC",
+        "publisher": "ICE",
+        "date": "2024-03-08",
+        "url": "https://www.ice.gov/news/releases/trinidad-and-tobago-national-ice-custody-dies-nwipc"
+      }
+    ],
+    "notes": "Death sparked hunger strikes by more than 160 detainees at the facility. ICE Detainee Death Report available at https://www.ice.gov/doclib/foia/reports/ddrDanielCharlesLeo.pdf"
+  }
+]

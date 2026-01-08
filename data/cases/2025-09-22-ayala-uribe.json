@@ -1,0 +1,48 @@
+{
+  "id": "2025-09-22-ayala-uribe",
+  "name": "Ismael Ayala-Uribe",
+  "age": 39,
+  "nationality": "Mexico",
+  "date_of_death": "2025-09-22",
+  "facility": {
+    "name": "Adelanto ICE Processing Center",
+    "state": "CA",
+    "type": "ICE-contracted jail"
+  },
+  "custody_status": "Detained",
+  "category": [
+    "Medical neglect"
+  ],
+  "official_cause_of_death": "Not specified (died at nearby hospital)",
+  "timeline": [
+    {
+      "date": "2025-09-21",
+      "event": "Referred to local hospital"
+    },
+    {
+      "date": "2025-09-22",
+      "event": "Died at nearby hospital"
+    }
+  ],
+  "discrepancies": [
+    {
+      "ice_claim": "Detainee was referred to local hospital day prior to death",
+      "counter_evidence": "Ayala-Uribe was a former DACA recipient, raising questions about his detention circumstances"
+    }
+  ],
+  "sources": [
+    {
+      "title": "DACA Recipient Dies in Adelanto Detention",
+      "publisher": "Austin Kocher Substack",
+      "date": "2025-09-24",
+      "url": "https://austinkocher.substack.com/p/daca-recipient-dies-in-adelanto-detention"
+    },
+    {
+      "title": "Mexican National Dies in ICE Custody After Being Referred to Local Hospital Day Prior",
+      "publisher": "ICE",
+      "date": "2025-09-23",
+      "url": "https://www.ice.gov/news/releases/mexican-national-dies-ice-custody-after-being-referred-local-hospital-day-prior"
+    }
+  ],
+  "notes": "Former DACA recipient. 14th death in ICE custody in 2025 at time of death. Adelanto facility operated by GEO Group."
+}

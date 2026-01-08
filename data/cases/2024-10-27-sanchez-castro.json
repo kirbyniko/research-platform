@@ -1,0 +1,72 @@
+{
+  "id": "2024-10-27-sanchez-castro",
+  "name": "Jose Manuel Sanchez-Castro",
+  "age": 36,
+  "nationality": "Mexico",
+  "date_of_death": "2024-10-27",
+  "facility": {
+    "name": "Northwest ICE Processing Center",
+    "state": "WA",
+    "type": "ICE-contracted jail"
+  },
+  "custody_status": "Detained",
+  "category": [
+    "Medical neglect"
+  ],
+  "official_cause_of_death": "Under investigation by Pierce County Medical Examiner (suspected fentanyl withdrawal complications)",
+  "timeline": [
+    {
+      "date": "2009-08-01",
+      "event": "First entered U.S. illegally"
+    },
+    {
+      "date": "2009-08-08",
+      "event": "Voluntarily deported to Mexico one week after first arrest"
+    },
+    {
+      "date": "2024-07-01",
+      "event": "Caught illegally entering the country (8th time between 2009 and July 2024)"
+    },
+    {
+      "date": "2024-10-22",
+      "event": "Arrived at Northwest ICE Processing Center, placed in medical isolation for fentanyl withdrawal"
+    },
+    {
+      "date": "2024-10-27",
+      "event": "911 call at 7:05 AM for medical services - reported unresponsive but breathing"
+    },
+    {
+      "date": "2024-10-27",
+      "event": "Pronounced dead"
+    },
+    {
+      "date": "2024-10-30",
+      "event": "ICE releases identity of deceased"
+    }
+  ],
+  "discrepancies": [
+    {
+      "ice_claim": "Detainee was placed in medical isolation for fentanyl withdrawal",
+      "counter_evidence": "Advocacy group La Resistencia alleged ICE violated its own detention standards requiring immediate transfer to appropriate medical facility for 'severe, life-threatening intoxication or withdrawal symptoms'"
+    },
+    {
+      "ice_claim": "Detainee received medical care",
+      "counter_evidence": "Only 5 days elapsed between arrival at facility and death, raising questions about adequacy of withdrawal treatment protocols"
+    }
+  ],
+  "sources": [
+    {
+      "title": "ICE releases identity of latest death at Tacoma detention center",
+      "publisher": "KNKX",
+      "date": "2024-10-30",
+      "url": "https://www.knkx.org/social-justice/2024-10-30/immigration-customs-enforcement-releases-identity-second-death-tacoma-nw-processing-detention-center"
+    },
+    {
+      "title": "Mexican National in ICE Custody Dies at NWIPC",
+      "publisher": "ICE",
+      "date": "2024-10-28",
+      "url": "https://www.ice.gov/news/releases/mexican-national-ice-custody-dies-nwipc"
+    }
+  ],
+  "notes": "Had prior convictions for resisting arrest and manufacture/delivery of methamphetamine in Yakima County. This was the second death at Northwest ICE Processing Center in 2024."
+}

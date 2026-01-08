@@ -1,0 +1,38 @@
+{
+  "id": "2025-12-10-sachwani",
+  "name": "Shiraz Fatehali Sachwani",
+  "age": 0,
+  "nationality": "Pakistan",
+  "date_of_death": "2025-12-10",
+  "facility": {
+    "name": "Prairieland Detention Center",
+    "city": "Alvarado",
+    "state": "TX",
+    "type": "ICE-contracted jail"
+  },
+  "custody_status": "Detained",
+  "category": [],
+  "official_cause_of_death": "Unknown - pending investigation",
+  "timeline": [
+    {
+      "date": "2025-12-10",
+      "event": "Died at detention facility in Fort Worth area"
+    }
+  ],
+  "discrepancies": [],
+  "sources": [
+    {
+      "title": "ICE Detention Deaths Tracker",
+      "publisher": "Austin Kocher / Detention Reports",
+      "date": "2025-12-01",
+      "url": "https://austinkocher.substack.com"
+    },
+    {
+      "title": "Detention Reports Database",
+      "publisher": "Detention Reports",
+      "date": "2025-12-01",
+      "url": "https://detentionreports.com"
+    }
+  ],
+  "notes": "Age unknown at time of documentation. Exact date may need verification. Pakistani national who died at a detention facility in the Fort Worth, Texas area. Limited information available - further documentation needed."
+}

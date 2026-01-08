@@ -1,0 +1,37 @@
+{
+  "id": "2025-12-14-rodriguez",
+  "name": "Dalvin Francisco Rodriguez",
+  "age": 0,
+  "nationality": "Nicaragua",
+  "date_of_death": "2025-12-14",
+  "facility": {
+    "name": "Adams County Correctional Center",
+    "state": "MS",
+    "type": "ICE-contracted jail"
+  },
+  "custody_status": "Detained",
+  "category": [],
+  "official_cause_of_death": "Unknown - pending investigation",
+  "timeline": [
+    {
+      "date": "2025-12-14",
+      "event": "Died at Adams County Correctional Center"
+    }
+  ],
+  "discrepancies": [],
+  "sources": [
+    {
+      "title": "ICE Detention Deaths Tracker",
+      "publisher": "Austin Kocher / Detention Reports",
+      "date": "2025-12-01",
+      "url": "https://austinkocher.substack.com"
+    },
+    {
+      "title": "Detention Reports Database",
+      "publisher": "Detention Reports",
+      "date": "2025-12-01",
+      "url": "https://detentionreports.com"
+    }
+  ],
+  "notes": "Age unknown at time of documentation. Nicaraguan national who died at Adams County Correctional Center. Limited information available - further documentation needed."
+}

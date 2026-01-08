@@ -1,0 +1,71 @@
+I wrote yesterday that as of December 13, ICE was detaining a record 68,442 people in its network of 216 detention centers across the country, the highest detained population in the agency’s history. But the latest reporting today also finds that December has become the deadliest month for people in ICE custody this year, with seven deaths reported, including four people who died within a four-day span. The coincidence of these two record-setting numbers raises a concerning question about whether the detention system is growing faster than it can responsibly manage.
+
+2025 is already the deadliest year for people in ICE custody since 2004, with at least 30 deaths announced by the agency as of mid-December, according to Reuters reporters Ted Hesson and Susan Heavey. That total includes two men who were shot when a sniper opened fire at a Dallas ICE facility and a 25-year-old from Honduras who died after being struck by a vehicle while fleeing from immigration officials in Norfolk, Virginia. But most of the deaths have occurred inside detention centers or in hospitals after detainees were transferred for emergency medical care. This is an absolute tragedy.
+
+Consider supporting this work with a paid subscription this holiday season. 🎄
+
+Subscribe
+
+ICE is required to report deaths in custody within 30 days on its Detainee Death Reporting page, but the website hasn’t been updated since October, meaning none of the December deaths—or likely deaths from November either—appear there. This lag in public reporting makes it difficult to track the full scope of deaths in detention and raises questions about transparency at a time when oversight is already limited. This is just one more reason why we desperately need the transparency work of Andrew Free, whose Substack, Detention Kills, is invaluable for anyone interested in seeing how he tracks and documents these cases in detail.
+
+The death notices published by ICE offer glimpses into individual tragedies. Francisco Gaspar-Andres, a 48-year-old from Guatemala, died of liver and kidney failure on December 3 after being held at Camp East Montana in Texas since September. His wife, Lucía Pedro Juan, told the El Paso Times that immigration officers didn’t allow her to see him before she was deported to Guatemala. The couple had lived together in Florida for nearly two decades and were both detained at Camp East Montana, but she only found out her husband had been taken to a local hospital from their daughter.
+
+Dalvin Francisco Rodriguez, a 39-year-old from Nicaragua, was found without a pulse at Adams County Detention Center in Colorado on December 4 and pronounced dead ten days later on December 14, just one day after he had been scheduled for deportation, according to NOTUS. Nenko Stanev Gantchev, a 56-year-old from Bulgaria and a resident of Illinois, died at North Lake Processing Center in Michigan on December 15. While ICE stated they suspected he died of natural causes, Congresswomen Delia Ramirez and Rashida Tlaib noted in a statement that “there have been numerous complaints from family members and advocates about inhumane conditions and inadequate medical care at North Lake” and demanded a transparent investigation into reports from other detainees that Gantchev had asked for medical assistance and did not receive it in time to save his life.
+
+Two of the seven December deaths occurred in processing centers themselves. Fouad Saeed Abdulkadir, a 46-year-old from Eritrea who had been detained for 215 days, died in a processing center, as did Gantchev, according to NOTUS. The other five died in hospitals after being transferred for medical care, a pattern that raises questions about the adequacy of medical attention available inside detention facilities.
+
+These deaths come against the backdrop of an enforcement system that has expanded at an unprecedented pace since Trump took office in January. The detained population has grown nearly 28 times over for people with no criminal histories, which now make up 35% of all people held. The scale matters, but so does the composition of who is being detained. The same enforcement operations that brought ICE raids to Columbus, Ohio and other cities across the country have been justified on the grounds of public safety, yet the data shows most people being detained have no criminal convictions or even charges.
+
+There’s no way to establish a definitive causal link between the surge in detention numbers and the spike in deaths. ICE maintains that it provides comprehensive medical care and has stated that the rate of deaths, when measured against the total detained population, averages less than 1%. “ICE remains committed to ensuring that all those in its custody reside in safe, secure and humane environments,” the agency said in a statement announcing one of the latest deaths. But the timing is hard to ignore, and it invites us to think about what happens when a system expands this rapidly. A previous study found that 95% of detention deaths could have been prevented with adequate medical care.
+
+The Trump administration secured roughly $70 billion in new funding this year to hire more staff and expand detention space, yet numerous reports suggest that facilities are struggling to meet even basic standards. Camp East Montana at Fort Bliss, where Gaspar-Andres died, reportedly failed to meet at least 60 federal detention standards in an internal inspection just months after opening. North Lake Processing Center, where Gantchev died, is owned by the for-profit GEO Group and has a decades-long history of abuse allegations dating back to when it operated as a juvenile detention facility and later as a federal prison. These aren’t new facilities learning the ropes; they’re reopened facilities with troubled pasts being pressed back into service.
+
+The expansion of the detention network has relied heavily on reopening shuttered prisons and detention centers, many of which closed precisely because of poor conditions, abuse allegations, or inadequate oversight. I think it’s reasonable to be concerned that when the system is expanding this rapidly—arresting tens of thousands of people per month and shuffling them between facilities across multiple states—it is likely to strain under the pressure. Medical care, oversight, staffing levels, and basic standards could be expected to suffer as a result. My previous discussion with Nancy Hiemstra and Dierdre Conlon about their book Immigrant Detention, Inc., add a ton of research and detail to these concerns.
+
+Listen to Nancy Hiemstra and Deirdre Conlon Discuss Their New Book: "Immigration Detention Inc."
+AUSTIN KOCHER
+·
+JUNE 26, 2025
+Read full story
+
+Throughout the year, detainees, their families, attorneys, civil rights organizations and members of Congress have denounced the lack of medical attention immigrants receive in detention. Federal judges have ordered ICE to improve detention conditions in Illinois, New York and California. Congress recently regained unrestricted access to detention centers after U.S. District Judge Jia Cobb blocked the Trump administration from enforcing policies that stopped lawmakers from conducting oversight visits. Democratic Rep. LaMonica McIver of New Jersey visited Delaney Hall detention facility for oversight after the death of Jean Wilson Brutus, a 41-year-old from Haiti who died in the center earlier this month.
+
+Democratic lawmakers in particular have been sharply critical of the deaths. “ICE has a responsibility to take care of these people, something they are clearly disregarding,” said Representative Pramila Jayapal. “This is beyond horrifying.” Representative Veronica Escobar, who represents the district where the largest detention center is located, called the deaths “heartbreaking” and noted that “for the billions of taxpayer dollars that are being spent, the conditions at detention centers do not meet minimum federal standards for care of human beings.”
+
+Earlier this week, I looked at the timing of deaths in detention that have been publicly reported by ICE over the course of this calendar year and compared it to the data available at detentionreports.com. One thing I found is that many, although not all, deaths in detention coincided with a sudden spike in the detained population at that facility. This includes the death of Maksym Chernyak on February 20 at Krome Service and Processing Center, Tien Xuan Phan on July 19 at Karnes County Immigration Processing Center, and Ismael Ayala Uribe on September 22 at Adelanto ICE Processing Center. If this does represent a more substantial pattern, it suggests that facilities may be particularly vulnerable to medical emergencies during periods of rapid intake, when staff and resources are stretched thin and new arrivals with unknown medical conditions are being processed.
+
+What troubles me most is the sense that this is not just a failure of capacity but a failure of intent. The system isn’t overwhelmed by accident—it’s overwhelmed by design. The policy is to arrest and detain as many people as possible, as quickly as possible, and the infrastructure to do so humanely simply hasn’t kept pace. A detained population of 68,442 people, up from about half that at the start of the year, means managing that many individuals with medical needs, mental health challenges, and vulnerabilities that persist regardless of their legal status or custody.
+
+I don’t have proof that the record number of deaths is a direct result of the record detention numbers. But I also don’t think we need ironclad proof to recognize that when you scale up an enforcement system this aggressively, you create conditions where tragedies become routinized, baked into the system. I’ve written before about the ways in which the immigration system (see below), so for those of you who follow this research, this is not a surprise but rather a predictable outcome of a punitive system.
+
+The Precarious Life of the Migrant
+AUSTIN K
+·
+JUNE 29, 2022
+Read full story
+DACA Recipient Held at Adelanto Detention Facility Dies at Nearby Hospital, 14th Death in ICE Custody This Year
+AUSTIN KOCHER
+·
+SEPTEMBER 23, 2025
+Read full story
+Fire at Migrant Detention Facility in Juarez, Mexico, Takes the Lives of 39 People
+AUSTIN K
+·
+MARCH 30, 2023
+Read full story
+Migrants are Left to Die at the Borders of the US and the EU
+AUSTIN K
+·
+FEBRUARY 5, 2021
+Read full story
+15 Years of Data on Migrant Deaths in the El Paso Border Patrol Sector Now Available
+AUSTIN K
+·
+MARCH 19, 2024
+Read full story
+
+Seven people died in ICE custody in December. That’s seven families who will spend the holidays grieving. Meanwhile, 68,442 people will spend Christmas in detention centers, many of them separated from their own families, held in facilities that are struggling to keep up with the influx. The numbers are connected. They’re both records we shouldn’t want to set. A simple immigration violation should not be death sentence.
+
+Share
+
+Photo by engin akyurt on Unsplash
