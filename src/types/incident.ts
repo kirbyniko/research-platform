@@ -37,6 +37,24 @@ export type ViolationType =
   | 'wrongful_death'     // Death caused by negligence/misconduct
   | 'other';
 
+// Three-tier violation classification
+export type ViolationClassification = 'alleged' | 'potential' | 'possible';
+
+export interface ClassifiedViolation {
+  type: ViolationType;
+  classification: ViolationClassification;
+  basis?: ViolationBasis;  // Required for 'potential' and 'possible'
+}
+
+export interface ViolationBasis {
+  legal_framework?: string;        // e.g., "Tennessee v. Garner (1985)"
+  legal_framework_source?: string; // URL to verify the case law
+  relevant_facts?: string[];       // Facts that support this classification
+  source?: string;                 // Who alleged it (for 'alleged')
+  source_date?: string;            // When it was alleged
+  note?: string;                   // Additional context
+}
+
 export type AgencyType =
   | 'ice'                // Immigration & Customs Enforcement
   | 'ice_ere'            // ICE Enforcement & Removal Operations
@@ -338,9 +356,15 @@ export interface Incident {
   
   // What
   summary: string;               // Brief factual description
+  image_url?: string;            // Free-use image URL (Wikimedia, Unsplash, etc.)
   agencies_involved: AgencyType[];
-  violations_alleged?: ViolationType[];
   
+  // Violation classification (three-tier system)
+  violations_alleged?: ViolationType[];      // Formally alleged in lawsuit/complaint
+  violations_potential?: ViolationType[];    // Facts match case law, no formal allegation
+  violations_possible?: ViolationType[];     // Would be violation if disputed facts are true
+  violation_details_map?: Record<string, ViolationBasis>;  // Keyed by "type_classification"
+
   // Type-specific details
   death_details?: DeathDetails;
   shooting_details?: ShootingDetails;

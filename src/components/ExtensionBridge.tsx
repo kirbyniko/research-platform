@@ -17,6 +17,7 @@ interface ExtensionBridgeProps {
     quotes?: Array<{
       text: string;
       category?: string;
+      status?: string;
     }>;
     sourceUrl?: string;
     sourceTitle?: string;

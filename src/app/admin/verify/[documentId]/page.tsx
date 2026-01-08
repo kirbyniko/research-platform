@@ -8,7 +8,8 @@ import { ExtensionBridge } from '@/components/ExtensionBridge';
 
 interface Quote {
   id: number;
-  text: string;
+  quote_text: string;
+  text?: string; // Legacy support
   page_number: number;
   category: string;
   status: string;
@@ -39,6 +40,30 @@ export default function VerificationPage() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'verified' | 'rejected'>('all');
   const [extracting, setExtracting] = useState(false);
+  
+  // Case field verification state
+  const [verifiedFields, setVerifiedFields] = useState<Record<string, boolean>>({
+    name: false,
+    dateOfDeath: false,
+    age: false,
+    country: false,
+    facility: false,
+    location: false,
+    causeOfDeath: false
+  });
+  
+  // Editable case field values
+  const [caseFields, setCaseFields] = useState({
+    name: '',
+    dateOfDeath: '',
+    age: '',
+    country: '',
+    facility: '',
+    location: '',
+    causeOfDeath: '',
+    iceStatement: '',
+    sourceUrls: ''
+  });
 
   // Helper to get auth headers
   const getAuthHeaders = useCallback(() => {
@@ -78,6 +103,20 @@ export default function VerificationPage() {
           const caseData = await caseResponse.json();
           if (caseData.success && caseData.case) {
             setCaseData(caseData.case);
+            // Populate case fields
+            setCaseFields({
+              name: caseData.case.name || '',
+              dateOfDeath: caseData.case.date_of_death || '',
+              age: caseData.case.age?.toString() || '',
+              country: caseData.case.nationality || '',
+              facility: caseData.case.facility?.name || '',
+              location: caseData.case.facility?.city && caseData.case.facility?.state 
+                ? `${caseData.case.facility.city}, ${caseData.case.facility.state}`
+                : caseData.case.facility?.state || '',
+              causeOfDeath: caseData.case.official_cause_of_death || '',
+              iceStatement: '',
+              sourceUrls: caseData.case.sources?.map((s: any) => s.url).join('\n') || ''
+            });
           }
         } catch (err) {
           console.error('Failed to load case data:', err);
@@ -336,12 +375,11 @@ export default function VerificationPage() {
                 sourceUrl: pdfUrl,
                 sourceTitle: document?.original_filename || '',
                 sourceType: 'document',
-                quotes: quotes
-                  .filter(q => q.status === 'verified')
-                  .map(q => ({
-                    text: q.text,
-                    category: q.category
-                  }))
+                quotes: quotes.map(q => ({
+                  text: q.quote_text || q.text || '',
+                  category: q.category,
+                  status: q.status
+                }))
               }}
             />
             
@@ -440,84 +478,189 @@ export default function VerificationPage() {
             {/* Name */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Full Name
+                Full Name *
               </label>
-              <input
-                type="text"
-                placeholder="Last Name, First Name"
-                className="w-full px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={caseFields.name}
+                  onChange={(e) => setCaseFields({ ...caseFields, name: e.target.value })}
+                  placeholder="Last Name, First Name"
+                  className="flex-1 px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <button
+                  onClick={() => setVerifiedFields({ ...verifiedFields, name: !verifiedFields.name })}
+                  className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                    verifiedFields.name 
+                      ? 'bg-green-600 text-white' 
+                      : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                  }`}
+                  title={verifiedFields.name ? 'Verified' : 'Click to verify'}
+                >
+                  {verifiedFields.name ? '✓' : '○'}
+                </button>
+              </div>
             </div>
 
             {/* Date of Death */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Date of Death
+                Date of Death *
               </label>
-              <input
-                type="date"
-                className="w-full px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={caseFields.dateOfDeath}
+                  onChange={(e) => setCaseFields({ ...caseFields, dateOfDeath: e.target.value })}
+                  className="flex-1 px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <button
+                  onClick={() => setVerifiedFields({ ...verifiedFields, dateOfDeath: !verifiedFields.dateOfDeath })}
+                  className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                    verifiedFields.dateOfDeath 
+                      ? 'bg-green-600 text-white' 
+                      : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                  }`}
+                  title={verifiedFields.dateOfDeath ? 'Verified' : 'Click to verify'}
+                >
+                  {verifiedFields.dateOfDeath ? '✓' : '○'}
+                </button>
+              </div>
             </div>
 
             {/* Age */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Age
+                Age *
               </label>
-              <input
-                type="number"
-                placeholder="e.g., 35"
-                className="w-full px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  value={caseFields.age}
+                  onChange={(e) => setCaseFields({ ...caseFields, age: e.target.value })}
+                  placeholder="e.g., 35"
+                  className="flex-1 px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <button
+                  onClick={() => setVerifiedFields({ ...verifiedFields, age: !verifiedFields.age })}
+                  className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                    verifiedFields.age 
+                      ? 'bg-green-600 text-white' 
+                      : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                  }`}
+                  title={verifiedFields.age ? 'Verified' : 'Click to verify'}
+                >
+                  {verifiedFields.age ? '✓' : '○'}
+                </button>
+              </div>
             </div>
 
             {/* Country of Citizenship */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Country of Citizenship
+                Country of Citizenship *
               </label>
-              <input
-                type="text"
-                placeholder="e.g., Mexico"
-                className="w-full px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={caseFields.country}
+                  onChange={(e) => setCaseFields({ ...caseFields, country: e.target.value })}
+                  placeholder="e.g., Mexico"
+                  className="flex-1 px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <button
+                  onClick={() => setVerifiedFields({ ...verifiedFields, country: !verifiedFields.country })}
+                  className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                    verifiedFields.country 
+                      ? 'bg-green-600 text-white' 
+                      : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                  }`}
+                  title={verifiedFields.country ? 'Verified' : 'Click to verify'}
+                >
+                  {verifiedFields.country ? '✓' : '○'}
+                </button>
+              </div>
             </div>
 
             {/* ICE Facility */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                ICE Facility
+                ICE Facility *
               </label>
-              <input
-                type="text"
-                placeholder="Facility name"
-                className="w-full px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={caseFields.facility}
+                  onChange={(e) => setCaseFields({ ...caseFields, facility: e.target.value })}
+                  placeholder="Facility name"
+                  className="flex-1 px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <button
+                  onClick={() => setVerifiedFields({ ...verifiedFields, facility: !verifiedFields.facility })}
+                  className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                    verifiedFields.facility 
+                      ? 'bg-green-600 text-white' 
+                      : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                  }`}
+                  title={verifiedFields.facility ? 'Verified' : 'Click to verify'}
+                >
+                  {verifiedFields.facility ? '✓' : '○'}
+                </button>
+              </div>
             </div>
 
             {/* Location */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Location (City, State)
+                Location (City, State) *
               </label>
-              <input
-                type="text"
-                placeholder="e.g., Phoenix, AZ"
-                className="w-full px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={caseFields.location}
+                  onChange={(e) => setCaseFields({ ...caseFields, location: e.target.value })}
+                  placeholder="e.g., Phoenix, AZ"
+                  className="flex-1 px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <button
+                  onClick={() => setVerifiedFields({ ...verifiedFields, location: !verifiedFields.location })}
+                  className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                    verifiedFields.location 
+                      ? 'bg-green-600 text-white' 
+                      : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                  }`}
+                  title={verifiedFields.location ? 'Verified' : 'Click to verify'}
+                >
+                  {verifiedFields.location ? '✓' : '○'}
+                </button>
+              </div>
             </div>
 
             {/* Cause of Death */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Cause of Death
+                Cause of Death *
               </label>
-              <textarea
-                placeholder="As stated in official records"
-                rows={3}
-                className="w-full px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+              <div className="flex gap-2 items-start">
+                <textarea
+                  value={caseFields.causeOfDeath}
+                  onChange={(e) => setCaseFields({ ...caseFields, causeOfDeath: e.target.value })}
+                  placeholder="As stated in official records"
+                  rows={3}
+                  className="flex-1 px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <button
+                  onClick={() => setVerifiedFields({ ...verifiedFields, causeOfDeath: !verifiedFields.causeOfDeath })}
+                  className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                    verifiedFields.causeOfDeath 
+                      ? 'bg-green-600 text-white' 
+                      : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                  }`}
+                  title={verifiedFields.causeOfDeath ? 'Verified' : 'Click to verify'}
+                >
+                  {verifiedFields.causeOfDeath ? '✓' : '○'}
+                </button>
+              </div>
             </div>
 
             {/* ICE Statement */}
@@ -526,6 +669,8 @@ export default function VerificationPage() {
                 ICE Official Statement
               </label>
               <textarea
+                value={caseFields.iceStatement}
+                onChange={(e) => setCaseFields({ ...caseFields, iceStatement: e.target.value })}
                 placeholder="Verbatim from ICE"
                 rows={4}
                 className="w-full px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -538,17 +683,44 @@ export default function VerificationPage() {
                 Source URLs
               </label>
               <textarea
+                value={caseFields.sourceUrls}
+                onChange={(e) => setCaseFields({ ...caseFields, sourceUrls: e.target.value })}
                 placeholder="One URL per line"
                 rows={3}
                 className="w-full px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
+            {/* Verification Status */}
+            <div className="pt-4 border-t">
+              <div className="text-xs text-gray-600 mb-2">
+                Verification Status: {Object.values(verifiedFields).filter(Boolean).length} / {Object.keys(verifiedFields).length} fields verified
+              </div>
+              <div className="flex flex-wrap gap-1 text-xs">
+                {Object.entries(verifiedFields).map(([field, verified]) => (
+                  <span
+                    key={field}
+                    className={`px-2 py-1 rounded ${
+                      verified ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    {verified ? '✓' : '○'} {field}
+                  </span>
+                ))}
+              </div>
+            </div>
+
             {/* Save Button */}
             <button
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium"
+              disabled={!Object.values(verifiedFields).every(Boolean)}
+              className={`w-full px-4 py-2 rounded font-medium transition-colors ${
+                Object.values(verifiedFields).every(Boolean)
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+              title={!Object.values(verifiedFields).every(Boolean) ? 'Verify all required fields first' : 'Save case information'}
             >
-              Save Case Info
+              {Object.values(verifiedFields).every(Boolean) ? 'Save Case Info' : 'Verify All Fields to Save'}
             </button>
 
             {/* Create New Case */}

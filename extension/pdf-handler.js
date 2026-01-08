@@ -1,36 +1,37 @@
 // ICE Deaths Research Assistant - PDF Handler
-// Uses PDF.js to extract text from PDFs viewed in browser
+// Uses bundled PDF.js to extract text from PDFs viewed in browser
 
-// PDF.js is loaded from CDN when needed
+// PDF.js is loaded as a content script before this file
 let pdfjsLib = null;
 
-// Initialize PDF.js library
-async function initPdfJs() {
+// Initialize PDF.js library (bundled version)
+function initPdfJs() {
   if (pdfjsLib) return pdfjsLib;
   
-  return new Promise((resolve, reject) => {
-    // Load PDF.js from CDN
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    script.onload = () => {
-      pdfjsLib = window.pdfjsLib;
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      resolve(pdfjsLib);
-    };
-    script.onerror = () => reject(new Error('Failed to load PDF.js'));
-    document.head.appendChild(script);
-  });
+  // PDF.js should already be loaded via content script
+  if (window.pdfjsLib) {
+    pdfjsLib = window.pdfjsLib;
+    // Set worker to use bundled version
+    const workerUrl = chrome.runtime.getURL('pdf.worker.min.js');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+    console.log('PDF.js initialized with bundled worker:', workerUrl);
+    return pdfjsLib;
+  }
+  
+  throw new Error('PDF.js not loaded. Please reload the extension.');
 }
 
 // Extract text from PDF with page numbers
 async function extractPdfText(pdfUrl) {
   try {
-    await initPdfJs();
+    const lib = initPdfJs();
     
-    const loadingTask = pdfjsLib.getDocument(pdfUrl);
+    console.log('Loading PDF from:', pdfUrl);
+    const loadingTask = lib.getDocument(pdfUrl);
     const pdf = await loadingTask.promise;
     
     const pageCount = pdf.numPages;
+    console.log('PDF has', pageCount, 'pages');
     const pages = [];
     const sentences = [];
     

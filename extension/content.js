@@ -113,7 +113,7 @@ function setupSelectionListener() {
 }
 
 // Get current text selection
-function getSelection() {
+function getTextSelection() {
   const selection = window.getSelection();
   if (!selection || selection.rangeCount === 0) {
     return null;
@@ -466,13 +466,66 @@ function getPdfUrl() {
 
 // Extract text from PDF using PDF.js
 async function extractPdfText() {
-  // Check if PDF handler is loaded
-  if (!window.ICEDeathsPdfHandler) {
-    throw new Error('PDF handler not loaded');
+  const pdfUrl = getPdfUrl();
+  
+  // For Chrome's built-in PDF viewer, try to get text from the embed element
+  const embed = document.querySelector('embed[type="application/pdf"]');
+  if (embed) {
+    try {
+      // Chrome's PDF viewer exposes text through the embed
+      const response = await fetch(pdfUrl);
+      const blob = await response.blob();
+      
+      // Simple text extraction - read as text
+      const text = await blob.text();
+      
+      // If it's actually PDF binary, we'll need PDF.js
+      if (text.includes('%PDF-')) {
+        // Try to load and use PDF handler
+        if (window.ICEDeathsPdfHandler) {
+          return await window.ICEDeathsPdfHandler.extractPdfText(pdfUrl);
+        } else {
+          throw new Error('PDF handler not available. Please refresh the page.');
+        }
+      }
+      
+      // If we got readable text, split it into sentences
+      const sentences = text
+        .split(/[.!?]+\s+/)
+        .map(s => s.trim())
+        .filter(s => s.length > 20)
+        .map((text, i) => ({ text, pageNumber: Math.floor(i / 10) + 1 }));
+      
+      return {
+        pageCount: Math.ceil(sentences.length / 10),
+        pages: [{ pageNumber: 1, text }],
+        sentences,
+        url: pdfUrl,
+        title: getPdfTitle(pdfUrl)
+      };
+    } catch (err) {
+      console.error('Failed to extract from embed:', err);
+    }
   }
   
-  const pdfUrl = getPdfUrl();
+  // Check if PDF handler is loaded
+  if (!window.ICEDeathsPdfHandler) {
+    throw new Error('PDF handler not available. Please refresh the page and try again.');
+  }
+  
   return await window.ICEDeathsPdfHandler.extractPdfText(pdfUrl);
+}
+
+// Get PDF title from URL
+function getPdfTitle(url) {
+  try {
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split('/');
+    const filename = pathParts[pathParts.length - 1];
+    return decodeURIComponent(filename.replace('.pdf', '').replace(/-/g, ' '));
+  } catch {
+    return 'PDF Document';
+  }
 }
 
 // Message handler
@@ -490,7 +543,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const pdfSelection = window.ICEDeathsPdfHandler.getPdfSelection();
         sendResponse(pdfSelection || { text: '' });
       } else {
-        const selection = getSelection();
+        const selection = getTextSelection();
         sendResponse(selection || { text: '' });
       }
       break;
@@ -498,28 +551,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     case 'EXTRACT_ARTICLE':
       // Check if this is a PDF
       if (isPdfPage()) {
+        console.log('Detected PDF page, extracting PDF text...');
+        console.log('PDF URL:', getPdfUrl());
         extractPdfText()
           .then(result => {
+            console.log('PDF extraction successful:', result.sentences.length, 'sentences');
             sendResponse({
               ...result,
               isPdf: true,
               headline: result.title,
               date: '',
               author: '',
-              body: result.pages.map(p => p.text).join('\n\n'),
-              sentences: result.sentences.map(s => s.text)
+              body: result.pages.map(p => p.text).join('\n\n')
             });
           })
           .catch(err => {
             console.error('PDF extraction failed:', err);
             sendResponse({ 
-              error: err.message,
+              error: err.message || 'PDF extraction failed. Try refreshing the page.',
               sentences: [],
               isPdf: true 
             });
           });
         return true; // Keep channel open for async response
       } else {
+        console.log('Extracting article content...');
         const article = extractArticleWithSelectors(message.selectors);
         sendResponse(article);
       }

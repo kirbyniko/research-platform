@@ -64,6 +64,259 @@ let apiUrl = 'http://localhost:3001';
 let apiKey = '';
 let currentSelectors = {};
 let isExtracting = false;
+let currentPageIsPdf = false;
+
+// Constitutional and Legal Reference Database
+const LEGAL_REFERENCES = {
+  first_amendment: {
+    name: "First Amendment",
+    text: "Congress shall make no law respecting an establishment of religion, or prohibiting the free exercise thereof; or abridging the freedom of speech, or of the press; or the right of the people peaceably to assemble, and to petition the Government for a redress of grievances.",
+    textSource: "https://constitution.congress.gov/constitution/amendment-1/",
+    cases: [
+      {
+        name: "Brandenburg v. Ohio (1969)",
+        citation: "395 U.S. 444",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/395/444",
+        holding: "The constitutional guarantees of free speech and free press do not permit a State to forbid or proscribe advocacy of the use of force or of law violation except where such advocacy is directed to inciting or producing imminent lawless action and is likely to incite or produce such action."
+      },
+      {
+        name: "NAACP v. Claiborne Hardware Co. (1982)",
+        citation: "458 U.S. 886",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/458/886",
+        holding: "Civil liability may not be imposed merely because an individual belonged to a group, some members of which committed acts of violence."
+      },
+      {
+        name: "Nieves v. Bartlett (2019)",
+        citation: "139 S. Ct. 1715",
+        sourceUrl: "https://www.supremecourt.gov/opinions/18pdf/17-1174_m6io.pdf",
+        holding: "Because there are a 'limited number of circumstances' in which 'an officer's retaliatory intent could be sufficiently unrelated to any legitimate arrestee behavior' to allow a claim, we craft a narrow exception."
+      }
+    ],
+    applicationNotes: "[Editorial guidance - not quotable] Consider when: arrests target journalists, protesters, or activists; retaliation for criticism; suppression of peaceful assembly."
+  },
+  fourth_amendment: {
+    name: "Fourth Amendment",
+    text: "The right of the people to be secure in their persons, houses, papers, and effects, against unreasonable searches and seizures, shall not be violated, and no Warrants shall issue, but upon probable cause, supported by Oath or affirmation, and particularly describing the place to be searched, and the persons or things to be seized.",
+    textSource: "https://constitution.congress.gov/constitution/amendment-4/",
+    cases: [
+      {
+        name: "Terry v. Ohio (1968)",
+        citation: "392 U.S. 1",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/392/1",
+        holding: "Where a police officer observes unusual conduct which leads him reasonably to conclude in light of his experience that criminal activity may be afoot... he is entitled for the protection of himself and others in the area to conduct a carefully limited search of the outer clothing of such persons in an attempt to discover weapons."
+      },
+      {
+        name: "Tennessee v. Garner (1985)",
+        citation: "471 U.S. 1",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/471/1",
+        holding: "Where the suspect poses no immediate threat to the officer and no threat to others, the harm resulting from failing to apprehend him does not justify the use of deadly force to do so... A police officer may not seize an unarmed, nondangerous suspect by shooting him dead."
+      },
+      {
+        name: "Graham v. Connor (1989)",
+        citation: "490 U.S. 386",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/490/386",
+        holding: "The 'reasonableness' of a particular use of force must be judged from the perspective of a reasonable officer on the scene, rather than with the 20/20 vision of hindsight."
+      },
+      {
+        name: "Arizona v. United States (2012)",
+        citation: "567 U.S. 387",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/11-182",
+        holding: "The Federal Government has broad, undoubted power over the subject of immigration and the status of aliens."
+      }
+    ],
+    applicationNotes: "[Editorial guidance - not quotable] Consider when: arrests without probable cause; excessive force during arrests; warrantless searches; prolonged detention."
+  },
+  fifth_amendment: {
+    name: "Fifth Amendment",
+    text: "No person shall be held to answer for a capital, or otherwise infamous crime, unless on a presentment or indictment of a Grand Jury...; nor shall any person be subject for the same offence to be twice put in jeopardy of life or limb; nor shall be compelled in any criminal case to be a witness against himself, nor be deprived of life, liberty, or property, without due process of law; nor shall private property be taken for public use, without just compensation.",
+    textSource: "https://constitution.congress.gov/constitution/amendment-5/",
+    cases: [
+      {
+        name: "Mathews v. Eldridge (1976)",
+        citation: "424 U.S. 319",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/424/319",
+        holding: "Due process is flexible, and calls for such procedural protections as the particular situation demands."
+      },
+      {
+        name: "Zadvydas v. Davis (2001)",
+        citation: "533 U.S. 678",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/533/678",
+        holding: "Once an alien enters the country, the legal circumstance changes, for the Due Process Clause applies to all 'persons' within the United States, including aliens, whether their presence here is lawful, unlawful, temporary, or permanent."
+      },
+      {
+        name: "Jennings v. Rodriguez (2018)",
+        citation: "138 S. Ct. 830",
+        sourceUrl: "https://www.supremecourt.gov/opinions/17pdf/15-1204_f29g.pdf",
+        holding: "The relevant statutory provisions do not give detained aliens the right to periodic bond hearings during the course of their detention."
+      }
+    ],
+    applicationNotes: "[Editorial guidance - not quotable] Consider when: prolonged detention without hearing; deportation without adequate process; denial of opportunity to contest charges."
+  },
+  sixth_amendment: {
+    name: "Sixth Amendment",
+    text: "In all criminal prosecutions, the accused shall enjoy the right to a speedy and public trial, by an impartial jury of the State and district wherein the crime shall have been committed...; to be informed of the nature and cause of the accusation; to be confronted with the witnesses against him; to have compulsory process for obtaining witnesses in his favor, and to have the Assistance of Counsel for his defence.",
+    textSource: "https://constitution.congress.gov/constitution/amendment-6/",
+    cases: [
+      {
+        name: "Gideon v. Wainwright (1963)",
+        citation: "372 U.S. 335",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/372/335",
+        holding: "The right of one charged with crime to counsel may not be deemed fundamental and essential to fair trials in some countries, but it is in ours."
+      },
+      {
+        name: "Padilla v. Kentucky (2010)",
+        citation: "559 U.S. 356",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/08-651",
+        holding: "Counsel must inform her client whether his plea carries a risk of deportation."
+      }
+    ],
+    applicationNotes: "[Editorial guidance - not quotable] Consider when: denial of legal representation; inadequate legal counsel; lack of interpreter services."
+  },
+  eighth_amendment: {
+    name: "Eighth Amendment",
+    text: "Excessive bail shall not be required, nor excessive fines imposed, nor cruel and unusual punishments inflicted.",
+    textSource: "https://constitution.congress.gov/constitution/amendment-8/",
+    cases: [
+      {
+        name: "Estelle v. Gamble (1976)",
+        citation: "429 U.S. 97",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/429/97",
+        holding: "Deliberate indifference to serious medical needs of prisoners constitutes the 'unnecessary and wanton infliction of pain' proscribed by the Eighth Amendment."
+      },
+      {
+        name: "Farmer v. Brennan (1994)",
+        citation: "511 U.S. 825",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/511/825",
+        holding: "A prison official may be held liable under the Eighth Amendment for denying humane conditions of confinement only if he knows that inmates face a substantial risk of serious harm and disregards that risk by failing to take reasonable measures to abate it."
+      },
+      {
+        name: "Kingsley v. Hendrickson (2015)",
+        citation: "576 U.S. 389",
+        sourceUrl: "https://www.supremecourt.gov/opinions/14pdf/14-6368_m64o.pdf",
+        holding: "A pretrial detainee must show only that the force purposely or knowingly used against him was objectively unreasonable."
+      }
+    ],
+    applicationNotes: "[Editorial guidance - not quotable] Consider when: denial of medical care in detention; inhumane conditions; excessive force against detainees."
+  },
+  fourteenth_amendment: {
+    name: "Fourteenth Amendment (Section 1)",
+    text: "All persons born or naturalized in the United States, and subject to the jurisdiction thereof, are citizens of the United States and of the State wherein they reside. No State shall make or enforce any law which shall abridge the privileges or immunities of citizens of the United States; nor shall any State deprive any person of life, liberty, or property, without due process of law; nor deny to any person within its jurisdiction the equal protection of the laws.",
+    textSource: "https://constitution.congress.gov/constitution/amendment-14/",
+    cases: [
+      {
+        name: "Plyler v. Doe (1982)",
+        citation: "457 U.S. 202",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/457/202",
+        holding: "Whatever his status under the immigration laws, an alien is surely a 'person' in any ordinary sense of that term. Aliens, even aliens whose presence in this country is unlawful, have long been recognized as 'persons' guaranteed due process of law by the Fifth and Fourteenth Amendments."
+      },
+      {
+        name: "Yick Wo v. Hopkins (1886)",
+        citation: "118 U.S. 356",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/118/356",
+        holding: "The fourteenth amendment to the constitution is not confined to the protection of citizens... These provisions are universal in their application, to all persons within the territorial jurisdiction."
+      },
+      {
+        name: "Wong Wing v. United States (1896)",
+        citation: "163 U.S. 228",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/163/228",
+        holding: "All persons within the territory of the United States are entitled to the protection guaranteed by those amendments, and... even aliens shall not be held to answer for a capital or other infamous crime, unless on a presentment or indictment of a grand jury."
+      }
+    ],
+    applicationNotes: "[Editorial guidance - not quotable] Consider when: discrimination based on nationality; selective enforcement; denial of equal legal protections."
+  },
+  civil_rights: {
+    name: "Civil Rights Statutes",
+    text: "42 U.S.C. § 1983: Every person who, under color of any statute, ordinance, regulation, custom, or usage, of any State or Territory... subjects, or causes to be subjected, any citizen of the United States or other person within the jurisdiction thereof to the deprivation of any rights, privileges, or immunities secured by the Constitution and laws, shall be liable to the party injured.",
+    textSource: "https://www.law.cornell.edu/uscode/text/42/1983",
+    cases: [
+      {
+        name: "Monroe v. Pape (1961)",
+        citation: "365 U.S. 167",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/365/167",
+        holding: "Section 1979 [now § 1983] should be read against the background of tort liability that makes a man responsible for the natural consequences of his actions."
+      },
+      {
+        name: "Monell v. Department of Social Services (1978)",
+        citation: "436 U.S. 658",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/436/658",
+        holding: "Local governing bodies... can be sued directly under § 1983 for monetary, declaratory, or injunctive relief where... the action that is alleged to be unconstitutional implements or executes a policy statement, ordinance, regulation, or decision officially adopted and promulgated by that body's officers."
+      },
+      {
+        name: "Bivens v. Six Unknown Named Agents (1971)",
+        citation: "403 U.S. 388",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/403/388",
+        holding: "The Fourth Amendment operates as a limitation upon the exercise of federal power... and where federally protected rights have been invaded, it has been the rule from the beginning that courts will be alert to adjust their remedies so as to grant the necessary relief."
+      }
+    ],
+    applicationNotes: "[Editorial guidance - not quotable] Consider when: any constitutional violation by government officials; basis for § 1983 or Bivens lawsuits."
+  },
+  excessive_force: {
+    name: "Excessive Force Standards",
+    text: "[No constitutional text - derived from 4th/8th/14th Amendment case law]",
+    textSource: null,
+    cases: [
+      {
+        name: "Graham v. Connor (1989)",
+        citation: "490 U.S. 386",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/490/386",
+        holding: "Our Fourth Amendment jurisprudence has long recognized that the right to make an arrest or investigatory stop necessarily carries with it the right to use some degree of physical coercion or threat thereof to effect it... The calculus of reasonableness must embody allowance for the fact that police officers are often forced to make split-second judgments—in circumstances that are tense, uncertain, and rapidly evolving."
+      },
+      {
+        name: "Tennessee v. Garner (1985)",
+        citation: "471 U.S. 1",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/471/1",
+        holding: "Where the suspect poses no immediate threat to the officer and no threat to others, the harm resulting from failing to apprehend him does not justify the use of deadly force to do so."
+      },
+      {
+        name: "Scott v. Harris (2007)",
+        citation: "550 U.S. 372",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/550/372",
+        holding: "A police officer's attempt to terminate a dangerous high-speed car chase that threatens the lives of innocent bystanders does not violate the Fourth Amendment, even when it places the fleeing motorist at risk of serious injury or death."
+      }
+    ],
+    applicationNotes: "[Editorial guidance - not quotable] Graham factors: (1) severity of crime, (2) immediate threat posed, (3) active resistance/evasion."
+  },
+  wrongful_death: {
+    name: "Wrongful Death & Deliberate Indifference",
+    text: "[No constitutional text - derived from 8th/14th Amendment case law and state tort law]",
+    textSource: null,
+    cases: [
+      {
+        name: "Estate of Owensby v. City of Cincinnati (6th Cir. 2005)",
+        citation: "414 F.3d 596",
+        sourceUrl: "https://caselaw.findlaw.com/court/us-6th-circuit/1234567.html",
+        holding: "[Note: Circuit court decisions should be verified. Consult Westlaw/LexisNexis for authoritative text.]"
+      },
+      {
+        name: "County of Sacramento v. Lewis (1998)",
+        citation: "523 U.S. 833",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/523/833",
+        holding: "The touchstone of due process is protection of the individual against arbitrary action of government... only the most egregious official conduct can be said to be 'arbitrary in the constitutional sense.'"
+      }
+    ],
+    applicationNotes: "[Editorial guidance - not quotable] Consider when: deaths from medical neglect; deaths from excessive force; failure to protect from known dangers."
+  },
+  asylum_violation: {
+    name: "Asylum & Refugee Law",
+    text: "8 U.S.C. § 1158(a)(1): Any alien who is physically present in the United States or who arrives in the United States (whether or not at a designated port of arrival...), irrespective of such alien's status, may apply for asylum.",
+    textSource: "https://www.law.cornell.edu/uscode/text/8/1158",
+    cases: [
+      {
+        name: "INS v. Cardoza-Fonseca (1987)",
+        citation: "480 U.S. 421",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/480/421",
+        holding: "There is simply no room in the United Nations' definition for concluding that because an applicant only has a 10% chance of being shot, tortured, or otherwise persecuted, that he or she has no 'well-founded fear' of the event happening."
+      },
+      {
+        name: "Sale v. Haitian Centers Council (1993)",
+        citation: "509 U.S. 155",
+        sourceUrl: "https://www.law.cornell.edu/supremecourt/text/509/155",
+        holding: "Neither the text nor the negotiating history of [INA § 243(h)] suggests that Congress intended the statute to have extraterritorial application."
+      }
+    ],
+    applicationNotes: "[Editorial guidance - not quotable] Consider when: deportation to danger; denial of asylum hearings; expedited removal without screening."
+  }
+};
 
 // Default CSS selectors
 const DEFAULT_SELECTORS = {
@@ -120,9 +373,31 @@ async function init() {
   await loadSettings();
   await loadState();
   setupEventListeners();
+  setupQuoteAssociationListeners();
   setupTabs();
   checkConnection();
   updatePageInfo();
+  loadQuoteAssociations();
+  
+  // Check if opened in wide mode popup
+  if (window.location.search.includes('wide=true')) {
+    enableWideMode();
+  }
+}
+
+// Enable wide mode layout (for popup window)
+function enableWideMode() {
+  document.body.classList.add('wide-mode');
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    if (tab.id !== 'tab-settings') {
+      tab.classList.add('active');
+    }
+  });
+  // Hide the wide mode button since we're already in wide mode
+  const wideModeBtn = document.getElementById('wideModeBtn');
+  if (wideModeBtn) {
+    wideModeBtn.style.display = 'none';
+  }
 }
 
 // Cache DOM elements
@@ -141,6 +416,10 @@ function cacheElements() {
   elements.caseFacility = document.getElementById('caseFacility');
   elements.caseLocation = document.getElementById('caseLocation');
   elements.caseCause = document.getElementById('caseCause');
+  elements.caseImageUrl = document.getElementById('caseImageUrl');
+  elements.caseImagePreview = document.getElementById('caseImagePreview');
+  elements.imagePreviewContainer = document.getElementById('imagePreviewContainer');
+  elements.removeImageBtn = document.getElementById('removeImageBtn');
   // Sections that show/hide based on type
   elements.violationsSection = document.getElementById('violationsSection');
   elements.deathFields = document.getElementById('deathFields');
@@ -305,14 +584,21 @@ function setupTabs() {
   const tabs = document.querySelectorAll('.tab');
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
+      // In wide mode, only tabs nav is hidden but we still track active state
+      const isWideMode = document.body.classList.contains('wide-mode');
+      
       // Remove active class from all tabs
       tabs.forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
       
       // Add active class to clicked tab
       tab.classList.add('active');
-      const tabId = `tab-${tab.dataset.tab}`;
-      document.getElementById(tabId).classList.add('active');
+      
+      if (!isWideMode) {
+        // Only change tab content visibility in normal mode
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        const tabId = `tab-${tab.dataset.tab}`;
+        document.getElementById(tabId).classList.add('active');
+      }
       
       // Update selectors when config tab is opened
       if (tab.dataset.tab === 'config') {
@@ -335,6 +621,14 @@ function setupEventListeners() {
       });
     }
   });
+  
+  // Case image URL - show preview on valid URL
+  if (elements.caseImageUrl) {
+    elements.caseImageUrl.addEventListener('input', handleImageUrlChange);
+  }
+  if (elements.removeImageBtn) {
+    elements.removeImageBtn.addEventListener('click', removeImage);
+  }
   
   // Death-specific fields
   ['deathCause', 'deathManner', 'deathCustodyDuration'].forEach(id => {
@@ -382,10 +676,42 @@ function setupEventListeners() {
     checkbox.addEventListener('change', updateCaseFromForm);
   });
   
-  // Violation checkboxes
-  document.querySelectorAll('[id^="violation-"]').forEach(checkbox => {
-    checkbox.addEventListener('change', updateCaseFromForm);
+  // Violation select dropdowns (three-tier system)
+  document.querySelectorAll('.violation-select').forEach(select => {
+    select.addEventListener('change', (e) => {
+      updateViolationSelectStyle(e.target);
+      updateViolationBasisVisibility();
+      updateCaseFromForm();
+    });
   });
+  
+  // Violation basis save button
+  const saveViolationBasisBtn = document.getElementById('saveViolationBasis');
+  if (saveViolationBasisBtn) {
+    saveViolationBasisBtn.addEventListener('click', saveViolationBasis);
+  }
+  
+  // Violation basis type dropdown - populate case law when changed
+  const violationBasisType = document.getElementById('violationBasisType');
+  if (violationBasisType) {
+    violationBasisType.addEventListener('change', populateCaseLawDropdown);
+  }
+  
+  // Case law dropdown - show custom input when "custom" selected
+  const caseLawSelect = document.getElementById('violationCaseLawSelect');
+  if (caseLawSelect) {
+    caseLawSelect.addEventListener('change', handleCaseLawSelection);
+  }
+  
+  // View selected case law button
+  const viewCaseLawBtn = document.getElementById('viewSelectedCaseLaw');
+  console.log('View case law button found:', !!viewCaseLawBtn);
+  if (viewCaseLawBtn) {
+    viewCaseLawBtn.addEventListener('click', () => {
+      console.log('View button clicked');
+      viewSelectedCaseLaw();
+    });
+  }
   
   // Agencies collapsible
   if (elements.agenciesHeader) {
@@ -486,6 +812,12 @@ function setupEventListeners() {
     elements.openOverlayBtn.addEventListener('click', openOverlayOnPage);
   }
   
+  // Wide mode toggle button
+  const wideModeBtn = document.getElementById('wideModeBtn');
+  if (wideModeBtn) {
+    wideModeBtn.addEventListener('click', toggleWideMode);
+  }
+  
   // Clear highlights button
   if (elements.clearHighlightsBtn) {
     elements.clearHighlightsBtn.addEventListener('click', clearAllHighlights);
@@ -536,6 +868,51 @@ function setupEventListeners() {
   elements.copyAllQuotesBtn.addEventListener('click', copyAllQuotes);
   elements.caseSearchInput.addEventListener('input', debounce(searchCases, 300));
   elements.clearAllDataBtn.addEventListener('click', clearAllData);
+  
+  // Event delegation for quote actions (avoids inline handlers blocked by CSP)
+  document.addEventListener('click', (e) => {
+    const action = e.target.dataset.action;
+    if (!action) return;
+    
+    const id = e.target.dataset.id;
+    const isVerified = e.target.dataset.verified === 'true';
+    const page = e.target.dataset.page;
+    
+    switch (action) {
+      case 'accept':
+        acceptQuote(id);
+        break;
+      case 'reject':
+        rejectQuote(id);
+        break;
+      case 'copy':
+        copyQuote(id, isVerified);
+        break;
+      case 'find':
+        highlightAndScroll(id, isVerified);
+        break;
+      case 'pin':
+        togglePinHighlight(id, isVerified);
+        break;
+      case 'goToPage':
+        goToPage(parseInt(page));
+        break;
+      case 'removeVerified':
+        removeVerifiedQuote(id);
+        break;
+    }
+  });
+}
+
+// Toggle wide mode - open in a popup window for wider view
+function toggleWideMode() {
+  // Open sidepanel in a new popup window with larger dimensions
+  chrome.windows.create({
+    url: chrome.runtime.getURL('sidepanel.html') + '?wide=true',
+    type: 'popup',
+    width: 1200,
+    height: 800
+  });
 }
 
 // Open the overlay panel on the current page
@@ -648,7 +1025,7 @@ async function updatePageInfo() {
                                  tab.url === 'about:blank';
         
         if (isRestrictedPage) {
-          elements.pageInfo.textContent = '⚠️ Cannot run on system pages';
+          elements.pageInfo.textContent = 'Cannot run on system pages';
           elements.pageInfo.style.color = '#ef4444';
           return;
         }
@@ -664,22 +1041,22 @@ async function updatePageInfo() {
               if (retries < maxRetries) {
                 // Retry after delay
                 elements.pageInfo.textContent = isPdf ? 
-                  `📄 ${url.hostname} (checking...)` : 
+                  `${url.hostname} (checking...)` : 
                   `${url.hostname} (checking...)`;
                 elements.pageInfo.style.color = '#f59e0b';
                 setTimeout(tryPing, 300);
               } else {
                 // Max retries reached
                 elements.pageInfo.textContent = isPdf ? 
-                  `📄 ${url.hostname} (refresh page)` : 
+                  `${url.hostname} (refresh page)` : 
                   `${url.hostname} (refresh page)`;
                 elements.pageInfo.style.color = '#f59e0b';
               }
             } else {
               // Success
               elements.pageInfo.textContent = isPdf ? 
-                `📄 ${url.hostname} ✓` : 
-                `${url.hostname} ✓`;
+                `${url.hostname} [ready]` :
+                `${url.hostname} [ready]`;
               elements.pageInfo.style.color = '#22c55e';
             }
           });
@@ -692,6 +1069,13 @@ async function updatePageInfo() {
           elements.extractBtn.textContent = isPdf ? 
             'Extract PDF Content' : 
             'Extract Article Content';
+        }
+        
+        // Track PDF status and re-render quotes if changed
+        if (currentPageIsPdf !== isPdf) {
+          currentPageIsPdf = isPdf;
+          renderQuotes();
+          renderPendingQuotes();
         }
       } catch {
         elements.pageInfo.textContent = '-';
@@ -825,6 +1209,17 @@ function populateCaseForm() {
   elements.caseLocation.value = currentCase.location || '';
   elements.caseCause.value = currentCase.causeOfDeath || '';
   
+  // Populate image URL and show preview if valid
+  if (elements.caseImageUrl) {
+    elements.caseImageUrl.value = currentCase.imageUrl || '';
+    if (currentCase.imageUrl) {
+      elements.caseImagePreview.src = currentCase.imageUrl;
+      elements.imagePreviewContainer.style.display = 'block';
+    } else {
+      elements.imagePreviewContainer.style.display = 'none';
+    }
+  }
+  
   // Populate occupation
   if (elements.caseOccupation) {
     elements.caseOccupation.value = currentCase.occupation || '';
@@ -842,11 +1237,29 @@ function populateCaseForm() {
     checkbox.checked = currentCase.agencies && currentCase.agencies.includes(agency);
   });
   
-  // Populate violations
-  document.querySelectorAll('[id^="violation-"]').forEach(checkbox => {
-    const violation = checkbox.value;
-    checkbox.checked = currentCase.violations && currentCase.violations.includes(violation);
+  // Populate violations (new three-tier system)
+  document.querySelectorAll('.violation-select').forEach(select => {
+    const violation = select.dataset.violation;
+    let classification = '';
+    
+    // Check each tier
+    if (currentCase.violations_alleged && currentCase.violations_alleged.includes(violation)) {
+      classification = 'alleged';
+    } else if (currentCase.violations_potential && currentCase.violations_potential.includes(violation)) {
+      classification = 'potential';
+    } else if (currentCase.violations_possible && currentCase.violations_possible.includes(violation)) {
+      classification = 'possible';
+    } else if (currentCase.violations && currentCase.violations.includes(violation)) {
+      // Legacy support - treat as alleged
+      classification = 'alleged';
+    }
+    
+    select.value = classification;
+    updateViolationSelectStyle(select);
   });
+  
+  // Show/hide violation basis section
+  updateViolationBasisVisibility();
   
   // Populate type-specific fields
   if (elements.deathCause) elements.deathCause.value = currentCase.deathCause || '';
@@ -896,6 +1309,404 @@ function populateCaseForm() {
   if (elements.protestPermitted) elements.protestPermitted.checked = currentCase.protestPermitted || false;
   if (elements.dispersalMethod) elements.dispersalMethod.value = currentCase.dispersalMethod || '';
   if (elements.arrestsMade) elements.arrestsMade.value = currentCase.arrestsMade || '';
+}
+
+// ============================================
+// VIOLATION CLASSIFICATION (THREE-TIER SYSTEM)
+// ============================================
+
+// Update violation select dropdown styling based on value
+function updateViolationSelectStyle(select) {
+  select.classList.remove('has-value-alleged', 'has-value-potential', 'has-value-possible');
+  const violationItem = select.closest('.violation-item');
+  
+  if (select.value) {
+    select.classList.add(`has-value-${select.value}`);
+    if (violationItem) violationItem.classList.add('has-violation');
+  } else {
+    if (violationItem) violationItem.classList.remove('has-violation');
+  }
+}
+
+// Show/hide violation basis section based on whether potential/possible is selected
+function updateViolationBasisVisibility() {
+  const basisSection = document.getElementById('violationBasisSection');
+  if (!basisSection) return;
+  
+  let hasPotentialOrPossible = false;
+  document.querySelectorAll('.violation-select').forEach(select => {
+    if (select.value === 'potential' || select.value === 'possible') {
+      hasPotentialOrPossible = true;
+    }
+  });
+  
+  basisSection.classList.toggle('hidden', !hasPotentialOrPossible);
+  
+  // Update the violation type dropdown to only show selected violations
+  if (hasPotentialOrPossible) {
+    populateViolationTypeDropdown();
+  }
+}
+
+// Populate the violation type dropdown with only selected potential/possible violations
+function populateViolationTypeDropdown() {
+  const violationBasisType = document.getElementById('violationBasisType');
+  if (!violationBasisType) return;
+  
+  const currentValue = violationBasisType.value;
+  
+  // Clear and rebuild
+  violationBasisType.innerHTML = '<option value="">Select violation...</option>';
+  
+  // Map of violation data-violation values to display names and LEGAL_REFERENCES keys
+  const violationMap = {
+    'first_amendment': { display: '1st Amendment (Speech/Assembly)', refKey: 'first_amendment' },
+    'fourth_amendment': { display: '4th Amendment (Search & Seizure)', refKey: 'fourth_amendment' },
+    'fifth_amendment': { display: '5th Amendment (Due Process)', refKey: 'fifth_amendment' },
+    'sixth_amendment': { display: '6th Amendment (Right to Counsel)', refKey: 'sixth_amendment' },
+    'eighth_amendment': { display: '8th Amendment (Cruel & Unusual)', refKey: 'eighth_amendment' },
+    '14th_amendment': { display: '14th Amendment (Equal Protection)', refKey: 'fourteenth_amendment' },
+    'civil_rights': { display: 'Civil Rights (§ 1983/Bivens)', refKey: 'civil_rights' },
+    'excessive_force': { display: 'Excessive Force', refKey: 'excessive_force' },
+    'wrongful_death': { display: 'Wrongful Death', refKey: 'wrongful_death' },
+    'asylum_violation': { display: 'Asylum Violation', refKey: 'asylum_violation' }
+  };
+  
+  // Find which violations are set to potential or possible
+  document.querySelectorAll('.violation-select').forEach(select => {
+    if (select.value === 'potential' || select.value === 'possible') {
+      const violationType = select.dataset.violation;
+      const mapping = violationMap[violationType];
+      
+      if (mapping) {
+        const option = document.createElement('option');
+        option.value = mapping.refKey;
+        option.textContent = `${mapping.display} [${select.value}]`;
+        violationBasisType.appendChild(option);
+      }
+    }
+  });
+  
+  // Try to restore previous selection if still valid
+  if (currentValue) {
+    const options = Array.from(violationBasisType.options);
+    const stillValid = options.some(opt => opt.value === currentValue);
+    if (stillValid) {
+      violationBasisType.value = currentValue;
+    } else {
+      // Reset case law dropdown too
+      populateCaseLawDropdown();
+    }
+  }
+}
+
+// Populate case law dropdown based on selected violation type
+function populateCaseLawDropdown() {
+  const violationType = document.getElementById('violationBasisType')?.value;
+  const caseLawSelect = document.getElementById('violationCaseLawSelect');
+  const customInput = document.getElementById('violationLegalFrameworkCustom');
+  
+  if (!caseLawSelect) return;
+  
+  // Reset dropdown
+  caseLawSelect.innerHTML = '<option value="">Select case law...</option><option value="custom">-- Custom Entry --</option>';
+  
+  // Hide custom input by default
+  if (customInput) {
+    customInput.classList.add('hidden');
+    customInput.value = '';
+  }
+  
+  if (!violationType || !LEGAL_REFERENCES[violationType]) {
+    return;
+  }
+  
+  const ref = LEGAL_REFERENCES[violationType];
+  
+  // Add cases from the selected violation type
+  if (ref.cases && ref.cases.length > 0) {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = ref.name;
+    
+    ref.cases.forEach((caseItem, idx) => {
+      const option = document.createElement('option');
+      option.value = `${violationType}:${idx}`;
+      option.textContent = `${caseItem.name} (${caseItem.citation})`;
+      option.dataset.holding = caseItem.holding;
+      option.dataset.sourceUrl = caseItem.sourceUrl || '';
+      optgroup.appendChild(option);
+    });
+    
+    caseLawSelect.appendChild(optgroup);
+  }
+  
+  // Also add common cross-referenced cases if relevant
+  const crossRefs = getCrossReferencedCases(violationType);
+  if (crossRefs.length > 0) {
+    const crossOptgroup = document.createElement('optgroup');
+    crossOptgroup.label = 'Related Case Law';
+    
+    crossRefs.forEach(item => {
+      const option = document.createElement('option');
+      option.value = `${item.type}:${item.idx}`;
+      option.textContent = `${item.caseItem.name} (${item.caseItem.citation})`;
+      option.dataset.holding = item.caseItem.holding;
+      option.dataset.sourceUrl = item.caseItem.sourceUrl || '';
+      crossOptgroup.appendChild(option);
+    });
+    
+    caseLawSelect.appendChild(crossOptgroup);
+  }
+}
+
+// Get cross-referenced cases that might apply to multiple violation types
+function getCrossReferencedCases(violationType) {
+  const crossRefs = [];
+  
+  // Common cross-references
+  const crossRefMap = {
+    'fourth_amendment': ['excessive_force'],
+    'excessive_force': ['fourth_amendment', 'eighth_amendment'],
+    'eighth_amendment': ['fourteenth_amendment'],
+    'wrongful_death': ['fourth_amendment', 'eighth_amendment', 'excessive_force'],
+    'fourteenth_amendment': ['fifth_amendment'],
+    'civil_rights': ['fourth_amendment', 'eighth_amendment']
+  };
+  
+  const relatedTypes = crossRefMap[violationType] || [];
+  
+  relatedTypes.forEach(relType => {
+    const ref = LEGAL_REFERENCES[relType];
+    if (ref && ref.cases) {
+      ref.cases.forEach((caseItem, idx) => {
+        // Avoid duplicates
+        const alreadyIncluded = crossRefs.some(cr => 
+          cr.caseItem.name === caseItem.name
+        );
+        if (!alreadyIncluded) {
+          crossRefs.push({ type: relType, idx, caseItem });
+        }
+      });
+    }
+  });
+  
+  return crossRefs;
+}
+
+// Handle case law dropdown selection
+function handleCaseLawSelection() {
+  const caseLawSelect = document.getElementById('violationCaseLawSelect');
+  const customInput = document.getElementById('violationLegalFrameworkCustom');
+  const hiddenInput = document.getElementById('violationLegalFramework');
+  
+  if (!caseLawSelect) return;
+  
+  const value = caseLawSelect.value;
+  
+  if (value === 'custom') {
+    // Show custom input
+    if (customInput) {
+      customInput.classList.remove('hidden');
+      customInput.focus();
+    }
+    if (hiddenInput) hiddenInput.value = '';
+  } else if (value && value.includes(':')) {
+    // Hide custom input
+    if (customInput) {
+      customInput.classList.add('hidden');
+      customInput.value = '';
+    }
+    
+    // Parse the selected case
+    const [violationType, caseIdx] = value.split(':');
+    const ref = LEGAL_REFERENCES[violationType];
+    if (ref && ref.cases && ref.cases[parseInt(caseIdx)]) {
+      const caseItem = ref.cases[parseInt(caseIdx)];
+      const frameworkValue = `${caseItem.name} (${caseItem.citation})`;
+      if (hiddenInput) hiddenInput.value = frameworkValue;
+    }
+  } else {
+    // No selection
+    if (customInput) {
+      customInput.classList.add('hidden');
+      customInput.value = '';
+    }
+    if (hiddenInput) hiddenInput.value = '';
+  }
+}
+
+// View selected case law details
+function viewSelectedCaseLaw() {
+  console.log('viewSelectedCaseLaw called');
+  const caseLawSelect = document.getElementById('violationCaseLawSelect');
+  console.log('caseLawSelect element:', caseLawSelect);
+  console.log('caseLawSelect value:', caseLawSelect?.value);
+  
+  if (!caseLawSelect || !caseLawSelect.value) {
+    console.log('No selection - showing notification');
+    showNotification('Please select a case law from the dropdown first.', 'warning');
+    return;
+  }
+  
+  const value = caseLawSelect.value;
+  
+  if (value === 'custom') {
+    showNotification('Custom entries have no associated case details to view.', 'info');
+    return;
+  }
+  
+  if (!value.includes(':')) {
+    showNotification('Please select a specific case law from the dropdown.', 'warning');
+    return;
+  }
+  
+  // Parse the selected case
+  const [violationType, caseIdx] = value.split(':');
+  const ref = LEGAL_REFERENCES[violationType];
+  
+  if (!ref) {
+    showNotification(`No legal reference found for type: ${violationType}`, 'error');
+    console.error('LEGAL_REFERENCES keys:', Object.keys(LEGAL_REFERENCES));
+    console.error('Attempted violation type:', violationType);
+    return;
+  }
+  
+  if (!ref.cases || !ref.cases[parseInt(caseIdx)]) {
+    showNotification(`Case index ${caseIdx} not found for ${violationType}`, 'error');
+    return;
+  }
+  
+  const caseItem = ref.cases[parseInt(caseIdx)];
+  
+  // Build modal content
+  let content = `
+    <div class="case-law-detail-view">
+      <h3 style="margin: 0 0 15px 0; color: #1e3a5f; font-size: 16px;">${caseItem.name}</h3>
+      
+      <div style="margin-bottom: 15px;">
+        <strong style="color: #666;">Citation:</strong>
+        <div style="margin-top: 5px; font-family: monospace; background: #f5f5f5; padding: 8px; border-radius: 4px;">
+          ${caseItem.citation}
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <strong style="color: #666;">Holding:</strong>
+        <div style="margin-top: 5px; background: #fff9e6; padding: 10px; border-left: 3px solid #f59e0b; border-radius: 4px; line-height: 1.5;">
+          "${caseItem.holding}"
+        </div>
+        <div style="margin-top: 8px; display: flex; gap: 10px;">
+          <button onclick="copyToClipboard(\`${caseItem.holding.replace(/`/g, '\\`').replace(/"/g, '\\"')}\`)" 
+                  style="padding: 5px 10px; background: #e5e7eb; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+            📋 Copy Holding
+          </button>
+          <button onclick="copyToClipboard(\`${caseItem.name} (${caseItem.citation})\`)" 
+                  style="padding: 5px 10px; background: #e5e7eb; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+            📋 Copy Citation
+          </button>
+        </div>
+      </div>
+      
+      ${caseItem.sourceUrl ? `
+      <div style="margin-bottom: 10px;">
+        <strong style="color: #666;">Verification Link:</strong>
+        <div style="margin-top: 5px;">
+          <a href="${caseItem.sourceUrl}" target="_blank" style="color: #2563eb; word-break: break-all;">
+            ${caseItem.sourceUrl}
+          </a>
+        </div>
+      </div>
+      ` : ''}
+      
+      <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
+        <strong style="color: #666;">Violation Type:</strong>
+        <span style="margin-left: 5px;">${ref.name}</span>
+      </div>
+    </div>
+  `;
+  
+  // Open the legal ref modal with this content
+  const modal = document.getElementById('legalRefModal');
+  const modalTitle = document.getElementById('legalRefTitle');
+  const modalBody = document.getElementById('legalRefBody');
+  
+  console.log('Modal elements:', { modal: !!modal, modalTitle: !!modalTitle, modalBody: !!modalBody });
+  
+  if (modal && modalTitle && modalBody) {
+    modalTitle.textContent = 'Case Law Details';
+    modalBody.innerHTML = content;
+    modal.classList.add('active');
+    console.log('Modal should be visible now');
+  }
+}
+
+// Helper function to copy text to clipboard
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    // Brief visual feedback could be added here
+    console.log('Copied to clipboard');
+  }).catch(err => {
+    console.error('Failed to copy:', err);
+    alert('Failed to copy to clipboard');
+  });
+}
+
+// Save violation basis information
+function saveViolationBasis() {
+  // Get legal framework from dropdown or custom input
+  const caseLawSelect = document.getElementById('violationCaseLawSelect');
+  const customInput = document.getElementById('violationLegalFrameworkCustom');
+  const hiddenInput = document.getElementById('violationLegalFramework');
+  
+  let legalFramework = '';
+  let sourceUrl = '';
+  
+  if (caseLawSelect?.value === 'custom' && customInput) {
+    legalFramework = customInput.value.trim();
+  } else if (caseLawSelect?.value && caseLawSelect.value.includes(':')) {
+    const selectedOption = caseLawSelect.selectedOptions[0];
+    legalFramework = hiddenInput?.value || selectedOption?.textContent || '';
+    sourceUrl = selectedOption?.dataset?.sourceUrl || '';
+  }
+  
+  const relevantFactsRaw = document.getElementById('violationRelevantFacts')?.value || '';
+  const note = document.getElementById('violationNote')?.value || '';
+  
+  const relevantFacts = relevantFactsRaw.split('\n').filter(f => f.trim());
+  
+  // Get all potential/possible violations
+  const violationsNeedingBasis = [];
+  document.querySelectorAll('.violation-select').forEach(select => {
+    if (select.value === 'potential' || select.value === 'possible') {
+      violationsNeedingBasis.push({
+        type: select.dataset.violation,
+        classification: select.value
+      });
+    }
+  });
+  
+  if (violationsNeedingBasis.length === 0) {
+    showNotification('No potential/possible violations to document', 'warning');
+    return;
+  }
+  
+  // Initialize violation_details_map if not exists
+  if (!currentCase.violation_details_map) {
+    currentCase.violation_details_map = {};
+  }
+  
+  // Apply the same basis to all potential/possible violations
+  violationsNeedingBasis.forEach(v => {
+    const key = `${v.type}_${v.classification}`;
+    currentCase.violation_details_map[key] = {
+      legal_framework: legalFramework || undefined,
+      legal_framework_source: sourceUrl || undefined,
+      relevant_facts: relevantFacts.length > 0 ? relevantFacts : undefined,
+      note: note || undefined
+    };
+  });
+  
+  showNotification(`Legal basis saved for ${violationsNeedingBasis.length} violation(s)`, 'success');
 }
 
 // Handle incident type change - show/hide relevant sections
@@ -952,6 +1763,46 @@ function handleIncidentTypeChange() {
   updateCaseFromForm();
 }
 
+// Handle image URL changes - show preview on valid URL
+function handleImageUrlChange() {
+  const url = elements.caseImageUrl.value.trim();
+  
+  if (!url) {
+    elements.imagePreviewContainer.style.display = 'none';
+    updateCaseFromForm();
+    return;
+  }
+  
+  // Validate it looks like a URL
+  try {
+    new URL(url);
+  } catch {
+    elements.imagePreviewContainer.style.display = 'none';
+    updateCaseFromForm();
+    return;
+  }
+  
+  // Try to load the image
+  const img = elements.caseImagePreview;
+  img.onload = () => {
+    elements.imagePreviewContainer.style.display = 'block';
+    updateCaseFromForm();
+  };
+  img.onerror = () => {
+    elements.imagePreviewContainer.style.display = 'none';
+    showNotification('Image failed to load', 'error');
+  };
+  img.src = url;
+}
+
+// Remove the case image
+function removeImage() {
+  elements.caseImageUrl.value = '';
+  elements.caseImagePreview.src = '';
+  elements.imagePreviewContainer.style.display = 'none';
+  updateCaseFromForm();
+}
+
 // Update case from form
 function updateCaseFromForm() {
   // Collect agencies
@@ -961,10 +1812,26 @@ function updateCaseFromForm() {
   });
   
   // Collect violations
-  const violations = [];
-  document.querySelectorAll('[id^="violation-"]:checked').forEach(checkbox => {
-    violations.push(checkbox.value);
+  // Collect violations by classification (three-tier system)
+  const violations_alleged = [];
+  const violations_potential = [];
+  const violations_possible = [];
+  
+  document.querySelectorAll('.violation-select').forEach(select => {
+    const violation = select.dataset.violation;
+    const classification = select.value;
+    
+    if (classification === 'alleged') {
+      violations_alleged.push(violation);
+    } else if (classification === 'potential') {
+      violations_potential.push(violation);
+    } else if (classification === 'possible') {
+      violations_possible.push(violation);
+    }
   });
+  
+  // Legacy violations array (for backwards compatibility, combine all)
+  const violations = [...violations_alleged, ...violations_potential, ...violations_possible];
   
   // Collect force types
   const forceTypes = [];
@@ -982,8 +1849,13 @@ function updateCaseFromForm() {
     facility: elements.caseFacility.value,
     location: elements.caseLocation.value,
     causeOfDeath: elements.caseCause.value,
+    imageUrl: elements.caseImageUrl ? elements.caseImageUrl.value.trim() : '',
     agencies: agencies,
     violations: violations,
+    violations_alleged: violations_alleged,
+    violations_potential: violations_potential,
+    violations_possible: violations_possible,
+    violation_details_map: currentCase.violation_details_map || {},
     // Death-specific
     deathCause: elements.deathCause ? elements.deathCause.value : '',
     deathManner: elements.deathManner ? elements.deathManner.value : '',
@@ -1032,6 +1904,774 @@ function updateCaseFromForm() {
   chrome.runtime.sendMessage({ type: 'SET_CURRENT_CASE', case: currentCase });
 }
 
+// Field quote associations - stores which quote is linked to which field
+let fieldQuoteAssociations = {};
+
+// Update all quote picker lists with current verified quotes
+function updateQuoteAssociationDropdowns() {
+  const lists = document.querySelectorAll('.quote-picker-list');
+  
+  lists.forEach(list => {
+    const field = list.dataset.field;
+    renderQuotePickerList(list, field, '');
+  });
+  
+  // Update trigger buttons to show selected quotes
+  updateQuotePickerTriggers();
+}
+
+// Render quotes in a picker list
+function renderQuotePickerList(listElement, field, searchTerm) {
+  const currentValue = fieldQuoteAssociations[field] || '';
+  const search = searchTerm.toLowerCase();
+  
+  // Combine verified and pending quotes
+  const allQuotes = [
+    ...verifiedQuotes.map(q => ({ ...q, isVerified: true })),
+    ...pendingQuotes.map(q => ({ ...q, isVerified: false }))
+  ];
+  
+  // Filter quotes by search term
+  const filteredQuotes = allQuotes.filter(q => 
+    !search || q.text.toLowerCase().includes(search) || q.category.toLowerCase().includes(search)
+  );
+  
+  if (filteredQuotes.length === 0) {
+    listElement.innerHTML = `
+      <div class="quote-picker-empty">
+        ${allQuotes.length === 0 ? 'No quotes yet' : 'No quotes match your search'}
+      </div>
+    `;
+    return;
+  }
+  
+  listElement.innerHTML = filteredQuotes.map(quote => `
+    <div class="quote-picker-item ${currentValue === quote.id ? 'selected' : ''} ${!quote.isVerified ? 'unverified' : ''}" data-id="${quote.id}" data-field="${field}">
+      <div class="quote-picker-item-header">
+        <span class="quote-picker-item-status ${quote.isVerified ? 'verified' : 'unverified'}">
+          ${quote.isVerified ? 'Verified' : 'Unverified'}
+        </span>
+        ${!quote.isVerified ? `<button class="quote-picker-verify-btn" data-id="${quote.id}" title="Verify this quote">Verify</button>` : ''}
+      </div>
+      <div class="quote-picker-item-text">"${escapeHtml(quote.text)}"</div>
+      <div class="quote-picker-item-meta">
+        <span class="quote-picker-item-category quote-category ${quote.category}">${quote.category}</span>
+        ${quote.sourceTitle ? `<span>${escapeHtml(quote.sourceTitle.substring(0, 30))}...</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+  
+  // Add verify button handlers
+  listElement.querySelectorAll('.quote-picker-verify-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      verifyQuoteInline(btn.dataset.id);
+      renderQuotePickerList(listElement, field, searchTerm);
+    });
+  });
+}
+
+// Update trigger buttons to reflect current selections
+function updateQuotePickerTriggers() {
+  document.querySelectorAll('.quote-picker-trigger').forEach(trigger => {
+    const field = trigger.dataset.field;
+    const quoteId = fieldQuoteAssociations[field];
+    const preview = trigger.querySelector('.selected-quote-preview');
+    
+    // Remove existing clear button and verify button
+    const existingClear = trigger.querySelector('.clear-btn');
+    if (existingClear) existingClear.remove();
+    const existingVerify = trigger.querySelector('.inline-verify-btn');
+    if (existingVerify) existingVerify.remove();
+    
+    if (quoteId) {
+      // Check in both verified and pending quotes
+      let quote = verifiedQuotes.find(q => q.id === quoteId);
+      let isVerified = true;
+      
+      if (!quote) {
+        quote = pendingQuotes.find(q => q.id === quoteId);
+        isVerified = false;
+      }
+      
+      if (quote) {
+        const truncated = quote.text.length > 35 ? quote.text.substring(0, 35) + '...' : quote.text;
+        
+        if (isVerified) {
+          preview.textContent = `[linked] "${truncated}"`;
+          trigger.classList.add('has-quote');
+          trigger.classList.remove('has-unverified');
+        } else {
+          preview.textContent = `[unverified] "${truncated}"`;
+          trigger.classList.add('has-quote', 'has-unverified');
+          
+          // Add inline verify button
+          const verifyBtn = document.createElement('button');
+          verifyBtn.className = 'inline-verify-btn';
+          verifyBtn.textContent = 'Verify';
+          verifyBtn.onclick = (e) => {
+            e.stopPropagation();
+            verifyQuoteInline(quoteId);
+            updateQuotePickerTriggers();
+          };
+          trigger.appendChild(verifyBtn);
+        }
+        
+        // Add clear button
+        const clearBtn = document.createElement('button');
+        clearBtn.className = 'clear-btn';
+        clearBtn.textContent = '✕';
+        clearBtn.onclick = (e) => {
+          e.stopPropagation();
+          clearQuoteAssociation(field);
+        };
+        trigger.appendChild(clearBtn);
+      } else {
+        // Quote no longer exists
+        resetTriggerText(trigger, field);
+      }
+    } else {
+      resetTriggerText(trigger, field);
+    }
+  });
+}
+
+function resetTriggerText(trigger, field) {
+  const preview = trigger.querySelector('.selected-quote-preview');
+  const isLongField = ['name', 'facility', 'location'].includes(field);
+  preview.textContent = isLongField ? '[src] Link quote...' : '[src] Link...';
+  trigger.classList.remove('has-quote', 'has-unverified', 'has-matches');
+}
+
+function clearQuoteAssociation(field) {
+  delete fieldQuoteAssociations[field];
+  chrome.storage.local.set({ fieldQuoteAssociations });
+  updateQuotePickerTriggers();
+  
+  // Update the list if open
+  const list = document.querySelector(`.quote-picker-list[data-field="${field}"]`);
+  if (list) renderQuotePickerList(list, field, '');
+}
+
+// Setup quote picker event listeners
+function setupQuoteAssociationListeners() {
+  // Toggle dropdown on trigger click
+  document.querySelectorAll('.quote-picker-trigger').forEach(trigger => {
+    trigger.addEventListener('click', (e) => {
+      if (e.target.classList.contains('clear-btn')) return;
+      
+      const field = trigger.dataset.field;
+      const dropdown = document.querySelector(`.quote-picker-dropdown[data-field="${field}"]`);
+      
+      // Close all other dropdowns
+      document.querySelectorAll('.quote-picker-dropdown.open').forEach(d => {
+        if (d !== dropdown) d.classList.remove('open');
+      });
+      
+      dropdown.classList.toggle('open');
+      
+      // Focus search input when opened
+      if (dropdown.classList.contains('open')) {
+        const searchInput = dropdown.querySelector('input');
+        if (searchInput) {
+          // Get the associated field value to pre-fill search
+          const fieldValue = getFieldValueForQuotePicker(field);
+          searchInput.value = fieldValue || '';
+          searchInput.focus();
+          renderQuotePickerList(dropdown.querySelector('.quote-picker-list'), field, searchInput.value);
+        }
+      }
+    });
+  });
+  
+  // Search filtering
+  document.querySelectorAll('.quote-picker-search input').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const field = e.target.dataset.field;
+      const list = document.querySelector(`.quote-picker-list[data-field="${field}"]`);
+      renderQuotePickerList(list, field, e.target.value);
+    });
+  });
+  
+  // Quote selection via event delegation
+  document.querySelectorAll('.quote-picker-list').forEach(list => {
+    list.addEventListener('click', (e) => {
+      const item = e.target.closest('.quote-picker-item');
+      if (!item) return;
+      
+      const quoteId = item.dataset.id;
+      const field = item.dataset.field;
+      
+      // Toggle selection
+      if (fieldQuoteAssociations[field] === quoteId) {
+        delete fieldQuoteAssociations[field];
+      } else {
+        fieldQuoteAssociations[field] = quoteId;
+      }
+      
+      // Save and update UI
+      chrome.storage.local.set({ fieldQuoteAssociations });
+      updateQuotePickerTriggers();
+      renderQuotePickerList(list, field, '');
+      
+      // Close dropdown
+      const dropdown = document.querySelector(`.quote-picker-dropdown[data-field="${field}"]`);
+      dropdown.classList.remove('open');
+    });
+  });
+  
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.quote-association')) {
+      document.querySelectorAll('.quote-picker-dropdown.open').forEach(d => {
+        d.classList.remove('open');
+      });
+    }
+  });
+  
+  // Auto-open quote picker when typing in associated fields
+  setupFieldAutoFilter();
+  
+  // Setup agency checkbox listeners to show/hide quote links
+  document.querySelectorAll('.checkbox-with-quote input[type="checkbox"]').forEach(checkbox => {
+    checkbox.addEventListener('change', (e) => {
+      const wrapper = e.target.closest('.checkbox-with-quote');
+      if (e.target.checked) {
+        wrapper.classList.add('checked');
+      } else {
+        wrapper.classList.remove('checked');
+        // Clear the quote association when unchecked
+        const field = wrapper.querySelector('.checkbox-quote-link').dataset.field;
+        if (fieldQuoteAssociations[field]) {
+          delete fieldQuoteAssociations[field];
+          chrome.storage.local.set({ fieldQuoteAssociations });
+          updateAgencyQuoteLinks();
+        }
+      }
+    });
+    
+    // Initialize state
+    if (checkbox.checked) {
+      checkbox.closest('.checkbox-with-quote').classList.add('checked');
+    }
+  });
+  
+  // Setup agency quote link clicks to open modal
+  document.querySelectorAll('.checkbox-quote-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openQuotePickerModal(link.dataset.field);
+    });
+  });
+  
+  // Violation info buttons (legal reference)
+  const violationInfoBtns = document.querySelectorAll('.violation-info-btn');
+  console.log('Found violation info buttons:', violationInfoBtns.length);
+  violationInfoBtns.forEach(btn => {
+    console.log('Adding listener to btn with data-violation:', btn.dataset.violation);
+    btn.addEventListener('click', (e) => {
+      console.log('? button clicked, violation:', btn.dataset.violation);
+      e.stopPropagation();
+      openLegalRefModal(btn.dataset.violation);
+    });
+  });
+  
+  // Modal close button
+  document.getElementById('closeQuotePickerModal').addEventListener('click', closeQuotePickerModal);
+  
+  // Legal reference modal close
+  document.getElementById('closeLegalRefModal').addEventListener('click', closeLegalRefModal);
+  document.getElementById('legalRefModal').addEventListener('click', (e) => {
+    if (e.target.id === 'legalRefModal') closeLegalRefModal();
+  });
+  
+  // Modal backdrop click to close
+  document.getElementById('quotePickerModal').addEventListener('click', (e) => {
+    if (e.target.id === 'quotePickerModal') closeQuotePickerModal();
+  });
+  
+  // Modal search
+  document.getElementById('modalQuoteSearch').addEventListener('input', (e) => {
+    renderModalQuoteList(e.target.value);
+  });
+  
+  // Modal quote selection
+  document.getElementById('modalQuoteList').addEventListener('click', (e) => {
+    const item = e.target.closest('.quote-picker-item');
+    if (!item) return;
+    
+    const quoteId = item.dataset.id;
+    const field = currentModalField;
+    
+    if (fieldQuoteAssociations[field] === quoteId) {
+      delete fieldQuoteAssociations[field];
+    } else {
+      fieldQuoteAssociations[field] = quoteId;
+    }
+    
+    chrome.storage.local.set({ fieldQuoteAssociations });
+    updateAgencyQuoteLinks();
+    closeQuotePickerModal();
+  });
+}
+
+// Current field being edited in modal
+let currentModalField = null;
+
+// Map of form field IDs to quote picker field names
+const fieldToPickerMap = {
+  'caseName': 'name',
+  'caseDod': 'date',
+  'caseAge': 'age',
+  'caseCountry': 'nationality',
+  'caseOccupation': 'occupation',
+  'caseFacility': 'facility',
+  'caseLocation': 'location'
+};
+
+// Get the value from a form field for a quote picker field name
+function getFieldValueForQuotePicker(pickerField) {
+  const reverseMap = {
+    'name': 'caseName',
+    'date': 'caseDod',
+    'age': 'caseAge',
+    'nationality': 'caseCountry',
+    'occupation': 'caseOccupation',
+    'facility': 'caseFacility',
+    'location': 'caseLocation',
+    'incident_type': 'incidentType'
+  };
+  
+  const formFieldId = reverseMap[pickerField];
+  if (!formFieldId) return '';
+  
+  const element = document.getElementById(formFieldId);
+  if (!element) return '';
+  
+  // For select elements, get the selected option text
+  if (element.tagName === 'SELECT') {
+    return element.options[element.selectedIndex]?.text || '';
+  }
+  
+  return element.value || '';
+}
+
+// Setup auto-filter on form field input
+function setupFieldAutoFilter() {
+  Object.entries(fieldToPickerMap).forEach(([formFieldId, pickerField]) => {
+    const formField = document.getElementById(formFieldId);
+    if (!formField) return;
+    
+    // On input, update the quote picker dropdown if open, or show matching count
+    formField.addEventListener('input', (e) => {
+      const value = e.target.value;
+      if (value.length >= 2) {
+        // Update the trigger button to show matches
+        const trigger = document.querySelector(`.quote-picker-trigger[data-field="${pickerField}"]`);
+        const dropdown = document.querySelector(`.quote-picker-dropdown[data-field="${pickerField}"]`);
+        
+        if (trigger && !fieldQuoteAssociations[pickerField]) {
+          // Count matching quotes
+          const matches = verifiedQuotes.filter(q => 
+            q.text.toLowerCase().includes(value.toLowerCase())
+          );
+          
+          if (matches.length > 0) {
+            const preview = trigger.querySelector('.selected-quote-preview');
+            preview.textContent = `[${matches.length}] matches "${value.substring(0, 15)}${value.length > 15 ? '...' : ''}"`;
+            trigger.classList.add('has-matches');
+          } else {
+            resetTriggerText(trigger, pickerField);
+            trigger.classList.remove('has-matches');
+          }
+        }
+        
+        // If dropdown is open, update the list
+        if (dropdown && dropdown.classList.contains('open')) {
+          const searchInput = dropdown.querySelector('input');
+          const list = dropdown.querySelector('.quote-picker-list');
+          if (searchInput && list) {
+            searchInput.value = value;
+            renderQuotePickerList(list, pickerField, value);
+          }
+        }
+      } else {
+        // Reset trigger if value is too short
+        const trigger = document.querySelector(`.quote-picker-trigger[data-field="${pickerField}"]`);
+        if (trigger && !fieldQuoteAssociations[pickerField]) {
+          resetTriggerText(trigger, pickerField);
+          trigger.classList.remove('has-matches');
+        }
+      }
+    });
+    
+    // On focus, if there's a value, show the dropdown with filtered results
+    formField.addEventListener('focus', (e) => {
+      const value = e.target.value;
+      if (value.length >= 2 && verifiedQuotes.length > 0) {
+        const matches = verifiedQuotes.filter(q => 
+          q.text.toLowerCase().includes(value.toLowerCase())
+        );
+        
+        if (matches.length > 0) {
+          const dropdown = document.querySelector(`.quote-picker-dropdown[data-field="${pickerField}"]`);
+          const searchInput = dropdown?.querySelector('input');
+          const list = dropdown?.querySelector('.quote-picker-list');
+          
+          if (dropdown && searchInput && list) {
+            // Close other dropdowns
+            document.querySelectorAll('.quote-picker-dropdown.open').forEach(d => {
+              if (d !== dropdown) d.classList.remove('open');
+            });
+            
+            searchInput.value = value;
+            renderQuotePickerList(list, pickerField, value);
+            dropdown.classList.add('open');
+          }
+        }
+      }
+    });
+  });
+}
+
+// Open quote picker modal
+function openQuotePickerModal(field) {
+  currentModalField = field;
+  const modal = document.getElementById('quotePickerModal');
+  const title = document.getElementById('quotePickerModalTitle');
+  const searchInput = document.getElementById('modalQuoteSearch');
+  
+  // Format title from field name
+  const fieldName = field.replace('agency_', '').replace(/_/g, ' ').toUpperCase();
+  title.textContent = `Link Quote for: ${fieldName}`;
+  
+  searchInput.value = '';
+  renderModalQuoteList('');
+  modal.classList.add('open');
+  searchInput.focus();
+}
+
+// Close quote picker modal
+function closeQuotePickerModal() {
+  document.getElementById('quotePickerModal').classList.remove('open');
+  currentModalField = null;
+}
+
+// Open legal reference modal
+function openLegalRefModal(violationType) {
+  console.log('openLegalRefModal called with:', violationType);
+  console.log('LEGAL_REFERENCES keys:', Object.keys(LEGAL_REFERENCES));
+  
+  const modal = document.getElementById('legalRefModal');
+  const title = document.getElementById('legalRefTitle');
+  const body = document.getElementById('legalRefBody');
+  
+  const ref = LEGAL_REFERENCES[violationType];
+  if (!ref) {
+    console.error('No ref found for violationType:', violationType);
+    showNotification(`No legal reference available for: "${violationType}"`, 'warning');
+    return;
+  }
+  
+  title.textContent = ref.name;
+  
+  let html = '';
+  
+  // Constitutional/Statutory text
+  const textSourceLink = ref.textSource 
+    ? `<a href="${ref.textSource}" target="_blank" style="font-size: 10px; color: #3b82f6;">[Verify Source]</a>`
+    : '';
+  
+  html += `
+    <div class="legal-ref-section">
+      <h4>Constitutional/Statutory Text ${textSourceLink}</h4>
+      <div class="constitutional-text">
+        "${ref.text}"
+      </div>
+      <button class="copy-text-btn" onclick="copyLegalText('${violationType}', 'text')">Copy Text</button>
+    </div>
+  `;
+  
+  // Application notes (clearly marked as editorial)
+  if (ref.applicationNotes) {
+    html += `
+      <div class="legal-ref-section">
+        <h4>Editorial Guidance</h4>
+        <p style="font-size: 11px; color: #6b7280; font-style: italic; background: #f1f5f9; padding: 8px; border-radius: 4px; border-left: 3px solid #94a3b8;">
+          ${ref.applicationNotes}
+        </p>
+      </div>
+    `;
+  }
+  
+  // Case law with source links
+  if (ref.cases && ref.cases.length > 0) {
+    html += `
+      <div class="legal-ref-section">
+        <h4>Key Case Law (Holdings are quotable)</h4>
+    `;
+    
+    ref.cases.forEach((caseItem, idx) => {
+      const sourceLink = caseItem.sourceUrl 
+        ? `<a href="${caseItem.sourceUrl}" target="_blank" style="font-size: 10px; color: #3b82f6; margin-left: 8px;">[Read Full Opinion]</a>`
+        : '';
+      
+      html += `
+        <div class="case-law-item">
+          <h5>${caseItem.name} <span style="font-weight: normal; color: #6b7280;">(${caseItem.citation})</span>${sourceLink}</h5>
+          <p class="holding" style="margin-top: 8px;"><strong>Holding:</strong> "${caseItem.holding}"</p>
+          <div style="margin-top: 8px; display: flex; gap: 8px;">
+            <button class="copy-text-btn" onclick="copyLegalText('${violationType}', 'case', ${idx})">Copy Citation + Holding</button>
+            ${caseItem.sourceUrl ? `<button class="copy-text-btn" onclick="window.open('${caseItem.sourceUrl}', '_blank')">Open Source</button>` : ''}
+          </div>
+        </div>
+      `;
+    });
+    
+    html += '</div>';
+  }
+  
+  // Use for legal basis button
+  html += `
+    <div class="legal-ref-section">
+      <h4>Use in This Case</h4>
+      <p style="font-size: 11px; color: #6b7280; margin-bottom: 8px;">
+        Click below to automatically fill the Legal Framework field with this violation's primary case law.
+      </p>
+      <button class="btn btn-sm" style="background: #3b82f6; color: white;" onclick="useLegalFramework('${violationType}')">
+        Use as Legal Framework
+      </button>
+    </div>
+  `;
+  
+  // Important notice
+  html += `
+    <div style="margin-top: 16px; padding: 10px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; font-size: 11px; color: #92400e;">
+      <strong>Important:</strong> Always verify quotes against the linked source before using. Holdings shown here are excerpts - read the full opinion for complete context.
+    </div>
+  `;
+  
+  body.innerHTML = html;
+  modal.classList.add('active');
+}
+
+// Close legal reference modal
+function closeLegalRefModal() {
+  document.getElementById('legalRefModal').classList.remove('active');
+}
+
+// Copy legal text to clipboard
+function copyLegalText(violationType, type, caseIdx) {
+  const ref = LEGAL_REFERENCES[violationType];
+  if (!ref) return;
+  
+  let textToCopy = '';
+  
+  if (type === 'text') {
+    const sourceNote = ref.textSource ? ` (Source: ${ref.textSource})` : '';
+    textToCopy = `${ref.name}: "${ref.text}"${sourceNote}`;
+  } else if (type === 'case' && ref.cases[caseIdx]) {
+    const caseItem = ref.cases[caseIdx];
+    const sourceNote = caseItem.sourceUrl ? ` (Source: ${caseItem.sourceUrl})` : '';
+    textToCopy = `${caseItem.name}, ${caseItem.citation}: "${caseItem.holding}"${sourceNote}`;
+  }
+  
+  navigator.clipboard.writeText(textToCopy).then(() => {
+    showNotification('Copied to clipboard (includes source link)', 'success');
+  }).catch(err => {
+    console.error('Failed to copy:', err);
+    showNotification('Failed to copy', 'error');
+  });
+}
+
+// Use legal framework from reference
+function useLegalFramework(violationType) {
+  const ref = LEGAL_REFERENCES[violationType];
+  if (!ref || !ref.cases || ref.cases.length === 0) return;
+  
+  // Use the first/primary case as the legal framework
+  const primaryCase = ref.cases[0];
+  const frameworkText = `${primaryCase.name} (${primaryCase.citation})`;
+  
+  const frameworkInput = document.getElementById('violationLegalFramework');
+  if (frameworkInput) {
+    frameworkInput.value = frameworkText;
+    updateCaseFromForm();
+  }
+  
+  closeLegalRefModal();
+  showNotification(`Legal framework set to: ${primaryCase.name}`, 'success');
+  
+  // Show the violation basis section if hidden
+  const basisSection = document.getElementById('violationBasisSection');
+  if (basisSection) {
+    basisSection.classList.remove('hidden');
+  }
+}
+
+// Render quotes in modal
+function renderModalQuoteList(searchTerm) {
+  const list = document.getElementById('modalQuoteList');
+  const search = searchTerm.toLowerCase();
+  const currentValue = fieldQuoteAssociations[currentModalField] || '';
+  
+  // Combine verified and pending quotes
+  const allQuotes = [
+    ...verifiedQuotes.map(q => ({ ...q, isVerified: true })),
+    ...pendingQuotes.map(q => ({ ...q, isVerified: false }))
+  ];
+  
+  const filteredQuotes = allQuotes.filter(q => 
+    !search || q.text.toLowerCase().includes(search) || q.category.toLowerCase().includes(search)
+  );
+  
+  if (filteredQuotes.length === 0) {
+    list.innerHTML = `
+      <div class="quote-picker-empty">
+        ${allQuotes.length === 0 ? 'No quotes yet. Add quotes from the Extract tab.' : 'No quotes match your search'}
+      </div>
+    `;
+    return;
+  }
+  
+  list.innerHTML = filteredQuotes.map(quote => `
+    <div class="quote-picker-item ${currentValue === quote.id ? 'selected' : ''} ${!quote.isVerified ? 'unverified' : ''}" data-id="${quote.id}">
+      <div class="quote-picker-item-header">
+        <span class="quote-picker-item-status ${quote.isVerified ? 'verified' : 'unverified'}">
+          ${quote.isVerified ? 'Verified' : 'Unverified'}
+        </span>
+        ${!quote.isVerified ? `<button class="quote-picker-verify-btn" data-id="${quote.id}" title="Verify this quote">Verify</button>` : ''}
+      </div>
+      <div class="quote-picker-item-text">"${escapeHtml(quote.text)}"</div>
+      <div class="quote-picker-item-meta">
+        <span class="quote-picker-item-category quote-category ${quote.category}">${quote.category}</span>
+        ${quote.sourceTitle ? `<span>${escapeHtml(quote.sourceTitle.substring(0, 30))}...</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+  
+  // Add verify button handlers
+  list.querySelectorAll('.quote-picker-verify-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      verifyQuoteInline(btn.dataset.id);
+      renderModalQuoteList(searchTerm);
+    });
+  });
+}
+
+// Verify a quote inline (move from pending to verified)
+function verifyQuoteInline(quoteId) {
+  const pendingIndex = pendingQuotes.findIndex(q => q.id === quoteId);
+  if (pendingIndex !== -1) {
+    const quote = pendingQuotes.splice(pendingIndex, 1)[0];
+    quote.status = 'verified';
+    verifiedQuotes.unshift(quote);
+    renderQuotes();
+    renderPendingQuotes();
+    syncQuotesToBackground();
+    showNotification('Quote verified', 'success');
+  }
+}
+
+// Check if all linked quotes are verified
+function checkAllLinkedQuotesVerified() {
+  const linkedQuoteIds = Object.values(fieldQuoteAssociations).filter(id => id);
+  
+  for (const quoteId of linkedQuoteIds) {
+    // Check if it's in verified quotes
+    const inVerified = verifiedQuotes.find(q => q.id === quoteId);
+    if (!inVerified) {
+      // Check if it's in pending quotes (unverified)
+      const inPending = pendingQuotes.find(q => q.id === quoteId);
+      if (inPending) {
+        return { valid: false, unverifiedQuote: inPending };
+      }
+    }
+  }
+  
+  return { valid: true };
+}
+
+// Get list of unverified linked quotes
+function getUnverifiedLinkedQuotes() {
+  const linkedQuoteIds = Object.values(fieldQuoteAssociations).filter(id => id);
+  const unverified = [];
+  
+  for (const quoteId of linkedQuoteIds) {
+    const inPending = pendingQuotes.find(q => q.id === quoteId);
+    if (inPending) {
+      unverified.push(inPending);
+    }
+  }
+  
+  return unverified;
+}
+
+// Update agency quote link text/state
+function updateAgencyQuoteLinks() {
+  document.querySelectorAll('.checkbox-quote-link').forEach(link => {
+    const field = link.dataset.field;
+    const quoteId = fieldQuoteAssociations[field];
+    
+    // Remove existing verify button
+    const existingVerify = link.parentElement?.querySelector('.checkbox-verify-btn');
+    if (existingVerify) existingVerify.remove();
+    
+    if (quoteId) {
+      // Check in both verified and pending quotes
+      let quote = verifiedQuotes.find(q => q.id === quoteId);
+      let isVerified = true;
+      
+      if (!quote) {
+        quote = pendingQuotes.find(q => q.id === quoteId);
+        isVerified = false;
+      }
+      
+      if (quote) {
+        const truncated = quote.text.length > 25 ? quote.text.substring(0, 25) + '...' : quote.text;
+        
+        if (isVerified) {
+          link.textContent = `[linked] "${truncated}"`;
+          link.classList.add('has-quote');
+          link.classList.remove('has-unverified');
+        } else {
+          link.textContent = `[unverified] "${truncated}"`;
+          link.classList.add('has-quote', 'has-unverified');
+          
+          // Add verify button next to the link
+          const verifyBtn = document.createElement('button');
+          verifyBtn.className = 'checkbox-verify-btn';
+          verifyBtn.textContent = 'Verify';
+          verifyBtn.onclick = (e) => {
+            e.stopPropagation();
+            verifyQuoteInline(quoteId);
+            updateAgencyQuoteLinks();
+          };
+          link.parentElement.appendChild(verifyBtn);
+        }
+      } else {
+        link.textContent = '[src]';
+        link.classList.remove('has-quote', 'has-unverified');
+      }
+    } else {
+      link.textContent = '[src]';
+      link.classList.remove('has-quote', 'has-unverified');
+    }
+  });
+}
+
+// Load saved quote associations
+function loadQuoteAssociations() {
+  chrome.storage.local.get(['fieldQuoteAssociations'], (result) => {
+    if (result.fieldQuoteAssociations) {
+      fieldQuoteAssociations = result.fieldQuoteAssociations;
+      updateQuoteAssociationDropdowns();
+      updateAgencyQuoteLinks();
+    }
+  });
+}
+
 // Render verified quotes list
 function renderQuotes() {
   elements.quoteCount.textContent = verifiedQuotes.length;
@@ -1039,7 +2679,7 @@ function renderQuotes() {
   if (verifiedQuotes.length === 0) {
     elements.quoteList.innerHTML = `
       <div class="empty-state">
-        <div class="empty-state-icon">📝</div>
+        <div class="empty-state-icon"></div>
         <p>No verified quotes yet</p>
         <p style="font-size: 11px; margin-top: 4px;">
           Go to Extract tab to pull quotes from the page
@@ -1054,17 +2694,21 @@ function renderQuotes() {
       <div class="quote-text ${quote.text.length > 200 ? 'truncated' : ''}">"${escapeHtml(quote.text)}"</div>
       <div class="quote-meta">
         <span class="quote-category ${quote.category}">${quote.category}</span>
-        ${quote.pageNumber ? `<span class="quote-page" onclick="goToPage(${quote.pageNumber})" title="Go to page">📄 Page ${quote.pageNumber}</span>` : ''}
+        ${quote.pageNumber ? `<span class="quote-page" data-action="goToPage" data-page="${quote.pageNumber}" title="Go to page">Page ${quote.pageNumber}</span>` : ''}
       </div>
-      ${quote.sourceUrl ? `<div class="quote-source"><a href="${escapeHtml(quote.sourceUrl)}" target="_blank" class="source-link" title="${escapeHtml(quote.sourceUrl)}">🔗 ${escapeHtml(quote.sourceTitle || new URL(quote.sourceUrl).hostname)}</a></div>` : ''}
+      ${quote.sourceUrl ? `<div class="quote-source"><a href="${escapeHtml(quote.sourceUrl)}" target="_blank" class="source-link" title="${escapeHtml(quote.sourceUrl)}">${escapeHtml(quote.sourceTitle || new URL(quote.sourceUrl).hostname)}</a></div>` : ''}
       <div class="quote-actions">
-        <button class="btn btn-sm btn-icon" onclick="copyQuote('${quote.id}', true)" title="Copy quote">📋</button>
-        <button class="btn btn-sm btn-icon" onclick="highlightAndScroll('${quote.id}', true)" title="Find & scroll to on page">🎯</button>
-        <button class="btn btn-sm btn-icon pin-btn" onclick="togglePinHighlight('${quote.id}', true)" title="Pin highlight on page">📌</button>
-        <button class="btn btn-sm btn-danger" onclick="removeVerifiedQuote('${quote.id}')" title="Remove">✗</button>
+        <button class="btn btn-sm btn-icon" data-action="copy" data-id="${quote.id}" data-verified="true" title="Copy quote">Copy</button>
+        ${!currentPageIsPdf ? `<button class="btn btn-sm btn-icon" data-action="find" data-id="${quote.id}" data-verified="true" title="Find & scroll to on page">Find</button>
+        <button class="btn btn-sm btn-icon pin-btn" data-action="pin" data-id="${quote.id}" data-verified="true" title="Pin highlight on page">Pin</button>` : ''}
+        <button class="btn btn-sm btn-danger" data-action="removeVerified" data-id="${quote.id}" title="Remove">X</button>
       </div>
     </div>
   `).join('');
+  
+  // Update quote association dropdowns with new quotes
+  updateQuoteAssociationDropdowns();
+  updateAgencyQuoteLinks();
 }
 
 // Render pending quotes list
@@ -1077,7 +2721,7 @@ function renderPendingQuotes() {
   if (pendingQuotes.length === 0) {
     elements.pendingList.innerHTML = `
       <div class="empty-state">
-        <div class="empty-state-icon">🔍</div>
+        <div class="empty-state-icon"></div>
         <p>No pending quotes</p>
         <p style="font-size: 11px; margin-top: 4px;">
           Click "Extract Article Content" to find quotes
@@ -1093,15 +2737,15 @@ function renderPendingQuotes() {
       <div class="quote-meta">
         <span class="quote-category ${quote.category}">${quote.category}</span>
         ${quote.confidence ? `<span class="quote-confidence">${Math.round(quote.confidence * 100)}%</span>` : ''}
-        ${quote.pageNumber ? `<span class="quote-page" onclick="goToPage(${quote.pageNumber})" title="Go to page">📄 Page ${quote.pageNumber}</span>` : ''}
+        ${quote.pageNumber ? `<span class="quote-page" data-action="goToPage" data-page="${quote.pageNumber}" title="Go to page">Page ${quote.pageNumber}</span>` : ''}
       </div>
-      ${quote.sourceUrl ? `<div class="quote-source"><a href="${escapeHtml(quote.sourceUrl)}" target="_blank" class="source-link" title="${escapeHtml(quote.sourceUrl)}">🔗 ${escapeHtml(quote.sourceTitle || new URL(quote.sourceUrl).hostname)}</a></div>` : ''}
+      ${quote.sourceUrl ? `<div class="quote-source"><a href="${escapeHtml(quote.sourceUrl)}" target="_blank" class="source-link" title="${escapeHtml(quote.sourceUrl)}">${escapeHtml(quote.sourceTitle || new URL(quote.sourceUrl).hostname)}</a></div>` : ''}
       <div class="quote-actions">
-        <button class="btn btn-sm btn-success" onclick="acceptQuote('${quote.id}')" title="Accept">✓</button>
-        <button class="btn btn-sm btn-danger" onclick="rejectQuote('${quote.id}')" title="Reject">✗</button>
-        <button class="btn btn-sm btn-icon" onclick="copyQuote('${quote.id}', false)" title="Copy">📋</button>
-        <button class="btn btn-sm btn-icon" onclick="highlightAndScroll('${quote.id}', false)" title="Find & scroll to on page">🎯</button>
-        <button class="btn btn-sm btn-icon pin-btn" onclick="togglePinHighlight('${quote.id}', false)" title="Pin highlight on page">📌</button>
+        <button class="btn btn-sm btn-success" data-action="accept" data-id="${quote.id}" title="Accept">Accept</button>
+        <button class="btn btn-sm btn-danger" data-action="reject" data-id="${quote.id}" title="Reject">X</button>
+        <button class="btn btn-sm btn-icon" data-action="copy" data-id="${quote.id}" data-verified="false" title="Copy">Copy</button>
+        ${!currentPageIsPdf ? `<button class="btn btn-sm btn-icon" data-action="find" data-id="${quote.id}" data-verified="false" title="Find & scroll to on page">Find</button>
+        <button class="btn btn-sm btn-icon pin-btn" data-action="pin" data-id="${quote.id}" data-verified="false" title="Pin highlight on page">Pin</button>` : ''}
       </div>
     </div>
   `).join('');
@@ -1127,7 +2771,7 @@ async function extractArticle() {
   
   // Get current domain from page info
   const domainText = elements.pageInfo.textContent || '';
-  const domain = domainText.replace('📄 ', '').replace(' (PDF)', '');
+  const domain = domainText.replace(' (PDF)', '');
   
   let selectors = DEFAULT_SELECTORS['*'];
   
@@ -1404,6 +3048,12 @@ window.copyQuote = function(quoteId, isVerified) {
   }
 };
 
+// Copy legal text to clipboard (global for onclick)
+window.copyLegalText = copyLegalText;
+
+// Use legal framework from reference (global for onclick)
+window.useLegalFramework = useLegalFramework;
+
 // Highlight quote on page (basic - clears previous)
 window.highlightQuote = function(quoteId, isVerified) {
   const list = isVerified ? verifiedQuotes : pendingQuotes;
@@ -1432,16 +3082,40 @@ window.highlightAndScroll = function(quoteId, isVerified) {
     }
     
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      chrome.tabs.sendMessage(tabs[0].id, { 
+      const tab = tabs[0];
+      const isPdf = tab.url && (tab.url.toLowerCase().endsWith('.pdf') || tab.url.includes('/file'));
+      
+      if (isPdf) {
+        // For PDFs: copy to clipboard and show hint
+        const searchText = quote.text.substring(0, 100);
+        navigator.clipboard.writeText(searchText).then(() => {
+          showNotification('Copied! Press Ctrl+F to search in PDF', 'success');
+        });
+        return;
+      }
+      
+      chrome.tabs.sendMessage(tab.id, { 
         type: 'HIGHLIGHT_AND_SCROLL', 
         text: quote.text,
         category: quote.category || '',
         flash: true
       }, (response) => {
+        if (chrome.runtime.lastError) {
+          // Fallback for PDFs or pages without content script
+          const searchText = quote.text.substring(0, 100);
+          navigator.clipboard.writeText(searchText).then(() => {
+            showNotification('Copied! Press Ctrl+F to search', 'success');
+          });
+          return;
+        }
         if (response && response.found) {
           showNotification('Found on page!', 'success');
         } else {
-          showNotification('Text not found on this page', 'error');
+          // Copy text as fallback
+          const searchText = quote.text.substring(0, 100);
+          navigator.clipboard.writeText(searchText).then(() => {
+            showNotification('Text copied - use Ctrl+F to find', 'info');
+          });
         }
       });
     });
@@ -1535,7 +3209,7 @@ function renderSources() {
   
   elements.sourceList.innerHTML = sources.map(source => `
     <a href="${source.url}" class="source-item" target="_blank" title="${source.title}">
-      📄 ${truncate(source.title || source.url, 40)}
+      ${truncate(source.title || source.url, 40)}
     </a>
   `).join('');
 }
@@ -1596,8 +3270,12 @@ function buildIncidentObject() {
       occupation: currentCase.occupation || undefined
     },
     summary: currentCase.causeOfDeath || '',
+    image_url: currentCase.imageUrl || undefined,
     agencies_involved: currentCase.agencies || [],
-    violations_alleged: currentCase.violations || [],
+    violations_alleged: currentCase.violations_alleged || currentCase.violations || [],
+    violations_potential: currentCase.violations_potential || [],
+    violations_possible: currentCase.violations_possible || [],
+    violation_details_map: currentCase.violation_details_map || {},
     verified: false
   };
   
@@ -1665,6 +3343,18 @@ async function saveCase() {
     return;
   }
   
+  // Check for unverified linked quotes
+  const unverifiedQuotes = getUnverifiedLinkedQuotes();
+  if (unverifiedQuotes.length > 0) {
+    const quotePreview = unverifiedQuotes.map(q => 
+      `• "${q.text.substring(0, 50)}${q.text.length > 50 ? '...' : ''}"`
+    ).join('\n');
+    
+    const message = `Cannot save: ${unverifiedQuotes.length} linked quote${unverifiedQuotes.length > 1 ? 's are' : ' is'} unverified.\n\n${quotePreview}\n\nPlease verify all linked quotes before saving.`;
+    alert(message);
+    return;
+  }
+  
   elements.saveCaseBtn.disabled = true;
   elements.saveCaseBtn.innerHTML = '<div class="spinner white"></div> Saving...';
   
@@ -1703,12 +3393,22 @@ async function saveCase() {
       }
       
       if (verifiedQuotes.length > 0) {
+        // Build a reverse map: quoteId -> [fields]
+        const quoteFieldMap = {};
+        for (const [field, quoteId] of Object.entries(fieldQuoteAssociations)) {
+          if (quoteId) {
+            if (!quoteFieldMap[quoteId]) quoteFieldMap[quoteId] = [];
+            quoteFieldMap[quoteId].push(field);
+          }
+        }
+        
         patchData.quotes = verifiedQuotes.map(q => ({
           text: q.text,
           category: q.category,
           page_number: q.pageNumber || undefined,
           confidence: q.confidence || undefined,
-          verified: false
+          verified: false,
+          linked_fields: quoteFieldMap[q.id] || []
         }));
       }
       
@@ -1780,6 +3480,8 @@ function clearCase() {
   verifiedQuotes = [];
   pendingQuotes = [];
   sources = [];
+  fieldQuoteAssociations = {};
+  chrome.storage.local.set({ fieldQuoteAssociations: {} });
   
   // Clear agency checkboxes
   document.querySelectorAll('[id^="agency-"]').forEach(checkbox => {
@@ -1795,6 +3497,13 @@ function clearCase() {
   renderQuotes();
   renderPendingQuotes();
   renderSources();
+  updateQuoteAssociationDropdowns();
+  updateAgencyQuoteLinks();
+  
+  // Reset agency checkbox states
+  document.querySelectorAll('.checkbox-with-quote').forEach(wrapper => {
+    wrapper.classList.remove('checked');
+  });
   
   chrome.runtime.sendMessage({ type: 'SET_CURRENT_CASE', case: currentCase });
   chrome.runtime.sendMessage({ type: 'CLEAR_QUOTES' });
@@ -1806,6 +3515,21 @@ chrome.runtime.onMessage.addListener((message) => {
     case 'QUOTE_ADDED':
       pendingQuotes.push(message.quote);
       renderPendingQuotes();
+      break;
+    
+    case 'QUOTE_VERIFIED':
+      // User-selected quote added directly to verified - add to top and show it
+      verifiedQuotes.unshift(message.quote);
+      renderQuotes();
+      syncQuotesToBackground();
+      // Switch to Case tab to show the new quote
+      const caseTab = document.querySelector('[data-tab="case"]');
+      if (caseTab) caseTab.click();
+      // Scroll the quote list to top to show the new quote
+      if (elements.quoteList) {
+        elements.quoteList.scrollTop = 0;
+      }
+      showNotification('Quote added to case', 'success');
       break;
       
     case 'EXTRACTION_PROGRESS':
@@ -1919,13 +3643,40 @@ function exportAsMarkdown() {
     md += `**Agencies Involved:** ${currentCase.agencies.join(', ')}\n`;
   }
   
-  // Violations alleged
-  if (currentCase.violations && currentCase.violations.length > 0) {
-    md += `**Violations Alleged:** ${currentCase.violations.join(', ')}\n`;
+  // Violations (three-tier system)
+  if (currentCase.violations_alleged && currentCase.violations_alleged.length > 0) {
+    md += `**Violations Alleged:** ${currentCase.violations_alleged.join(', ')}\n`;
+  }
+  if (currentCase.violations_potential && currentCase.violations_potential.length > 0) {
+    md += `**Violations Potential:** ${currentCase.violations_potential.join(', ')}\n`;
+  }
+  if (currentCase.violations_possible && currentCase.violations_possible.length > 0) {
+    md += `**Violations Possible:** ${currentCase.violations_possible.join(', ')}\n`;
+  }
+  // Legacy fallback
+  if (!currentCase.violations_alleged && !currentCase.violations_potential && !currentCase.violations_possible && currentCase.violations && currentCase.violations.length > 0) {
+    md += `**Violations:** ${currentCase.violations.join(', ')}\n`;
+  }
+  
+  // Violation basis details
+  if (currentCase.violation_details_map && Object.keys(currentCase.violation_details_map).length > 0) {
+    md += `\n### Violation Legal Basis\n\n`;
+    for (const [key, basis] of Object.entries(currentCase.violation_details_map)) {
+      md += `**${key}:**\n`;
+      if (basis.legal_framework) md += `- Legal Framework: ${basis.legal_framework}\n`;
+      if (basis.relevant_facts?.length) md += `- Relevant Facts: ${basis.relevant_facts.join('; ')}\n`;
+      if (basis.note) md += `- Note: ${basis.note}\n`;
+      md += '\n';
+    }
   }
   
   if (currentCase.causeOfDeath) {
     md += `\n## Summary\n\n${currentCase.causeOfDeath}\n`;
+  }
+  
+  // Case image
+  if (currentCase.imageUrl) {
+    md += `\n## Case Image\n\n![Case Image](${currentCase.imageUrl})\n`;
   }
   
   // Type-specific details
@@ -1942,16 +3693,16 @@ function exportAsMarkdown() {
     if (incident.arrest_details.stated_reason) md += `- **Stated Reason:** ${incident.arrest_details.stated_reason}\n`;
     if (incident.arrest_details.actual_context) md += `- **Actual Context:** ${incident.arrest_details.actual_context}\n`;
     if (incident.arrest_details.charges?.length) md += `- **Charges:** ${incident.arrest_details.charges.join(', ')}\n`;
-    if (incident.arrest_details.timing_suspicious) md += `- ⚠️ **Timing Suspicious**\n`;
-    if (incident.arrest_details.pretext_arrest) md += `- ⚠️ **Pretext Arrest Indicators**\n`;
-    if (incident.arrest_details.selective_enforcement) md += `- ⚠️ **Selective Enforcement**\n`;
+    if (incident.arrest_details.timing_suspicious) md += `- **Timing Suspicious**\n`;
+    if (incident.arrest_details.pretext_arrest) md += `- **Pretext Arrest Indicators**\n`;
+    if (incident.arrest_details.selective_enforcement) md += `- **Selective Enforcement**\n`;
   }
   
   if (incidentType === 'rights_violation' && incident.violation_details) {
     md += `\n## Violation Details\n\n`;
-    if (incident.violation_details.journalism_related) md += `- 📰 **Journalism Related**\n`;
-    if (incident.violation_details.protest_related) md += `- ✊ **Protest Related**\n`;
-    if (incident.violation_details.activism_related) md += `- 📢 **Activism Related**\n`;
+    if (incident.violation_details.journalism_related) md += `- **Journalism Related**\n`;
+    if (incident.violation_details.protest_related) md += `- **Protest Related**\n`;
+    if (incident.violation_details.activism_related) md += `- **Activism Related**\n`;
     if (incident.violation_details.speech_content) md += `- **Speech/Activity:** ${incident.violation_details.speech_content}\n`;
     if (incident.violation_details.court_ruling) md += `- **Court Ruling:** ${incident.violation_details.court_ruling}\n`;
   }

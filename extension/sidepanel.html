@@ -135,6 +135,56 @@
       display: block;
     }
     
+    /* Wide mode - side by side tabs (for popup window) */
+    body.wide-mode .tabs {
+      display: none;
+    }
+    
+    body.wide-mode .tab-content-wrapper {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    
+    body.wide-mode .tab-content {
+      display: flex !important;
+      flex-direction: column;
+      flex: 1;
+      border-right: 1px solid #e0e0e0;
+      overflow-y: auto;
+      min-width: 0;
+    }
+    
+    body.wide-mode .tab-content:last-of-type {
+      border-right: none;
+    }
+    
+    body.wide-mode #tab-settings {
+      display: none !important;
+    }
+    
+    body.wide-mode .wide-tab-header {
+      display: flex;
+      background: #f0f0f0;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+      border-bottom: 1px solid #e0e0e0;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      flex-shrink: 0;
+    }
+    
+    .wide-tab-header {
+      display: none;
+    }
+    
+    .tab-content-wrapper {
+      display: contents;
+    }
+    
     /* Section styles */
     .section {
       margin-bottom: 20px;
@@ -199,6 +249,351 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
+    }
+    
+    /* Quote association picker */
+    .quote-association {
+      margin-top: 4px;
+    }
+    
+    .quote-picker-trigger {
+      width: 100%;
+      padding: 6px 10px;
+      font-size: 11px;
+      border: 1px dashed #ccc;
+      border-radius: 4px;
+      background: #fafafa;
+      color: #666;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    
+    .quote-picker-trigger:hover {
+      border-color: #999;
+      background: #f5f5f5;
+    }
+    
+    .quote-picker-trigger.has-quote {
+      border-color: #22c55e;
+      border-style: solid;
+      background: #f0fdf4;
+      color: #166534;
+    }
+    
+    .quote-picker-trigger.has-matches {
+      border-color: #3b82f6;
+      border-style: solid;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+    
+    .quote-picker-trigger .selected-quote-preview {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .quote-picker-trigger .clear-btn {
+      padding: 2px 6px;
+      font-size: 10px;
+      background: #dc2626;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    
+    .quote-picker-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 1000;
+      max-height: 350px;
+      display: none;
+      flex-direction: column;
+    }
+    
+    .quote-picker-dropdown.open {
+      display: flex;
+    }
+    
+    .quote-picker-search {
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .quote-picker-search input {
+      width: 100%;
+      padding: 6px 10px;
+      font-size: 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    .quote-picker-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .quote-picker-item {
+      padding: 8px 10px;
+      border: 1px solid #e5e5e5;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #fafafa;
+      transition: all 0.15s;
+    }
+    
+    .quote-picker-item:hover {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+    
+    .quote-picker-item.selected {
+      border-color: #22c55e;
+      background: #f0fdf4;
+    }
+    
+    .quote-picker-item.unverified {
+      border-color: #f59e0b;
+      background: #fffbeb;
+    }
+    
+    .quote-picker-item.unverified.selected {
+      border-color: #f59e0b;
+      background: #fef3c7;
+    }
+    
+    .quote-picker-item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    
+    .quote-picker-item-status {
+      font-size: 9px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+    
+    .quote-picker-item-status.verified {
+      background: #dcfce7;
+      color: #166534;
+    }
+    
+    .quote-picker-item-status.unverified {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    .quote-picker-verify-btn {
+      font-size: 9px;
+      padding: 2px 8px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    
+    .quote-picker-verify-btn:hover {
+      background: #2563eb;
+    }
+    
+    /* Trigger button states for unverified quotes */
+    .quote-picker-trigger.has-unverified {
+      background: #fff7ed;
+      border-color: #f97316;
+    }
+    
+    .quote-picker-trigger.has-unverified .selected-quote-preview {
+      color: #c2410c;
+    }
+    
+    .inline-verify-btn {
+      font-size: 9px;
+      padding: 1px 6px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      margin-left: 6px;
+      flex-shrink: 0;
+    }
+    
+    .inline-verify-btn:hover {
+      background: #2563eb;
+    }
+    
+    .quote-picker-item-text {
+      font-size: 11px;
+      line-height: 1.4;
+      color: #333;
+      margin-bottom: 4px;
+    }
+    
+    .quote-picker-item-meta {
+      font-size: 10px;
+      color: #888;
+      display: flex;
+      gap: 8px;
+    }
+    
+    .quote-picker-item-category {
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 9px;
+      text-transform: uppercase;
+    }
+    
+    .quote-picker-empty {
+      padding: 20px;
+      text-align: center;
+      color: #999;
+      font-size: 12px;
+    }
+    
+    /* Checkbox with quote link */
+    .checkbox-with-quote {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    
+    .checkbox-with-quote .checkbox-item {
+      margin: 0;
+    }
+    
+    .checkbox-quote-link {
+      font-size: 9px;
+      color: #888;
+      cursor: pointer;
+      padding: 2px 4px 2px 18px;
+      border-radius: 3px;
+      display: none;
+    }
+    
+    .checkbox-with-quote.checked .checkbox-quote-link {
+      display: block;
+    }
+    
+    .checkbox-quote-link:hover {
+      background: #f0f0f0;
+      color: #666;
+    }
+    
+    .checkbox-quote-link.has-quote {
+      color: #166534;
+      background: #f0fdf4;
+    }
+    
+    .checkbox-quote-link.has-unverified {
+      color: #c2410c;
+      background: #fff7ed;
+    }
+    
+    .checkbox-verify-btn {
+      font-size: 9px;
+      padding: 2px 6px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      margin-left: 4px;
+    }
+    
+    .checkbox-verify-btn:hover {
+      background: #2563eb;
+    }
+    
+    /* Quote picker modal */
+    .quote-picker-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .quote-picker-modal.open {
+      display: flex;
+    }
+    
+    .quote-picker-modal-content {
+      background: white;
+      border-radius: 8px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    
+    .quote-picker-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid #eee;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .quote-picker-modal-close {
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: #666;
+      padding: 4px 8px;
+    }
+    
+    .quote-picker-modal-close:hover {
+      color: #333;
+    }
+    
+    .quote-picker-modal .quote-picker-search {
+      padding: 12px 16px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .quote-picker-modal .quote-picker-search input {
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 13px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+    }
+    
+    .quote-picker-modal .quote-picker-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
     }
     
     /* Button styles */
@@ -697,6 +1092,284 @@
       cursor: pointer;
     }
     
+    /* Violation grid (three-tier system) */
+    .violation-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .violation-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 0;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .violation-name {
+      flex: 1;
+      font-size: 12px;
+      min-width: 100px;
+    }
+    
+    .violation-select {
+      width: 90px;
+      padding: 3px 6px;
+      font-size: 11px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: white;
+    }
+    
+    .violation-select:focus {
+      border-color: #3b82f6;
+      outline: none;
+    }
+    
+    .violation-select option[value="alleged"] { color: #dc2626; }
+    .violation-select option[value="potential"] { color: #f59e0b; }
+    .violation-select option[value="possible"] { color: #6b7280; }
+    
+    .violation-select.has-value-alleged { 
+      background: #fef2f2; 
+      border-color: #dc2626; 
+      color: #dc2626;
+    }
+    .violation-select.has-value-potential { 
+      background: #fffbeb; 
+      border-color: #f59e0b;
+      color: #b45309;
+    }
+    .violation-select.has-value-possible { 
+      background: #f9fafb; 
+      border-color: #6b7280;
+      color: #4b5563;
+    }
+    
+    .violation-quote-link {
+      font-size: 11px;
+      padding: 2px 6px;
+      cursor: pointer;
+      color: #666;
+      transition: all 0.2s;
+      border-radius: 3px;
+    }
+    
+    .violation-quote-link:hover {
+      background: #e5e7eb;
+      color: #333;
+    }
+    
+    .violation-quote-link.has-quote {
+      color: #166534;
+      background: #dcfce7;
+    }
+    
+    .violation-info-btn {
+      font-size: 10px;
+      padding: 2px 5px;
+      cursor: pointer;
+      color: #3b82f6;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 3px;
+      transition: all 0.2s;
+    }
+    
+    .violation-info-btn:hover {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+    
+    /* Legal Reference Modal */
+    .legal-ref-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 2000;
+      overflow-y: auto;
+    }
+    
+    .legal-ref-modal.active {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 20px;
+    }
+    
+    .legal-ref-content {
+      background: white;
+      border-radius: 8px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    
+    .legal-ref-header {
+      padding: 16px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      background: white;
+      z-index: 1;
+    }
+    
+    .legal-ref-header h3 {
+      margin: 0;
+      font-size: 16px;
+      color: #111;
+    }
+    
+    .legal-ref-close {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: #666;
+      padding: 4px;
+    }
+    
+    .legal-ref-body {
+      padding: 16px;
+    }
+    
+    .legal-ref-section {
+      margin-bottom: 20px;
+    }
+    
+    .legal-ref-section h4 {
+      font-size: 13px;
+      color: #374151;
+      margin: 0 0 8px 0;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .constitutional-text {
+      background: #fefce8;
+      border: 1px solid #fde047;
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #713f12;
+      font-style: italic;
+      margin-bottom: 12px;
+    }
+    
+    .case-law-item {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 8px;
+    }
+    
+    .case-law-item h5 {
+      margin: 0 0 6px 0;
+      font-size: 12px;
+      color: #1e40af;
+    }
+    
+    .case-law-item p {
+      margin: 0;
+      font-size: 11px;
+      color: #475569;
+      line-height: 1.5;
+    }
+    
+    .case-law-item .holding {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px dashed #cbd5e1;
+      font-style: italic;
+    }
+    
+    .copy-text-btn {
+      font-size: 10px;
+      padding: 3px 8px;
+      margin-top: 6px;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 3px;
+      cursor: pointer;
+      color: #475569;
+    }
+    
+    .copy-text-btn:hover {
+      background: #e2e8f0;
+    }
+    
+    .violation-quote-link.has-unverified {
+      color: #c2410c;
+      background: #ffedd5;
+    }
+    
+    .section-hint {
+      font-size: 11px;
+      color: #666;
+      margin-bottom: 8px;
+      font-style: italic;
+    }
+    
+    .form-hint {
+      font-size: 11px;
+      color: #666;
+      margin-top: 4px;
+      font-style: italic;
+    }
+    
+    .image-preview-container {
+      margin-top: 8px;
+      padding: 8px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      text-align: center;
+    }
+    
+    .image-preview-container img {
+      max-width: 100%;
+      max-height: 150px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    
+    .image-preview-container .btn-danger {
+      background: #ef4444;
+      color: white;
+      font-size: 11px;
+      padding: 4px 8px;
+    }
+    
+    .image-preview-container .btn-danger:hover {
+      background: #dc2626;
+    }
+    
+    .violation-basis-section {
+      margin-top: 12px;
+      padding: 10px;
+      background: #f8fafc;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+    
+    .violation-basis-section h4 {
+      margin: 0 0 10px 0;
+      font-size: 12px;
+      color: #334155;
+    }
+    
     /* Hidden */
     .hidden {
       display: none !important;
@@ -761,11 +1434,12 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>📋 ICE Incident Documentation</h1>
+      <h1>ICE Incident Documentation</h1>
       <div class="header-actions">
-        <button class="header-btn" id="openOverlayBtn" title="Open overlay on page (Alt+O)">📌</button>
+        <button class="header-btn" id="wideModeBtn" title="Toggle wide mode (side by side)">⬌</button>
+        <button class="header-btn" id="openOverlayBtn" title="Open overlay on page (Alt+O)">Overlay</button>
         <button class="header-btn" id="clearHighlightsBtn" title="Clear all highlights on page">🧹</button>
-        <button class="header-btn" id="settingsBtn" title="Settings">⚙️</button>
+        <button class="header-btn" id="settingsBtn" title="Settings">Settings</button>
       </div>
     </div>
     
@@ -783,86 +1457,135 @@
       <button class="tab" data-tab="settings">Settings</button>
     </div>
     
+    <div class="tab-content-wrapper">
     <!-- Case Tab -->
     <div class="tab-content active" id="tab-case">
+      <div class="wide-tab-header">Incident Details</div>
       <!-- Incident Type Section -->
       <div class="section">
         <div class="section-header">
-          <span class="section-title">📌 Incident Type</span>
+          <span class="section-title">Incident Type</span>
         </div>
         
         <div class="form-group">
           <select class="form-input" id="incidentType">
             <optgroup label="Deaths">
-              <option value="death_in_custody">💀 Death in Custody</option>
-              <option value="death_during_operation">💀 Death During Operation</option>
-              <option value="death_at_protest">💀 Death at Protest</option>
+              <option value="death_in_custody">Death in Custody</option>
+              <option value="death_during_operation">Death During Operation</option>
+              <option value="death_at_protest">Death at Protest</option>
             </optgroup>
             <optgroup label="Force/Violence">
-              <option value="shooting">🔫 Shooting</option>
-              <option value="excessive_force">⚡ Excessive Force</option>
-              <option value="injury">🩹 Injury</option>
+              <option value="shooting">Shooting</option>
+              <option value="excessive_force">Excessive Force</option>
+              <option value="injury">Injury</option>
             </optgroup>
             <optgroup label="Enforcement">
-              <option value="arrest">🚔 Arrest/Detention</option>
-              <option value="deportation">✈️ Deportation</option>
-              <option value="workplace_raid">🏭 Workplace Raid</option>
-              <option value="family_separation">👨‍👩‍👧 Family Separation</option>
+              <option value="arrest">Arrest/Detention</option>
+              <option value="deportation">Deportation</option>
+              <option value="workplace_raid">Workplace Raid</option>
+              <option value="family_separation">Family Separation</option>
             </optgroup>
             <optgroup label="Rights Issues">
-              <option value="rights_violation">⚖️ Rights Violation</option>
-              <option value="protest_suppression">✊ Protest Suppression</option>
-              <option value="retaliation">🎯 Retaliation</option>
-              <option value="medical_neglect">🏥 Medical Neglect</option>
+              <option value="rights_violation">Rights Violation</option>
+              <option value="protest_suppression">Protest Suppression</option>
+              <option value="retaliation">Retaliation</option>
+              <option value="medical_neglect">Medical Neglect</option>
             </optgroup>
-            <option value="other">📋 Other</option>
+            <option value="other">Other</option>
           </select>
+          <div class="quote-association" style="position: relative;">
+            <button type="button" class="quote-picker-trigger" data-field="incident_type">
+              <span class="selected-quote-preview">[src] Link quote...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="incident_type">
+              <div class="quote-picker-search">
+                <input type="text" placeholder="Search quotes..." data-field="incident_type">
+              </div>
+              <div class="quote-picker-list" data-field="incident_type"></div>
+            </div>
+          </div>
         </div>
       </div>
       
       <!-- Agencies Involved Section -->
       <div class="section">
         <div class="collapsible-header open" id="agenciesHeader">
-          <span class="section-title">🏛️ Agencies Involved</span>
+          <span class="section-title">Agencies Involved</span>
         </div>
         <div class="collapsible-content open" id="agenciesContent">
           <div class="checkbox-grid">
-            <label class="checkbox-item">
-              <input type="checkbox" id="agency-ice" value="ice"> ICE
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="agency-ice_ere" value="ice_ere"> ICE ERO
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="agency-cbp" value="cbp"> CBP
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="agency-border_patrol" value="border_patrol"> Border Patrol
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="agency-local_police" value="local_police"> Local Police
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="agency-state_police" value="state_police"> State Police
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="agency-federal_marshals" value="federal_marshals"> US Marshals
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="agency-national_guard" value="national_guard"> National Guard
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="agency-dhs" value="dhs"> DHS
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="agency-private_contractor" value="private_contractor"> Private Contractor
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="agency-other" value="other"> Other
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="agency-unknown" value="unknown"> Unknown
-            </label>
+            <div class="checkbox-with-quote" data-agency="ice">
+              <label class="checkbox-item">
+                <input type="checkbox" id="agency-ice" value="ice"> ICE
+              </label>
+              <span class="checkbox-quote-link" data-field="agency_ice">[src]</span>
+            </div>
+            <div class="checkbox-with-quote" data-agency="ice_ere">
+              <label class="checkbox-item">
+                <input type="checkbox" id="agency-ice_ere" value="ice_ere"> ICE ERO
+              </label>
+              <span class="checkbox-quote-link" data-field="agency_ice_ere">[src]</span>
+            </div>
+            <div class="checkbox-with-quote" data-agency="cbp">
+              <label class="checkbox-item">
+                <input type="checkbox" id="agency-cbp" value="cbp"> CBP
+              </label>
+              <span class="checkbox-quote-link" data-field="agency_cbp">[src]</span>
+            </div>
+            <div class="checkbox-with-quote" data-agency="border_patrol">
+              <label class="checkbox-item">
+                <input type="checkbox" id="agency-border_patrol" value="border_patrol"> Border Patrol
+              </label>
+              <span class="checkbox-quote-link" data-field="agency_border_patrol">[src]</span>
+            </div>
+            <div class="checkbox-with-quote" data-agency="local_police">
+              <label class="checkbox-item">
+                <input type="checkbox" id="agency-local_police" value="local_police"> Local Police
+              </label>
+              <span class="checkbox-quote-link" data-field="agency_local_police">[src]</span>
+            </div>
+            <div class="checkbox-with-quote" data-agency="state_police">
+              <label class="checkbox-item">
+                <input type="checkbox" id="agency-state_police" value="state_police"> State Police
+              </label>
+              <span class="checkbox-quote-link" data-field="agency_state_police">[src]</span>
+            </div>
+            <div class="checkbox-with-quote" data-agency="federal_marshals">
+              <label class="checkbox-item">
+                <input type="checkbox" id="agency-federal_marshals" value="federal_marshals"> US Marshals
+              </label>
+              <span class="checkbox-quote-link" data-field="agency_federal_marshals">[src]</span>
+            </div>
+            <div class="checkbox-with-quote" data-agency="national_guard">
+              <label class="checkbox-item">
+                <input type="checkbox" id="agency-national_guard" value="national_guard"> National Guard
+              </label>
+              <span class="checkbox-quote-link" data-field="agency_national_guard">[src]</span>
+            </div>
+            <div class="checkbox-with-quote" data-agency="dhs">
+              <label class="checkbox-item">
+                <input type="checkbox" id="agency-dhs" value="dhs"> DHS
+              </label>
+              <span class="checkbox-quote-link" data-field="agency_dhs">[src]</span>
+            </div>
+            <div class="checkbox-with-quote" data-agency="private_contractor">
+              <label class="checkbox-item">
+                <input type="checkbox" id="agency-private_contractor" value="private_contractor"> Private Contractor
+              </label>
+              <span class="checkbox-quote-link" data-field="agency_private_contractor">[src]</span>
+            </div>
+            <div class="checkbox-with-quote" data-agency="other">
+              <label class="checkbox-item">
+                <input type="checkbox" id="agency-other" value="other"> Other
+              </label>
+              <span class="checkbox-quote-link" data-field="agency_other">[src]</span>
+            </div>
+            <div class="checkbox-with-quote" data-agency="unknown">
+              <label class="checkbox-item">
+                <input type="checkbox" id="agency-unknown" value="unknown"> Unknown
+              </label>
+              <span class="checkbox-quote-link" data-field="agency_unknown">[src]</span>
+            </div>
           </div>
         </div>
       </div>
@@ -870,40 +1593,154 @@
       <!-- Violations Section -->
       <div class="section hidden" id="violationsSection">
         <div class="collapsible-header open" id="violationsHeader">
-          <span class="section-title">⚖️ Violations Alleged</span>
+          <span class="section-title">Constitutional Violations</span>
         </div>
         <div class="collapsible-content open" id="violationsContent">
-          <div class="checkbox-grid">
-            <label class="checkbox-item">
-              <input type="checkbox" id="violation-first_amendment" value="first_amendment"> 1st Amendment
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="violation-fourth_amendment" value="fourth_amendment"> 4th Amendment
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="violation-fifth_amendment" value="fifth_amendment"> 5th Amendment
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="violation-sixth_amendment" value="sixth_amendment"> 6th Amendment
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="violation-eighth_amendment" value="eighth_amendment"> 8th Amendment
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="violation-14th_amendment" value="14th_amendment"> 14th Amendment
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="violation-civil_rights" value="civil_rights"> Civil Rights
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="violation-excessive_force" value="excessive_force"> Excessive Force
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="violation-wrongful_death" value="wrongful_death"> Wrongful Death
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="violation-asylum_violation" value="asylum_violation"> Asylum Violation
-            </label>
+          <p class="section-hint">Select classification type for each violation:</p>
+          <div class="violation-grid">
+            <div class="violation-item">
+              <span class="violation-name">1st Amendment</span>
+              <select class="violation-select" id="violation-first_amendment" data-violation="first_amendment">
+                <option value="">—</option>
+                <option value="alleged">Alleged</option>
+                <option value="potential">Potential</option>
+                <option value="possible">Possible</option>
+              </select>
+              <span class="violation-info-btn" data-violation="first_amendment" title="View constitutional text &amp; case law">?</span>
+              <span class="checkbox-quote-link violation-quote-link" data-field="violation_first_amendment">[src]</span>
+            </div>
+            <div class="violation-item">
+              <span class="violation-name">4th Amendment</span>
+              <select class="violation-select" id="violation-fourth_amendment" data-violation="fourth_amendment">
+                <option value="">—</option>
+                <option value="alleged">Alleged</option>
+                <option value="potential">Potential</option>
+                <option value="possible">Possible</option>
+              </select>
+              <span class="violation-info-btn" data-violation="fourth_amendment" title="View constitutional text &amp; case law">?</span>
+              <span class="checkbox-quote-link violation-quote-link" data-field="violation_fourth_amendment">[src]</span>
+            </div>
+            <div class="violation-item">
+              <span class="violation-name">5th Amendment</span>
+              <select class="violation-select" id="violation-fifth_amendment" data-violation="fifth_amendment">
+                <option value="">—</option>
+                <option value="alleged">Alleged</option>
+                <option value="potential">Potential</option>
+                <option value="possible">Possible</option>
+              </select>
+              <span class="violation-info-btn" data-violation="fifth_amendment" title="View constitutional text &amp; case law">?</span>
+              <span class="checkbox-quote-link violation-quote-link" data-field="violation_fifth_amendment">[src]</span>
+            </div>
+            <div class="violation-item">
+              <span class="violation-name">6th Amendment</span>
+              <select class="violation-select" id="violation-sixth_amendment" data-violation="sixth_amendment">
+                <option value="">—</option>
+                <option value="alleged">Alleged</option>
+                <option value="potential">Potential</option>
+                <option value="possible">Possible</option>
+              </select>
+              <span class="violation-info-btn" data-violation="sixth_amendment" title="View constitutional text &amp; case law">?</span>
+              <span class="checkbox-quote-link violation-quote-link" data-field="violation_sixth_amendment">[src]</span>
+            </div>
+            <div class="violation-item">
+              <span class="violation-name">8th Amendment</span>
+              <select class="violation-select" id="violation-eighth_amendment" data-violation="eighth_amendment">
+                <option value="">—</option>
+                <option value="alleged">Alleged</option>
+                <option value="potential">Potential</option>
+                <option value="possible">Possible</option>
+              </select>
+              <span class="violation-info-btn" data-violation="eighth_amendment" title="View constitutional text &amp; case law">?</span>
+              <span class="checkbox-quote-link violation-quote-link" data-field="violation_eighth_amendment">[src]</span>
+            </div>
+            <div class="violation-item">
+              <span class="violation-name">14th Amendment</span>
+              <select class="violation-select" id="violation-14th_amendment" data-violation="14th_amendment">
+                <option value="">—</option>
+                <option value="alleged">Alleged</option>
+                <option value="potential">Potential</option>
+                <option value="possible">Possible</option>
+              </select>
+              <span class="violation-info-btn" data-violation="fourteenth_amendment" title="View constitutional text &amp; case law">?</span>
+              <span class="checkbox-quote-link violation-quote-link" data-field="violation_14th_amendment">[src]</span>
+            </div>
+            <div class="violation-item">
+              <span class="violation-name">Civil Rights</span>
+              <select class="violation-select" id="violation-civil_rights" data-violation="civil_rights">
+                <option value="">—</option>
+                <option value="alleged">Alleged</option>
+                <option value="potential">Potential</option>
+                <option value="possible">Possible</option>
+              </select>
+              <span class="violation-info-btn" data-violation="civil_rights" title="View legal framework">?</span>
+              <span class="checkbox-quote-link violation-quote-link" data-field="violation_civil_rights">[src]</span>
+            </div>
+            <div class="violation-item">
+              <span class="violation-name">Excessive Force</span>
+              <select class="violation-select" id="violation-excessive_force" data-violation="excessive_force">
+                <option value="">—</option>
+                <option value="alleged">Alleged</option>
+                <option value="potential">Potential</option>
+                <option value="possible">Possible</option>
+              </select>
+              <span class="violation-info-btn" data-violation="excessive_force" title="View legal framework">?</span>
+              <span class="checkbox-quote-link violation-quote-link" data-field="violation_excessive_force">[src]</span>
+            </div>
+            <div class="violation-item">
+              <span class="violation-name">Wrongful Death</span>
+              <select class="violation-select" id="violation-wrongful_death" data-violation="wrongful_death">
+                <option value="">—</option>
+                <option value="alleged">Alleged</option>
+                <option value="potential">Potential</option>
+                <option value="possible">Possible</option>
+              </select>
+              <span class="violation-info-btn" data-violation="wrongful_death" title="View legal framework">?</span>
+              <span class="checkbox-quote-link violation-quote-link" data-field="violation_wrongful_death">[src]</span>
+            </div>
+            <div class="violation-item">
+              <span class="violation-name">Asylum Violation</span>
+              <select class="violation-select" id="violation-asylum_violation" data-violation="asylum_violation">
+                <option value="">—</option>
+                <option value="alleged">Alleged</option>
+                <option value="potential">Potential</option>
+                <option value="possible">Possible</option>
+              </select>
+              <span class="violation-info-btn" data-violation="asylum_violation" title="View legal framework">?</span>
+              <span class="checkbox-quote-link violation-quote-link" data-field="violation_asylum_violation">[src]</span>
+            </div>
+          </div>
+          
+          <!-- Violation Basis Entry (shown when potential/possible selected) -->
+          <div class="violation-basis-section hidden" id="violationBasisSection">
+            <h4>Legal Basis (for Potential/Possible)</h4>
+            <div class="form-group">
+              <label class="form-label">Violation Type</label>
+              <select class="form-input" id="violationBasisType">
+                <option value="">Select violation...</option>
+                <!-- Populated dynamically with only selected violations -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Case Law / Legal Framework</label>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <select class="form-input" id="violationCaseLawSelect" style="flex: 1;">
+                  <option value="">Select case law...</option>
+                  <option value="custom">-- Custom Entry --</option>
+                </select>
+                <button type="button" class="view-case-law-btn" id="viewSelectedCaseLaw" title="View selected case law details" style="padding: 6px 10px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">View</button>
+              </div>
+              <input type="text" class="form-input hidden" id="violationLegalFrameworkCustom" placeholder="Enter custom case law citation..." style="margin-top: 6px;">
+              <input type="hidden" id="violationLegalFramework">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Relevant Facts (one per line)</label>
+              <textarea class="form-input" id="violationRelevantFacts" rows="3" placeholder="Subject was unarmed&#10;No threat posed to officers&#10;Shot while seated in vehicle"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Note</label>
+              <input type="text" class="form-input" id="violationNote" placeholder="Additional context">
+            </div>
+            <button type="button" class="btn btn-sm" id="saveViolationBasis">Save Basis</button>
           </div>
         </div>
       </div>
@@ -911,7 +1748,7 @@
       <!-- Shooting Details Section (for shooting type) -->
       <div class="section hidden" id="shootingSection">
         <div class="collapsible-header open" id="shootingHeader">
-          <span class="section-title">🔫 Shooting Details</span>
+          <span class="section-title">Shooting Details</span>
         </div>
         <div class="collapsible-content open" id="shootingContent">
           <div class="form-row">
@@ -957,7 +1794,7 @@
       <!-- Excessive Force Details Section -->
       <div class="section hidden" id="excessiveForceSection">
         <div class="collapsible-header open" id="excessiveForceHeader">
-          <span class="section-title">⚡ Excessive Force Details</span>
+          <span class="section-title">Excessive Force Details</span>
         </div>
         <div class="collapsible-content open" id="excessiveForceContent">
           <div class="form-group">
@@ -1000,7 +1837,7 @@
       <!-- Protest Details Section -->
       <div class="section hidden" id="protestSection">
         <div class="collapsible-header open" id="protestHeader">
-          <span class="section-title">✊ Protest Details</span>
+          <span class="section-title">Protest Details</span>
         </div>
         <div class="collapsible-content open" id="protestContent">
           <div class="form-group">
@@ -1041,23 +1878,56 @@
       <!-- Case Form Section -->
       <div class="section">
         <div class="section-header">
-          <span class="section-title">📄 Basic Information</span>
+          <span class="section-title">Basic Information</span>
           <button class="btn btn-sm btn-secondary" id="clearCaseBtn">Clear</button>
         </div>
         
         <div class="form-group">
           <label class="form-label">Subject Name</label>
           <input type="text" class="form-input" id="caseName" placeholder="Last name, First name (or Anonymous)">
+          <div class="quote-association" style="position: relative;">
+            <button type="button" class="quote-picker-trigger" data-field="name">
+              <span class="selected-quote-preview">[src] Link quote...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="name">
+              <div class="quote-picker-search">
+                <input type="text" placeholder="Search quotes..." data-field="name">
+              </div>
+              <div class="quote-picker-list" data-field="name"></div>
+            </div>
+          </div>
         </div>
         
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Incident Date</label>
             <input type="date" class="form-input" id="caseDod">
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="date">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="date">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="date">
+                </div>
+                <div class="quote-picker-list" data-field="date"></div>
+              </div>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">Age</label>
             <input type="number" class="form-input" id="caseAge" placeholder="Age">
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="age">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="age">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="age">
+                </div>
+                <div class="quote-picker-list" data-field="age"></div>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -1065,33 +1935,87 @@
           <div class="form-group">
             <label class="form-label">Nationality</label>
             <input type="text" class="form-input" id="caseCountry" placeholder="Country">
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="nationality">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="nationality">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="nationality">
+                </div>
+                <div class="quote-picker-list" data-field="nationality"></div>
+              </div>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">Occupation</label>
             <input type="text" class="form-input" id="caseOccupation" placeholder="e.g., Journalist">
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="occupation">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="occupation">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="occupation">
+                </div>
+                <div class="quote-picker-list" data-field="occupation"></div>
+              </div>
+            </div>
           </div>
         </div>
         
         <div class="form-group">
           <label class="form-label">Facility (if applicable)</label>
           <input type="text" class="form-input" id="caseFacility" placeholder="Detention facility name">
+          <div class="quote-association" style="position: relative;">
+            <button type="button" class="quote-picker-trigger" data-field="facility">
+              <span class="selected-quote-preview">[src] Link quote...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="facility">
+              <div class="quote-picker-search">
+                <input type="text" placeholder="Search quotes..." data-field="facility">
+              </div>
+              <div class="quote-picker-list" data-field="facility"></div>
+            </div>
+          </div>
         </div>
         
         <div class="form-group">
           <label class="form-label">Location</label>
           <input type="text" class="form-input" id="caseLocation" placeholder="City, State">
+          <div class="quote-association" style="position: relative;">
+            <button type="button" class="quote-picker-trigger" data-field="location">
+              <span class="selected-quote-preview">[src] Link quote...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="location">
+              <div class="quote-picker-search">
+                <input type="text" placeholder="Search quotes..." data-field="location">
+              </div>
+              <div class="quote-picker-list" data-field="location"></div>
+            </div>
+          </div>
         </div>
         
         <div class="form-group">
           <label class="form-label">Summary</label>
           <textarea class="form-input" id="caseCause" placeholder="Brief factual summary of what happened"></textarea>
         </div>
+        
+        <div class="form-group">
+          <label class="form-label">Case Image (optional)</label>
+          <input type="url" class="form-input" id="caseImageUrl" placeholder="URL to free-use image (Wikimedia, Unsplash, etc.)">
+          <div class="image-preview-container" id="imagePreviewContainer" style="display: none;">
+            <img id="caseImagePreview" src="" alt="Case image preview">
+            <button type="button" class="btn btn-sm btn-danger" id="removeImageBtn">Remove</button>
+          </div>
+          <p class="form-hint">Images must be public domain, Creative Commons, or otherwise free-use (e.g., Wikimedia Commons, Unsplash, government sources). Only link to images you have legal rights to use.</p>
+        </div>
       </div>
       
       <!-- Death-Specific Fields -->
       <div class="section hidden" id="deathFields">
         <div class="section-header">
-          <span class="section-title">💀 Death Details</span>
+          <span class="section-title">Death Details</span>
         </div>
         
         <div class="form-group">
@@ -1126,7 +2050,7 @@
       <!-- Injury-Specific Fields -->
       <div class="section hidden" id="injuryFields">
         <div class="section-header">
-          <span class="section-title">🩹 Injury Details</span>
+          <span class="section-title">Injury Details</span>
         </div>
         
         <div class="form-group">
@@ -1159,7 +2083,7 @@
       <!-- Arrest-Specific Fields -->
       <div class="section hidden" id="arrestFields">
         <div class="section-header">
-          <span class="section-title">🚔 Arrest Details</span>
+          <span class="section-title">Arrest Details</span>
         </div>
         
         <div class="form-group">
@@ -1193,7 +2117,7 @@
       <!-- Rights Violation Fields -->
       <div class="section hidden" id="violationFields">
         <div class="section-header">
-          <span class="section-title">⚖️ Violation Details</span>
+          <span class="section-title">Violation Details</span>
         </div>
         
         <div class="checkbox-grid">
@@ -1227,7 +2151,7 @@
         
         <div class="quote-list" id="quoteList">
           <div class="empty-state">
-            <div class="empty-state-icon">📝</div>
+            <div class="empty-state-icon"></div>
             <p>No verified quotes yet</p>
             <p style="font-size: 11px; margin-top: 4px;">
               Go to Extract tab to pull quotes from the page
@@ -1239,7 +2163,7 @@
       <!-- Sources Section -->
       <div class="section">
         <div class="section-header">
-          <span class="section-title">🔗 Sources (<span id="sourceCount">0</span>)</span>
+          <span class="section-title">Sources (<span id="sourceCount">0</span>)</span>
           <button class="btn btn-sm btn-secondary" id="addSourceBtn">+ Add Page</button>
         </div>
         
@@ -1251,9 +2175,10 @@
     
     <!-- Extract Tab -->
     <div class="tab-content" id="tab-extract">
+      <div class="wide-tab-header">Extract & Review</div>
       <div class="section">
         <div class="section-header">
-          <span class="section-title">🔍 Extract from Page</span>
+          <span class="section-title">Extract from Page</span>
         </div>
         
         <p style="font-size: 12px; color: #666; margin-bottom: 12px;">
@@ -1275,7 +2200,7 @@
       <!-- Custom Selector Section -->
       <div class="section">
         <div class="collapsible-header" id="customSelectorHeader">
-          <span class="section-title">🎯 Custom Element Selection</span>
+          <span class="section-title">Custom Element Selection</span>
         </div>
         <div class="collapsible-content" id="customSelectorContent">
           <div class="alert alert-info" style="margin-bottom: 12px;">
@@ -1303,17 +2228,17 @@
       <!-- Pending Quotes Section -->
       <div class="section">
         <div class="section-header">
-          <span class="section-title">📋 Pending Review (<span id="pendingCount">0</span>)</span>
+          <span class="section-title">Pending Review (<span id="pendingCount">0</span>)</span>
         </div>
         
         <div class="bulk-actions hidden" id="bulkActions">
-          <button class="btn btn-sm btn-success" id="acceptAllBtn">✓ Accept All</button>
+          <button class="btn btn-sm btn-success" id="acceptAllBtn">Accept All</button>
           <button class="btn btn-sm btn-danger" id="rejectAllBtn">✗ Clear All</button>
         </div>
         
         <div class="quote-list" id="pendingList">
           <div class="empty-state">
-            <div class="empty-state-icon">🔍</div>
+            <div class="empty-state-icon"></div>
             <p>No pending quotes</p>
             <p style="font-size: 11px; margin-top: 4px;">
               Click "Extract Article Content" to find quotes
@@ -1379,7 +2304,7 @@
       
       <div class="section">
         <div class="section-header">
-          <span class="section-title">⌨️ Keyboard Shortcuts</span>
+          <span class="section-title">Keyboard Shortcuts</span>
         </div>
         
         <div class="shortcuts-list">
@@ -1408,15 +2333,15 @@
       
       <div class="section">
         <div class="section-header">
-          <span class="section-title">📌 Page Overlay</span>
+          <span class="section-title">Page Overlay</span>
         </div>
         
         <p class="help-text" style="margin-bottom: 12px; font-size: 11px; line-height: 1.6;">
-          The overlay shows your quotes and case info directly on the page. Use <kbd>Alt + O</kbd> or click 📌 in the header.
+          The overlay shows your quotes and case info directly on the page. Use <kbd>Alt + O</kbd> or click "Overlay" in the header.
         </p>
         
         <div style="background: #fff3cd; padding: 10px; border-radius: 6px; margin-bottom: 12px; font-size: 11px; line-height: 1.6;">
-          <strong>⚠️ Works on:</strong> Regular websites<br>
+          <strong>Note:</strong> Works on regular websites<br>
           <strong>❌ Cannot run on:</strong> Chrome system pages (chrome://, extensions, settings)<br>
           <br>
           If you see a yellow warning in the status bar, refresh the page to activate the extension.
@@ -1438,13 +2363,13 @@
         </div>
         
         <button class="btn btn-secondary btn-block" id="copyAllQuotesBtn" style="margin-top: 8px;">
-          📋 Copy All Quotes
+          Copy All Quotes
         </button>
       </div>
       
       <div class="section">
         <div class="section-header">
-          <span class="section-title">🔍 Search Existing Cases</span>
+          <span class="section-title">Search Existing Cases</span>
         </div>
         
         <div class="form-group">
@@ -1456,7 +2381,7 @@
       
       <div class="section">
         <div class="section-header">
-          <span class="section-title">🗑️ Data Management</span>
+          <span class="section-title">Data Management</span>
         </div>
         
         <button class="btn btn-danger btn-block" id="clearAllDataBtn">
@@ -1465,6 +2390,34 @@
         <p class="help-text" style="margin-top: 8px; font-size: 11px; color: #999;">
           This removes all unsaved cases, quotes, and custom selectors.
         </p>
+      </div>
+    </div>
+    </div><!-- end tab-content-wrapper -->
+    
+    <!-- Quote Picker Modal -->
+    <div class="quote-picker-modal" id="quotePickerModal">
+      <div class="quote-picker-modal-content">
+        <div class="quote-picker-modal-header">
+          <span id="quotePickerModalTitle">Select Quote</span>
+          <button class="quote-picker-modal-close" id="closeQuotePickerModal">X</button>
+        </div>
+        <div class="quote-picker-search">
+          <input type="text" placeholder="Search quotes..." id="modalQuoteSearch">
+        </div>
+        <div class="quote-picker-list" id="modalQuoteList"></div>
+      </div>
+    </div>
+    
+    <!-- Legal Reference Modal -->
+    <div class="legal-ref-modal" id="legalRefModal">
+      <div class="legal-ref-content">
+        <div class="legal-ref-header">
+          <h3 id="legalRefTitle">Constitutional Reference</h3>
+          <button class="legal-ref-close" id="closeLegalRefModal">X</button>
+        </div>
+        <div class="legal-ref-body" id="legalRefBody">
+          <!-- Content populated by JavaScript -->
+        </div>
       </div>
     </div>
     

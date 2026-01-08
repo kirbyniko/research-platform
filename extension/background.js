@@ -53,15 +53,16 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       sourceUrl: tab.url,
       sourceTitle: tab.title,
       category: category,
-      status: 'pending',
+      status: 'verified',
       createdAt: new Date().toISOString()
     };
     
-    pendingQuotes.push(quote);
+    // Add to verified quotes (user-selected quotes go directly to verified)
+    verifiedQuotes.unshift(quote);
     
     // Notify sidebar
     chrome.runtime.sendMessage({
-      type: 'QUOTE_ADDED',
+      type: 'QUOTE_VERIFIED',
       quote: quote
     });
     
@@ -85,15 +86,16 @@ chrome.commands.onCommand.addListener((command, tab) => {
           sourceUrl: tab.url,
           sourceTitle: tab.title,
           category: 'uncategorized',
-          status: 'pending',
+          status: 'verified',
           createdAt: new Date().toISOString(),
           pageNumber: response.pageNumber
         };
         
-        pendingQuotes.push(quote);
+        // Add to verified quotes (user-selected quotes go directly to verified)
+        verifiedQuotes.unshift(quote);
         
         chrome.runtime.sendMessage({
-          type: 'QUOTE_ADDED',
+          type: 'QUOTE_VERIFIED',
           quote: quote
         });
         
@@ -286,13 +288,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         
         // Load extracted quotes if any
         if (doc.quotes && Array.isArray(doc.quotes)) {
-          pendingQuotes = doc.quotes.map(q => ({
+          // Split quotes into pending and verified based on status
+          const allQuotes = doc.quotes.map(q => ({
             id: crypto.randomUUID(),
             text: q.text || q,
             category: q.category || 'context',
+            status: q.status || 'pending',
             sourceUrl: doc.sourceUrl || '',
             sourceTitle: doc.sourceTitle || doc.title || ''
           }));
+          
+          pendingQuotes = allQuotes.filter(q => q.status !== 'verified');
+          verifiedQuotes = allQuotes.filter(q => q.status === 'verified');
         }
         
         // Load source
@@ -355,13 +362,18 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
         };
         
         if (doc.quotes && Array.isArray(doc.quotes)) {
-          pendingQuotes = doc.quotes.map(q => ({
+          // Split quotes into pending and verified based on status
+          const allQuotes = doc.quotes.map(q => ({
             id: crypto.randomUUID(),
             text: q.text || q,
             category: q.category || 'context',
+            status: q.status || 'pending',
             sourceUrl: doc.sourceUrl || '',
             sourceTitle: doc.sourceTitle || doc.title || ''
           }));
+          
+          pendingQuotes = allQuotes.filter(q => q.status !== 'verified');
+          verifiedQuotes = allQuotes.filter(q => q.status === 'verified');
         }
         
         if (doc.sourceUrl || doc.url) {
