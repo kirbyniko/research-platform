@@ -1,4 +1,5 @@
 // ICE Deaths Research Assistant - Content Script
+console.log('ICE Deaths content script loaded');
 
 // Default CSS selectors for major news sites
 const DEFAULT_SELECTORS = {
@@ -241,10 +242,13 @@ function splitIntoSentences(text) {
   return rawSentences;
 }
 
-// Highlight text on page
-function highlightText(searchText, category = '') {
-  // Remove existing highlights
-  removeHighlights();
+// Track pinned highlights
+const pinnedHighlightElements = new Map();
+
+// Highlight text on page (clears non-pinned highlights first)
+function highlightText(searchText, category = '', flash = false) {
+  // Remove existing non-pinned highlights
+  removeHighlights(false);
   
   if (!searchText) return;
   
@@ -329,20 +333,113 @@ function highlightText(searchText, category = '') {
   if (firstMatch) {
     setTimeout(() => {
       firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      // Flash effect if requested
+      if (flash) {
+        firstMatch.style.transition = 'all 0.3s ease';
+        firstMatch.style.transform = 'scale(1.05)';
+        firstMatch.style.boxShadow = '0 0 20px rgba(255, 200, 0, 0.8)';
+        setTimeout(() => {
+          firstMatch.style.transform = 'scale(1)';
+          firstMatch.style.boxShadow = '';
+        }, 500);
+      }
     }, 100);
   }
   
   return matches.length > 0;
 }
 
-// Remove all highlights
-function removeHighlights() {
+// Pin highlight (doesn't get cleared automatically)
+function pinHighlightText(searchText, category = '', quoteId = '') {
+  if (!searchText) return false;
+  
+  const normalizedSearch = searchText.trim().replace(/\s+/g, ' ');
+  
+  const walker = document.createTreeWalker(
+    document.body,
+    NodeFilter.SHOW_TEXT,
+    null,
+    false
+  );
+  
+  let node;
+  let found = false;
+  
+  while (node = walker.nextNode()) {
+    const normalizedText = node.textContent.replace(/\s+/g, ' ');
+    if (normalizedText.includes(normalizedSearch)) {
+      const text = node.textContent;
+      const index = normalizedText.indexOf(normalizedSearch);
+      
+      // Find actual position
+      let actualIndex = 0;
+      let normalizedPos = 0;
+      while (normalizedPos < index && actualIndex < text.length) {
+        if (text[actualIndex] !== ' ' || normalizedText[normalizedPos] === ' ') {
+          normalizedPos++;
+        }
+        actualIndex++;
+      }
+      
+      const span = document.createElement('span');
+      span.className = 'ice-deaths-highlight ice-deaths-pinned';
+      span.dataset.quoteId = quoteId;
+      
+      const before = document.createTextNode(text.substring(0, actualIndex));
+      const match = document.createElement('mark');
+      match.className = `ice-deaths-highlight-mark pinned ${category}`;
+      match.textContent = text.substring(actualIndex, actualIndex + normalizedSearch.length);
+      const after = document.createTextNode(text.substring(actualIndex + normalizedSearch.length));
+      
+      span.appendChild(before);
+      span.appendChild(match);
+      span.appendChild(after);
+      
+      node.parentNode.replaceChild(span, node);
+      
+      // Store reference for removal
+      pinnedHighlightElements.set(quoteId, searchText);
+      
+      // Scroll to it
+      match.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      found = true;
+      break; // Only highlight first occurrence for pins
+    }
+  }
+  
+  return found;
+}
+
+// Remove highlight by text content
+function removeHighlightByText(searchText) {
+  const normalizedSearch = searchText.trim().replace(/\s+/g, ' ');
   const highlights = document.querySelectorAll('.ice-deaths-highlight');
+  
+  highlights.forEach(span => {
+    const spanText = span.textContent.replace(/\s+/g, ' ');
+    if (spanText.includes(normalizedSearch)) {
+      const parent = span.parentNode;
+      parent.replaceChild(document.createTextNode(span.textContent), span);
+      parent.normalize();
+    }
+  });
+}
+
+// Remove all highlights (optionally preserve pinned)
+function removeHighlights(includesPinned = true) {
+  const selector = includesPinned ? '.ice-deaths-highlight' : '.ice-deaths-highlight:not(.ice-deaths-pinned)';
+  const highlights = document.querySelectorAll(selector);
   highlights.forEach(span => {
     const parent = span.parentNode;
     parent.replaceChild(document.createTextNode(span.textContent), span);
     parent.normalize();
   });
+  
+  if (includesPinned) {
+    pinnedHighlightElements.clear();
+  }
 }
 
 // Check if current page is a PDF
@@ -381,6 +478,12 @@ async function extractPdfText() {
 // Message handler
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   switch (message.type) {
+    case 'PING':
+      // Simple availability check
+      console.log('Content script PING received');
+      sendResponse({ ready: true });
+      return true;
+      
     case 'GET_SELECTION':
       // Check if we're in a PDF viewer
       if (isPdfPage() && window.ICEDeathsPdfHandler) {
@@ -440,6 +543,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     case 'HIGHLIGHT_TEXT':
       const found = highlightText(message.text, message.category || '');
       sendResponse({ success: true, found: found });
+      break;
+      
+    case 'HIGHLIGHT_AND_SCROLL':
+      const foundAndScrolled = highlightText(message.text, message.category || '', message.flash);
+      sendResponse({ success: true, found: foundAndScrolled });
+      break;
+      
+    case 'PIN_HIGHLIGHT':
+      const pinned = pinHighlightText(message.text, message.category || '', message.quoteId);
+      sendResponse({ success: true, found: pinned });
+      break;
+      
+    case 'REMOVE_HIGHLIGHT_BY_TEXT':
+      removeHighlightByText(message.text);
+      sendResponse({ success: true });
       break;
       
     case 'REMOVE_HIGHLIGHTS':

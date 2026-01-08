@@ -272,6 +272,16 @@
       background: #f0f0f0;
     }
     
+    .btn-icon.pin-btn {
+      transition: all 0.2s ease;
+    }
+    
+    .btn-icon.pin-btn.active {
+      background: #f59e0b;
+      border-color: #f59e0b;
+      color: white;
+    }
+    
     .btn-block {
       width: 100%;
     }
@@ -691,6 +701,61 @@
     .hidden {
       display: none !important;
     }
+    
+    /* Header buttons */
+    .header-btn {
+      background: transparent;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    
+    .header-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    /* Highlight controls in quote cards */
+    .highlight-controls {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    
+    .pin-highlight {
+      font-size: 10px;
+      background: #fef3c7;
+      color: #92400e;
+      border: none;
+      padding: 2px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .pin-highlight.active {
+      background: #f59e0b;
+      color: white;
+    }
+    
+    .highlight-flash {
+      animation: flashHighlight 0.3s ease;
+    }
+    
+    @keyframes flashHighlight {
+      0% { background: #fef3c7; }
+      50% { background: #fcd34d; }
+      100% { background: #fef3c7; }
+    }
+    
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+      15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+      85% { opacity: 1; transform: translateX(-50%) translateY(0); }
+      100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    }
   </style>
 </head>
 <body>
@@ -698,6 +763,8 @@
     <div class="header">
       <h1>📋 ICE Incident Documentation</h1>
       <div class="header-actions">
+        <button class="header-btn" id="openOverlayBtn" title="Open overlay on page (Alt+O)">📌</button>
+        <button class="header-btn" id="clearHighlightsBtn" title="Clear all highlights on page">🧹</button>
         <button class="header-btn" id="settingsBtn" title="Settings">⚙️</button>
       </div>
     </div>
@@ -1317,10 +1384,6 @@
         
         <div class="shortcuts-list">
           <div class="shortcut-item">
-            <span class="shortcut-desc">Open Sidebar</span>
-            <kbd>Alt + Shift + S</kbd>
-          </div>
-          <div class="shortcut-item">
             <span class="shortcut-desc">Add Selected Quote</span>
             <kbd>Alt + Q</kbd>
           </div>
@@ -1332,11 +1395,32 @@
             <span class="shortcut-desc">Save Case</span>
             <kbd>Alt + S</kbd>
           </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">Toggle Overlay</span>
+            <kbd>Alt + O</kbd>
+          </div>
         </div>
         
         <p class="help-text" style="margin-top: 12px; font-size: 11px; color: #666;">
           Customize shortcuts in Chrome: <code>chrome://extensions/shortcuts</code>
         </p>
+      </div>
+      
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">📌 Page Overlay</span>
+        </div>
+        
+        <p class="help-text" style="margin-bottom: 12px; font-size: 11px; line-height: 1.6;">
+          The overlay shows your quotes and case info directly on the page. Use <kbd>Alt + O</kbd> or click 📌 in the header.
+        </p>
+        
+        <div style="background: #fff3cd; padding: 10px; border-radius: 6px; margin-bottom: 12px; font-size: 11px; line-height: 1.6;">
+          <strong>⚠️ Works on:</strong> Regular websites<br>
+          <strong>❌ Cannot run on:</strong> Chrome system pages (chrome://, extensions, settings)<br>
+          <br>
+          If you see a yellow warning in the status bar, refresh the page to activate the extension.
+        </div>
       </div>
       
       <div class="section">

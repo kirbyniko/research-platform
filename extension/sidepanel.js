@@ -212,6 +212,9 @@ function cacheElements() {
   elements.caseSearchInput = document.getElementById('caseSearchInput');
   elements.caseSearchResults = document.getElementById('caseSearchResults');
   elements.clearAllDataBtn = document.getElementById('clearAllDataBtn');
+  // Overlay and highlight controls
+  elements.openOverlayBtn = document.getElementById('openOverlayBtn');
+  elements.clearHighlightsBtn = document.getElementById('clearHighlightsBtn');
   // Agency collapsible
   elements.agenciesHeader = document.getElementById('agenciesHeader');
   elements.agenciesContent = document.getElementById('agenciesContent');
@@ -276,13 +279,21 @@ async function loadState() {
           currentCase = response.currentCase;
           populateCaseForm();
         }
-        if (response.pendingQuotes) {
-          // Separate verified and pending
+        // Use verifiedQuotes array if available, otherwise filter from pendingQuotes
+        if (response.verifiedQuotes && response.verifiedQuotes.length > 0) {
+          verifiedQuotes = response.verifiedQuotes;
+        } else if (response.pendingQuotes) {
           verifiedQuotes = response.pendingQuotes.filter(q => q.status === 'verified');
-          pendingQuotes = response.pendingQuotes.filter(q => q.status !== 'verified');
-          renderQuotes();
-          renderPendingQuotes();
         }
+        if (response.pendingQuotes) {
+          pendingQuotes = response.pendingQuotes.filter(q => q.status !== 'verified');
+        }
+        if (response.sources) {
+          sources = response.sources;
+        }
+        renderQuotes();
+        renderPendingQuotes();
+        renderSources();
       }
       resolve();
     });
@@ -470,6 +481,16 @@ function setupEventListeners() {
     document.querySelector('.tab[data-tab="settings"]').click();
   });
   
+  // Open overlay button - opens the floating panel on the page
+  if (elements.openOverlayBtn) {
+    elements.openOverlayBtn.addEventListener('click', openOverlayOnPage);
+  }
+  
+  // Clear highlights button
+  if (elements.clearHighlightsBtn) {
+    elements.clearHighlightsBtn.addEventListener('click', clearAllHighlights);
+  }
+  
   // Bulk actions
   elements.acceptAllBtn.addEventListener('click', acceptAllPending);
   elements.rejectAllBtn.addEventListener('click', rejectAllPending);
@@ -517,6 +538,71 @@ function setupEventListeners() {
   elements.clearAllDataBtn.addEventListener('click', clearAllData);
 }
 
+// Open the overlay panel on the current page
+function openOverlayOnPage() {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs[0]) {
+      const tab = tabs[0];
+      
+      // Check if tab URL is loaded
+      if (!tab.url) {
+        showNotification('Page not loaded yet - wait a moment', 'error');
+        return;
+      }
+      
+      // Check if we can access the page (not chrome:// or extension pages)
+      if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('edge://')) {
+        showNotification('Overlay cannot run on browser system pages. Navigate to a website.', 'error');
+        return;
+      }
+      
+      chrome.tabs.sendMessage(tab.id, { type: 'SHOW_OVERLAY' }, (response) => {
+        if (chrome.runtime.lastError) {
+          showNotification('Overlay not available - refresh the page or wait a moment', 'error');
+          console.log('Content script not ready:', chrome.runtime.lastError.message);
+        } else if (response && response.success) {
+          showNotification('Overlay opened (Alt+O to toggle)', 'success');
+        } else {
+          showNotification('Could not open overlay', 'error');
+        }
+      });
+    }
+  });
+}
+
+// Clear all highlights on the current page
+function clearAllHighlights() {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    chrome.tabs.sendMessage(tabs[0].id, { type: 'REMOVE_HIGHLIGHTS' }, (response) => {
+      if (response && response.success) {
+        showNotification('Highlights cleared', 'success');
+      }
+    });
+  });
+}
+
+// Show notification toast
+function showNotification(message, type = 'info') {
+  const toast = document.createElement('div');
+  toast.className = `notification ${type}`;
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#6366f1'};
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    z-index: 10000;
+    animation: fadeInOut 2s ease;
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2000);
+}
+
 // Check API connection
 async function checkConnection() {
   try {
@@ -541,21 +627,75 @@ function updateConnectionStatus() {
 async function updatePageInfo() {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (tabs[0]) {
+      const tab = tabs[0];
+      
+      // Check if tab has URL loaded
+      if (!tab.url) {
+        elements.pageInfo.textContent = 'Loading...';
+        elements.pageInfo.style.color = '#666';
+        return;
+      }
+      
       try {
-        const url = new URL(tabs[0].url);
-        const isPdf = tabs[0].url.toLowerCase().endsWith('.pdf') || 
-                      tabs[0].url.includes('application/pdf');
+        const url = new URL(tab.url);
+        const isPdf = tab.url.toLowerCase().endsWith('.pdf') || 
+                      tab.url.includes('application/pdf');
         
-        elements.pageInfo.textContent = isPdf ? 
-          `📄 ${url.hostname} (PDF)` : 
-          url.hostname;
+        // Check if extension can run on this page
+        const isRestrictedPage = tab.url.startsWith('chrome://') || 
+                                 tab.url.startsWith('chrome-extension://') || 
+                                 tab.url.startsWith('edge://') ||
+                                 tab.url === 'about:blank';
+        
+        if (isRestrictedPage) {
+          elements.pageInfo.textContent = '⚠️ Cannot run on system pages';
+          elements.pageInfo.style.color = '#ef4444';
+          return;
+        }
+        
+        // Try to ping content script with retries
+        let retries = 0;
+        const maxRetries = 3;
+        
+        const tryPing = () => {
+          chrome.tabs.sendMessage(tab.id, { type: 'PING' }, (response) => {
+            if (chrome.runtime.lastError || !response) {
+              retries++;
+              if (retries < maxRetries) {
+                // Retry after delay
+                elements.pageInfo.textContent = isPdf ? 
+                  `📄 ${url.hostname} (checking...)` : 
+                  `${url.hostname} (checking...)`;
+                elements.pageInfo.style.color = '#f59e0b';
+                setTimeout(tryPing, 300);
+              } else {
+                // Max retries reached
+                elements.pageInfo.textContent = isPdf ? 
+                  `📄 ${url.hostname} (refresh page)` : 
+                  `${url.hostname} (refresh page)`;
+                elements.pageInfo.style.color = '#f59e0b';
+              }
+            } else {
+              // Success
+              elements.pageInfo.textContent = isPdf ? 
+                `📄 ${url.hostname} ✓` : 
+                `${url.hostname} ✓`;
+              elements.pageInfo.style.color = '#22c55e';
+            }
+          });
+        };
+        
+        tryPing();
         
         // Update extract button text based on page type
-        elements.extractBtn.textContent = isPdf ? 
-          'Extract PDF Content' : 
-          'Extract Article Content';
+        if (elements.extractBtn) {
+          elements.extractBtn.textContent = isPdf ? 
+            'Extract PDF Content' : 
+            'Extract Article Content';
+        }
       } catch {
         elements.pageInfo.textContent = '-';
+        elements.pageInfo.style.color = '#666';
       }
     }
   });
@@ -916,9 +1056,11 @@ function renderQuotes() {
         <span class="quote-category ${quote.category}">${quote.category}</span>
         ${quote.pageNumber ? `<span class="quote-page" onclick="goToPage(${quote.pageNumber})" title="Go to page">📄 Page ${quote.pageNumber}</span>` : ''}
       </div>
+      ${quote.sourceUrl ? `<div class="quote-source"><a href="${escapeHtml(quote.sourceUrl)}" target="_blank" class="source-link" title="${escapeHtml(quote.sourceUrl)}">🔗 ${escapeHtml(quote.sourceTitle || new URL(quote.sourceUrl).hostname)}</a></div>` : ''}
       <div class="quote-actions">
-        <button class="btn btn-sm btn-icon" onclick="copyQuote('${quote.id}', true)" title="Copy">📋</button>
-        <button class="btn btn-sm btn-icon" onclick="highlightQuote('${quote.id}', true)" title="Find on page">🔍</button>
+        <button class="btn btn-sm btn-icon" onclick="copyQuote('${quote.id}', true)" title="Copy quote">📋</button>
+        <button class="btn btn-sm btn-icon" onclick="highlightAndScroll('${quote.id}', true)" title="Find & scroll to on page">🎯</button>
+        <button class="btn btn-sm btn-icon pin-btn" onclick="togglePinHighlight('${quote.id}', true)" title="Pin highlight on page">📌</button>
         <button class="btn btn-sm btn-danger" onclick="removeVerifiedQuote('${quote.id}')" title="Remove">✗</button>
       </div>
     </div>
@@ -958,7 +1100,8 @@ function renderPendingQuotes() {
         <button class="btn btn-sm btn-success" onclick="acceptQuote('${quote.id}')" title="Accept">✓</button>
         <button class="btn btn-sm btn-danger" onclick="rejectQuote('${quote.id}')" title="Reject">✗</button>
         <button class="btn btn-sm btn-icon" onclick="copyQuote('${quote.id}', false)" title="Copy">📋</button>
-        <button class="btn btn-sm btn-icon" onclick="highlightQuote('${quote.id}', false)" title="Find on page">🔍</button>
+        <button class="btn btn-sm btn-icon" onclick="highlightAndScroll('${quote.id}', false)" title="Find & scroll to on page">🎯</button>
+        <button class="btn btn-sm btn-icon pin-btn" onclick="togglePinHighlight('${quote.id}', false)" title="Pin highlight on page">📌</button>
       </div>
     </div>
   `).join('');
@@ -1184,10 +1327,23 @@ async function classifySentences(sentences, isPdf = false, sourceUrl = '', sourc
   }
 }
 
-// Sync quotes to background script
+// Sync quotes to background script and notify overlay
 function syncQuotesToBackground() {
-  const allQuotes = [...verifiedQuotes, ...pendingQuotes];
-  chrome.runtime.sendMessage({ type: 'SYNC_QUOTES', quotes: allQuotes });
+  // Sync all state to background
+  chrome.runtime.sendMessage({ 
+    type: 'SYNC_STATE', 
+    pendingQuotes: pendingQuotes,
+    verifiedQuotes: verifiedQuotes,
+    sources: sources,
+    currentCase: currentCase
+  });
+  
+  // Notify overlay to refresh if it's open
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs[0]) {
+      chrome.tabs.sendMessage(tabs[0].id, { type: 'REFRESH_OVERLAY' }).catch(() => {});
+    }
+  });
 }
 
 // Accept a pending quote
@@ -1244,10 +1400,11 @@ window.copyQuote = function(quoteId, isVerified) {
   const quote = list.find(q => q.id === quoteId);
   if (quote) {
     navigator.clipboard.writeText(quote.text);
+    showNotification('Quote copied!', 'success');
   }
 };
 
-// Highlight quote on page
+// Highlight quote on page (basic - clears previous)
 window.highlightQuote = function(quoteId, isVerified) {
   const list = isVerified ? verifiedQuotes : pendingQuotes;
   const quote = list.find(q => q.id === quoteId);
@@ -1257,6 +1414,82 @@ window.highlightQuote = function(quoteId, isVerified) {
         type: 'HIGHLIGHT_TEXT', 
         text: quote.text,
         category: quote.category || ''
+      });
+    });
+  }
+};
+
+// Highlight and scroll to quote with visual feedback
+window.highlightAndScroll = function(quoteId, isVerified) {
+  const list = isVerified ? verifiedQuotes : pendingQuotes;
+  const quote = list.find(q => q.id === quoteId);
+  if (quote) {
+    // Flash the quote card to show it was activated
+    const card = document.querySelector(`[data-id="${quoteId}"]`);
+    if (card) {
+      card.classList.add('highlight-flash');
+      setTimeout(() => card.classList.remove('highlight-flash'), 300);
+    }
+    
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      chrome.tabs.sendMessage(tabs[0].id, { 
+        type: 'HIGHLIGHT_AND_SCROLL', 
+        text: quote.text,
+        category: quote.category || '',
+        flash: true
+      }, (response) => {
+        if (response && response.found) {
+          showNotification('Found on page!', 'success');
+        } else {
+          showNotification('Text not found on this page', 'error');
+        }
+      });
+    });
+  }
+};
+
+// Track pinned highlights
+let pinnedHighlights = new Set();
+
+// Toggle pinned highlight (stays visible until manually cleared)
+window.togglePinHighlight = function(quoteId, isVerified) {
+  const list = isVerified ? verifiedQuotes : pendingQuotes;
+  const quote = list.find(q => q.id === quoteId);
+  if (!quote) return;
+  
+  const btn = document.querySelector(`[data-id="${quoteId}"] .pin-btn`);
+  
+  if (pinnedHighlights.has(quoteId)) {
+    // Unpin - remove this specific highlight
+    pinnedHighlights.delete(quoteId);
+    if (btn) btn.classList.remove('active');
+    
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      chrome.tabs.sendMessage(tabs[0].id, { 
+        type: 'REMOVE_HIGHLIGHT_BY_TEXT', 
+        text: quote.text
+      });
+    });
+    showNotification('Highlight unpinned', 'info');
+  } else {
+    // Pin - add persistent highlight
+    pinnedHighlights.add(quoteId);
+    if (btn) btn.classList.add('active');
+    
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      chrome.tabs.sendMessage(tabs[0].id, { 
+        type: 'PIN_HIGHLIGHT', 
+        text: quote.text,
+        category: quote.category || '',
+        quoteId: quoteId
+      }, (response) => {
+        if (response && response.found) {
+          showNotification('Highlight pinned!', 'success');
+        } else {
+          showNotification('Text not found on this page', 'error');
+          pinnedHighlights.delete(quoteId);
+          if (btn) btn.classList.remove('active');
+        }
       });
     });
   }
@@ -1587,6 +1820,21 @@ chrome.runtime.onMessage.addListener((message) => {
     case 'TRIGGER_SAVE':
       saveCase();
       break;
+      
+    case 'REFRESH_QUOTES':
+      // Reload state from background when overlay makes changes
+      loadState();
+      break;
+    
+    case 'DOCUMENT_LOADED':
+      // Document loaded from website - refresh all data
+      loadState().then(() => {
+        showNotification(`Document loaded: ${message.documentData.name || 'Unnamed'}`, 'success');
+        // Switch to case tab to show the loaded data
+        const caseTab = document.querySelector('[data-tab="case"]');
+        if (caseTab) caseTab.click();
+      });
+      break;
   }
 });
 
@@ -1915,6 +2163,23 @@ function clearAllData() {
     alert('All extension data cleared');
   });
 }
+
+// Listen for tab changes to update page info
+chrome.tabs.onActivated.addListener(() => {
+  // Delay to let content script load on new tab
+  setTimeout(() => {
+    updatePageInfo();
+  }, 500);
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (changeInfo.status === 'complete') {
+    // Small delay to ensure content script is ready
+    setTimeout(() => {
+      updatePageInfo();
+    }, 300);
+  }
+});
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', init);

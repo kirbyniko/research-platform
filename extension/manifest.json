@@ -11,7 +11,8 @@
   ],
   "host_permissions": [
     "http://localhost:3000/*",
-    "http://localhost:3001/*"
+    "http://localhost:3001/*",
+    "http://localhost:3002/*"
   ],
   "side_panel": {
     "default_path": "sidepanel.html"
@@ -29,7 +30,8 @@
   },
   "content_scripts": [{
     "matches": ["<all_urls>"],
-    "js": ["pdf-handler.js", "content.js"],
+    "exclude_matches": ["http://localhost:3000/*", "http://localhost:3001/*", "http://localhost:3002/*"],
+    "js": ["pdf-handler.js", "content.js", "overlay.js"],
     "css": ["content.css"]
   }],
   "icons": {
@@ -38,12 +40,6 @@
     "128": "icons/icon128.svg"
   },
   "commands": {
-    "_execute_action": {
-      "suggested_key": {
-        "default": "Alt+Shift+S"
-      },
-      "description": "Open sidebar"
-    },
     "add-quote": {
       "suggested_key": {
         "default": "Alt+Q"
@@ -61,6 +57,12 @@
         "default": "Alt+S"
       },
       "description": "Save current case"
+    },
+    "toggle-overlay": {
+      "suggested_key": {
+        "default": "Alt+O"
+      },
+      "description": "Toggle overlay panel on page"
     }
   }
 }

@@ -5,6 +5,8 @@ const API_BASE = 'http://localhost:3001/api';
 // Extension state
 let currentCase = null;
 let pendingQuotes = [];
+let verifiedQuotes = [];
+let sources = [];
 
 // Initialize extension
 chrome.runtime.onInstalled.addListener(() => {
@@ -111,6 +113,17 @@ chrome.commands.onCommand.addListener((command, tab) => {
   } else if (command === 'save-case') {
     // Trigger save via sidebar
     chrome.runtime.sendMessage({ type: 'TRIGGER_SAVE' });
+  } else if (command === 'toggle-overlay') {
+    // Toggle the page overlay
+    chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_OVERLAY' }, (response) => {
+      if (response && response.success) {
+        notifyContentScript(tab.id, {
+          type: 'SHOW_TOAST',
+          message: response.visible ? 'Overlay opened' : 'Overlay closed',
+          duration: 1000
+        });
+      }
+    });
   }
 });
 
@@ -120,7 +133,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     case 'GET_STATE':
       sendResponse({
         currentCase: currentCase,
-        pendingQuotes: pendingQuotes
+        pendingQuotes: pendingQuotes,
+        verifiedQuotes: verifiedQuotes,
+        sources: sources
       });
       break;
       
@@ -132,7 +147,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       
     case 'CLEAR_QUOTES':
       pendingQuotes = [];
+      verifiedQuotes = [];
       saveState();
+      sendResponse({ success: true });
+      break;
+    
+    case 'CLEAR_ALL':
+      pendingQuotes = [];
+      verifiedQuotes = [];
+      sources = [];
+      currentCase = null;
+      saveState();
+      chrome.runtime.sendMessage({ type: 'REFRESH_QUOTES' });
       sendResponse({ success: true });
       break;
       
@@ -153,6 +179,65 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (idx !== -1) {
         pendingQuotes[idx] = { ...pendingQuotes[idx], ...message.quote };
       }
+      saveState();
+      sendResponse({ success: true });
+      break;
+    
+    case 'ACCEPT_QUOTE':
+      // Move quote from pending to verified
+      const acceptIdx = pendingQuotes.findIndex(q => q.id === message.quoteId);
+      if (acceptIdx !== -1) {
+        const quote = pendingQuotes[acceptIdx];
+        quote.status = 'verified';
+        verifiedQuotes.push(quote);
+        pendingQuotes.splice(acceptIdx, 1);
+      }
+      saveState();
+      // Notify sidepanel to refresh
+      chrome.runtime.sendMessage({ type: 'REFRESH_QUOTES' });
+      sendResponse({ success: true });
+      break;
+    
+    case 'REJECT_QUOTE':
+      // Remove quote from pending
+      pendingQuotes = pendingQuotes.filter(q => q.id !== message.quoteId);
+      saveState();
+      chrome.runtime.sendMessage({ type: 'REFRESH_QUOTES' });
+      sendResponse({ success: true });
+      break;
+    
+    case 'REMOVE_VERIFIED_QUOTE':
+      // Remove from verified quotes
+      verifiedQuotes = verifiedQuotes.filter(q => q.id !== message.quoteId);
+      saveState();
+      chrome.runtime.sendMessage({ type: 'REFRESH_QUOTES' });
+      sendResponse({ success: true });
+      break;
+    
+    case 'ADD_SOURCE':
+      // Store sources in state
+      if (message.source) {
+        sources.push(message.source);
+        saveState();
+      }
+      chrome.runtime.sendMessage({ type: 'REFRESH_QUOTES' });
+      sendResponse({ success: true });
+      break;
+    
+    case 'REMOVE_SOURCE':
+      // Remove source by id
+      sources = sources.filter(s => s.id !== message.sourceId);
+      saveState();
+      chrome.runtime.sendMessage({ type: 'REFRESH_QUOTES' });
+      sendResponse({ success: true });
+      break;
+    
+    case 'SYNC_STATE':
+      // Sync all state from sidepanel
+      if (message.pendingQuotes !== undefined) pendingQuotes = message.pendingQuotes;
+      if (message.verifiedQuotes !== undefined) verifiedQuotes = message.verifiedQuotes;
+      if (message.sources !== undefined) sources = message.sources;
+      if (message.currentCase !== undefined) currentCase = message.currentCase;
       saveState();
       sendResponse({ success: true });
       break;
@@ -178,6 +263,59 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse(result);
       });
       return true;
+    
+    case 'LOAD_DOCUMENT_DATA':
+      // External page (website) wants to load document data into extension
+      if (message.documentData) {
+        const doc = message.documentData;
+        
+        // Set up case from document
+        currentCase = {
+          incidentType: doc.incidentType || 'death_in_custody',
+          name: doc.name || '',
+          dateOfDeath: doc.dateOfDeath || '',
+          age: doc.age || '',
+          country: doc.country || '',
+          facility: doc.facility || '',
+          location: doc.location || '',
+          causeOfDeath: doc.causeOfDeath || '',
+          summary: doc.summary || ''
+        };
+        
+        // Load extracted quotes if any
+        if (doc.quotes && Array.isArray(doc.quotes)) {
+          pendingQuotes = doc.quotes.map(q => ({
+            id: crypto.randomUUID(),
+            text: q.text || q,
+            category: q.category || 'context',
+            sourceUrl: doc.sourceUrl || '',
+            sourceTitle: doc.sourceTitle || doc.title || ''
+          }));
+        }
+        
+        // Load source
+        if (doc.sourceUrl || doc.url) {
+          sources = [{
+            id: crypto.randomUUID(),
+            url: doc.sourceUrl || doc.url,
+            title: doc.sourceTitle || doc.title || '',
+            type: doc.sourceType || 'article',
+            date: doc.date || '',
+            author: doc.author || ''
+          }];
+        }
+        
+        saveState();
+        
+        // Notify sidepanel to refresh
+        chrome.runtime.sendMessage({ type: 'REFRESH_QUOTES' });
+        chrome.runtime.sendMessage({ type: 'DOCUMENT_LOADED', documentData: doc });
+        
+        sendResponse({ success: true, message: 'Document loaded into extension' });
+      } else {
+        sendResponse({ success: false, error: 'No document data provided' });
+      }
+      break;
       
     default:
       console.log('Unknown message type:', message.type);
@@ -188,6 +326,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 function saveState() {
   chrome.storage.local.set({
     pendingQuotes: pendingQuotes,
+    verifiedQuotes: verifiedQuotes,
+    sources: sources,
     currentCase: currentCase
   });
 }
@@ -276,9 +416,15 @@ async function saveQuotes(caseId, quotes) {
 }
 
 // Store pending quotes in local storage for persistence
-chrome.storage.local.get(['pendingQuotes', 'currentCase'], (result) => {
+chrome.storage.local.get(['pendingQuotes', 'verifiedQuotes', 'sources', 'currentCase'], (result) => {
   if (result.pendingQuotes) {
     pendingQuotes = result.pendingQuotes;
+  }
+  if (result.verifiedQuotes) {
+    verifiedQuotes = result.verifiedQuotes;
+  }
+  if (result.sources) {
+    sources = result.sources;
   }
   if (result.currentCase) {
     currentCase = result.currentCase;

@@ -3,8 +3,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from '@descope/nextjs-sdk/client';
-import PDFViewer, { Quote } from '@/components/verification/PDFViewer';
 import QuoteCard from '@/components/verification/QuoteCard';
+import { ExtensionBridge } from '@/components/ExtensionBridge';
+
+interface Quote {
+  id: number;
+  text: string;
+  page_number: number;
+  category: string;
+  status: string;
+}
 
 interface Document {
   id: number;
@@ -272,13 +280,21 @@ export default function VerificationPage() {
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
         {/* PDF Viewer */}
-        <div className="flex-1 border-r">
-          <PDFViewer
-            pdfUrl={pdfUrl}
-            quotes={quotes}
-            selectedQuoteId={selectedQuoteId}
-            onQuoteClick={(id: number) => setSelectedQuoteId(id)}
-          />
+        <div className="flex-1 border-r flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <h3 className="text-lg font-semibold mb-2">PDF Document</h3>
+            <p className="text-gray-600 mb-4">
+              Open the PDF in a new tab to view and select quotes
+            </p>
+            <a
+              href={pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block px-6 py-3 bg-black text-white rounded hover:bg-gray-800"
+            >
+              📄 Open PDF
+            </a>
+          </div>
         </div>
 
         {/* Quotes Panel */}
@@ -287,8 +303,24 @@ export default function VerificationPage() {
           <div className="p-4 border-b">
             <h2 className="font-semibold mb-2">Extracted Quotes</h2>
             
+            {/* Extension Bridge */}
+            <ExtensionBridge
+              documentData={{
+                name: document?.case_name || '',
+                sourceUrl: pdfUrl,
+                sourceTitle: document?.original_filename || '',
+                sourceType: 'document',
+                quotes: quotes
+                  .filter(q => q.status === 'verified')
+                  .map(q => ({
+                    text: q.text,
+                    category: q.category
+                  }))
+              }}
+            />
+            
             {/* Stats */}
-            <div className="flex space-x-4 text-sm mb-3">
+            <div className="flex space-x-4 text-sm mb-3 mt-3">
               <span className="text-yellow-600">● {stats.pending} pending</span>
               <span className="text-green-600">✓ {stats.verified} verified</span>
               <span className="text-red-600">✗ {stats.rejected} rejected</span>
