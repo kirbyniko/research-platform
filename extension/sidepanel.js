@@ -60,7 +60,7 @@ let verifiedQuotes = [];
 let pendingQuotes = [];
 let sources = [];
 let isConnected = false;
-let apiUrl = 'http://localhost:3000';
+let apiUrl = 'https://ice-deaths.vercel.app';
 let apiKey = '';
 let currentSelectors = {};
 let isExtracting = false;
@@ -486,7 +486,6 @@ function cacheElements() {
   elements.extractCustomBtn = document.getElementById('extractCustomBtn');
   elements.selectorTestResult = document.getElementById('selectorTestResult');
   // Settings elements
-  elements.apiUrl = document.getElementById('apiUrl');
   elements.apiKey = document.getElementById('apiKey');
   elements.testConnectionBtn = document.getElementById('testConnectionBtn');
   elements.exportJsonBtn = document.getElementById('exportJsonBtn');
@@ -536,11 +535,7 @@ function cacheElements() {
 // Load settings from storage
 async function loadSettings() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(['apiUrl', 'apiKey', 'customSelectors'], (result) => {
-      if (result.apiUrl) {
-        apiUrl = result.apiUrl;
-        elements.apiUrl.value = apiUrl;
-      }
+    chrome.storage.local.get(['apiKey', 'customSelectors'], (result) => {
       if (result.apiKey) {
         apiKey = result.apiKey;
         elements.apiKey.value = apiKey;
@@ -879,12 +874,6 @@ function setupEventListeners() {
   
   // Test connection
   elements.testConnectionBtn.addEventListener('click', testConnection);
-  
-  // API URL change
-  elements.apiUrl.addEventListener('change', () => {
-    apiUrl = elements.apiUrl.value;
-    chrome.storage.local.set({ apiUrl });
-  });
   
   // API Key change
   elements.apiKey.addEventListener('change', () => {

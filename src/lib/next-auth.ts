@@ -28,6 +28,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       
       try {
+        // Check database connection
+        if (!process.env.DATABASE_URL) {
+          console.error('[NextAuth] DATABASE_URL not configured - cannot create user');
+          return false;
+        }
+        
         // Check if user exists in our database
         const result = await pool.query(
           'SELECT id, role FROM users WHERE email = $1',
@@ -45,7 +51,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
              VALUES ($1, $2, $3, true, 'google')`,
             [user.email, user.name, defaultRole]
           );
-          console.log(`Created new ${defaultRole} user:`, user.email);
+          console.log(`[NextAuth] Created new ${defaultRole} user:`, user.email);
         } else {
           // Update existing user's auth provider
           // If user is admin email and not already admin, upgrade them
@@ -54,7 +60,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               `UPDATE users SET auth_provider = 'google', name = COALESCE($2, name), role = 'admin' WHERE email = $1`,
               [user.email, user.name]
             );
-            console.log('Upgraded user to admin:', user.email);
+            console.log('[NextAuth] Upgraded user to admin:', user.email);
           } else {
             await pool.query(
               `UPDATE users SET auth_provider = 'google', name = COALESCE($2, name) WHERE email = $1`,
@@ -65,7 +71,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         
         return true;
       } catch (error) {
-        console.error('Error during sign in:', error);
+        console.error('[NextAuth] Error during sign in:', error);
+        console.error('[NextAuth] Make sure DATABASE_URL is set in Vercel environment variables for Production');
         return false;
       }
     },

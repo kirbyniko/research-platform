@@ -1,6 +1,6 @@
 // ICE Deaths Research Assistant - Background Service Worker
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = 'https://ice-deaths.vercel.app/api';
 
 // Extension state
 let currentCase = null;
