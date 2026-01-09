@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { loginUser } from '@/lib/auth';
 import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
-import { logAndRespond, SafeErrors } from '@/lib/security';
 
 export async function POST(request: NextRequest) {
   // Rate limit: 10 attempts per minute to prevent brute force

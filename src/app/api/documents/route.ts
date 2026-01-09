@@ -14,7 +14,7 @@ const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'documents');
 async function ensureUploadDir() {
   try {
     await fs.mkdir(UPLOAD_DIR, { recursive: true });
-  } catch (error) {
+  } catch {
     // Directory might already exist
   }
 }

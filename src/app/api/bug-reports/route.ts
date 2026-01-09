@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const status = searchParams.get('status'); // 'open', 'resolved', 'all'
     
-    let query = `
+    const query = `
       SELECT * FROM bug_reports 
       ${status && status !== 'all' ? 'WHERE status = $2' : ''}
       ORDER BY reported_at DESC 

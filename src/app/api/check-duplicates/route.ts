@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
   if (rateLimitResponse) return rateLimitResponse;
 
   try {
-    const { victimName, dateOfDeath, facility, sourceUrls } = await request.json();
+    const { victimName, dateOfDeath, sourceUrls } = await request.json();
 
     const results: {
       existingCases: Array<{ id: number; victim_name: string; incident_date: string; facility_name: string; city?: string; state?: string; verification_status: string }>;
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
       if (conditions.length > 0) {
         // Try with pg_trgm first, fall back to basic matching if extension not available
-        let query = `
+        const query = `
           SELECT id, victim_name, incident_date, facility_name, city, state, verification_status
           FROM incidents
           WHERE ${conditions.join(' OR ')}
@@ -60,9 +60,10 @@ export async function POST(request: NextRequest) {
         try {
           const caseResult = await pool.query(query, params);
           results.existingCases = caseResult.rows;
-        } catch (err: any) {
+        } catch (err: unknown) {
           // If similarity function fails (extension not installed), use basic matching
-          if (err.message?.includes('similarity')) {
+          const error = err as Error;
+          if (error.message?.includes('similarity')) {
             const basicConditions: string[] = [];
             const basicParams: (string | null)[] = [];
             let idx = 1;
