@@ -126,6 +126,20 @@ export async function requireServerAuth(
   }
 }
 
+/**
+ * Optional authentication - returns user if authenticated, null if not.
+ * Never returns an error for unauthenticated requests.
+ */
+export async function optionalServerAuth(
+  request: NextRequest
+): Promise<{ user: AuthUser | null }> {
+  const result = await requireServerAuth(request);
+  if ('error' in result) {
+    return { user: null };
+  }
+  return result;
+}
+
 function hasRequiredRole(userRole: RoleLevel, requiredRole: RoleLevel): boolean {
   return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
 }

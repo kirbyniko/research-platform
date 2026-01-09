@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireServerAuth } from '@/lib/server-auth';
+import { requireServerAuth, optionalServerAuth } from '@/lib/server-auth';
 import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 import pool from '@/lib/db';
 import {
@@ -103,22 +103,24 @@ export async function GET(request: NextRequest) {
 
 // POST /api/incidents - Create new incident
 export async function POST(request: NextRequest) {
-  // Rate limit: 60 per minute for authenticated users
-  const rateLimitResponse = rateLimit(request, RateLimitPresets.standard, 'incidents-create');
-  if (rateLimitResponse) return rateLimitResponse;
+  // Check authentication (optional - guests allowed)
+  const authResult = await optionalServerAuth(request);
+  const user = authResult.user;
+  const isGuest = !user;
+  const isAnalyst = user && (user.role === 'analyst' || user.role === 'admin');
+  
+  // Different rate limits for guests vs authenticated users
+  if (isGuest) {
+    // Guests: 5 submissions per hour (very strict)
+    const rateLimitResponse = rateLimit(request, RateLimitPresets.veryStrict, 'incidents-create-guest');
+    if (rateLimitResponse) return rateLimitResponse;
+  } else {
+    // Authenticated: 60 per minute (standard)
+    const rateLimitResponse = rateLimit(request, RateLimitPresets.standard, 'incidents-create');
+    if (rateLimitResponse) return rateLimitResponse;
+  }
 
   try {
-    // Require editor role minimum
-    const authResult = await requireServerAuth(request, 'editor');
-    if ('error' in authResult) {
-      return NextResponse.json(
-        { error: authResult.error },
-        { status: authResult.status }
-      );
-    }
-    
-    const user = authResult.user;
-
     const body = await request.json();
     const incident: Omit<Incident, 'id' | 'created_at' | 'updated_at'> = body;
 
@@ -138,12 +140,9 @@ export async function POST(request: NextRequest) {
 
     const id = await createIncident(incident);
     
-    // If submitter is an analyst, auto-record their submission and mark fields as first-verified
-    const isAnalyst = user.role === 'analyst' || user.role === 'admin';
-    
     if (isAnalyst) {
+      // Analyst submission - auto first-verify
       try {
-        // Update incident with submitter info and auto first-verification
         await pool.query(`
           UPDATE incidents SET 
             submitted_by = $1,
@@ -156,7 +155,7 @@ export async function POST(request: NextRequest) {
           WHERE id = $3
         `, [user.id, user.role, id]);
         
-        // Create field-level verification records for all fields with values
+        // Create field-level verification records
         const fieldsToVerify = [
           { key: 'victim_name', value: incident.subject?.name },
           { key: 'incident_date', value: incident.date },
@@ -165,7 +164,7 @@ export async function POST(request: NextRequest) {
           { key: 'state', value: incident.location?.state },
           { key: 'facility', value: incident.location?.facility },
           { key: 'summary', value: incident.summary },
-        ].filter(f => f.value); // Only create verifications for fields with values
+        ].filter(f => f.value);
         
         for (const field of fieldsToVerify) {
           await pool.query(`
@@ -177,10 +176,18 @@ export async function POST(request: NextRequest) {
         }
       } catch (verifyError) {
         console.error('Error auto-verifying analyst submission:', verifyError);
-        // Don't fail the whole request if verification fails
       }
-    } else {
-      // Non-analyst submission - just record who submitted
+      
+      return NextResponse.json({ 
+        success: true, 
+        id, 
+        incident_id: incident.incident_id,
+        auto_verified: true,
+        submission_type: 'analyst',
+        message: 'Incident created and auto-verified as first review (analyst submission)'
+      });
+    } else if (user) {
+      // Authenticated non-analyst submission
       await pool.query(`
         UPDATE incidents SET 
           submitted_by = $1,
@@ -190,17 +197,44 @@ export async function POST(request: NextRequest) {
           victim_name = COALESCE(victim_name, subject_name)
         WHERE id = $3
       `, [user.id, user.role, id]);
+      
+      return NextResponse.json({ 
+        success: true, 
+        id, 
+        incident_id: incident.incident_id,
+        auto_verified: false,
+        submission_type: 'user',
+        message: 'Incident created and pending analyst review'
+      });
+    } else {
+      // Guest submission - mark appropriately
+      // Get IP for tracking
+      const forwarded = request.headers.get('x-forwarded-for');
+      const realIp = request.headers.get('x-real-ip');
+      const cfIp = request.headers.get('cf-connecting-ip');
+      const guestIp = cfIp || realIp || forwarded?.split(',')[0]?.trim() || 'unknown';
+      
+      await pool.query(`
+        UPDATE incidents SET 
+          submitted_by = NULL,
+          submitted_at = NOW(),
+          submitter_role = 'guest',
+          submitter_ip = $1,
+          verification_status = 'pending_guest',
+          victim_name = COALESCE(victim_name, subject_name)
+        WHERE id = $2
+      `, [guestIp, id]);
+      
+      return NextResponse.json({ 
+        success: true, 
+        id, 
+        incident_id: incident.incident_id,
+        auto_verified: false,
+        submission_type: 'guest',
+        message: 'Incident submitted as guest. Create an account to track your submissions and get higher rate limits.',
+        rate_limit_info: 'Guest submissions limited to 5 per hour'
+      });
     }
-    
-    return NextResponse.json({ 
-      success: true, 
-      id, 
-      incident_id: incident.incident_id,
-      auto_verified: isAnalyst,
-      message: isAnalyst 
-        ? 'Incident created and auto-verified as first review (analyst submission)'
-        : 'Incident created and pending first review'
-    });
   } catch (error) {
     console.error('Error creating incident:', error);
     

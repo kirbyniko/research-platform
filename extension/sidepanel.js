@@ -493,8 +493,6 @@ function cacheElements() {
   elements.caseSearchInput = document.getElementById('caseSearchInput');
   elements.caseSearchResults = document.getElementById('caseSearchResults');
   elements.clearAllDataBtn = document.getElementById('clearAllDataBtn');
-  // Overlay and highlight controls
-  elements.openOverlayBtn = document.getElementById('openOverlayBtn');
   // Agency collapsible
   elements.agenciesHeader = document.getElementById('agenciesHeader');
   elements.agenciesContent = document.getElementById('agenciesContent');
@@ -799,45 +797,10 @@ function setupEventListeners() {
   // Add source button
   elements.addSourceBtn.addEventListener('click', addCurrentPageAsSource);
   
-  // Open overlay button - opens the floating panel on the page
-  if (elements.openOverlayBtn) {
-    elements.openOverlayBtn.addEventListener('click', openOverlayOnPage);
-  }
-  
   // Bug report button
   const reportBugBtn = document.getElementById('reportBugBtn');
   if (reportBugBtn) {
     reportBugBtn.addEventListener('click', openBugReportModal);
-  }
-  
-  // Sync modal controls
-  const syncToOverlayBtn = document.getElementById('syncToOverlay');
-  if (syncToOverlayBtn) {
-    syncToOverlayBtn.addEventListener('click', () => {
-      document.getElementById('syncModal').style.display = 'none';
-      syncSidepanelToOverlay();
-    });
-  }
-  const syncFromOverlayBtn = document.getElementById('syncFromOverlay');
-  if (syncFromOverlayBtn) {
-    syncFromOverlayBtn.addEventListener('click', () => {
-      document.getElementById('syncModal').style.display = 'none';
-      syncOverlayToSidepanel();
-    });
-  }
-  const cancelSyncBtn = document.getElementById('cancelSync');
-  if (cancelSyncBtn) {
-    cancelSyncBtn.addEventListener('click', () => {
-      document.getElementById('syncModal').style.display = 'none';
-    });
-  }
-  const syncModal = document.getElementById('syncModal');
-  if (syncModal) {
-    syncModal.addEventListener('click', (e) => {
-      if (e.target.id === 'syncModal') {
-        syncModal.style.display = 'none';
-      }
-    });
   }
   
   // Bug report modal controls
@@ -892,9 +855,16 @@ function setupEventListeners() {
   elements.testConnectionBtn.addEventListener('click', testConnection);
   
   // API Key change
-  elements.apiKey.addEventListener('change', () => {
+  elements.apiKey.addEventListener('change', async () => {
     apiKey = elements.apiKey.value;
     chrome.storage.local.set({ apiKey });
+    // Re-check role when API key changes
+    if (apiKey) {
+      await checkUserRole();
+    } else {
+      userRole = null;
+      updateUserStatus();
+    }
   });
   
   // Get API Key link
@@ -961,110 +931,6 @@ function toggleWideMode() {
   });
 }
 
-// Open the overlay panel on the current page
-function openOverlayOnPage() {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs[0]) {
-      const tab = tabs[0];
-      
-      // Check if tab URL is loaded
-      if (!tab.url) {
-        showNotification('Page not loaded yet - wait a moment', 'error');
-        return;
-      }
-      
-      // Check if we can access the page (not chrome:// or extension pages)
-      if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('edge://')) {
-        showNotification('Overlay cannot run on browser system pages. Navigate to a website.', 'error');
-        return;
-      }
-      
-      chrome.tabs.sendMessage(tab.id, { type: 'SHOW_OVERLAY' }, (response) => {
-        if (chrome.runtime.lastError) {
-          showNotification('Overlay not available - refresh the page or wait a moment', 'error');
-          console.log('Content script not ready:', chrome.runtime.lastError.message);
-        } else if (response && response.success) {
-          showNotification('Overlay opened (Alt+O to toggle)', 'success');
-        } else {
-          showNotification('Could not open overlay', 'error');
-        }
-      });
-    }
-  });
-}
-
-// Sync current data to overlay
-function syncToOverlay() {
-  // Show modal to choose sync direction
-  const modal = document.getElementById('syncModal');
-  if (modal) {
-    modal.style.display = 'flex';
-  }
-}
-
-// Sync FROM sidepanel TO overlay
-function syncSidepanelToOverlay() {
-  // First sync to background
-  syncQuotesToBackground();
-  
-  // Then tell overlay to refresh
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs[0]) {
-      chrome.tabs.sendMessage(tabs[0].id, { type: 'REFRESH_OVERLAY' }, (response) => {
-        if (chrome.runtime.lastError) {
-          showNotification('Overlay not open - click "Overlay" to open it first', 'error');
-        } else if (response && response.success) {
-          showNotification('✓ Synced sidepanel → overlay', 'success');
-        } else {
-          showNotification('Could not sync - is overlay open?', 'error');
-        }
-      });
-    }
-  });
-}
-
-// Sync FROM overlay TO sidepanel
-function syncOverlayToSidepanel() {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs[0]) {
-      // Request current overlay state
-      chrome.tabs.sendMessage(tabs[0].id, { type: 'GET_OVERLAY_STATE' }, (response) => {
-        if (chrome.runtime.lastError) {
-          showNotification('Overlay not open - click "Overlay" to open it first', 'error');
-        } else if (response && response.data) {
-          // Load overlay data into sidepanel
-          const overlayData = response.data;
-          
-          // Merge quotes
-          if (overlayData.pendingQuotes) {
-            pendingQuotes = overlayData.pendingQuotes;
-          }
-          if (overlayData.verifiedQuotes) {
-            verifiedQuotes = overlayData.verifiedQuotes;
-          }
-          if (overlayData.sources) {
-            sources = overlayData.sources;
-          }
-          if (overlayData.currentCase) {
-            currentCase = overlayData.currentCase;
-            populateFormFromCase(currentCase);
-          }
-          
-          // Update UI
-          renderPendingQuotes();
-          renderVerifiedQuotes();
-          renderSources();
-          updateCounts();
-          
-          showNotification('✓ Synced overlay → sidepanel', 'success');
-        } else {
-          showNotification('Could not get overlay data', 'error');
-        }
-      });
-    }
-  });
-}
-
 // Clear all highlights on the current page
 function clearAllHighlights() {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -1115,6 +981,9 @@ async function checkConnection() {
   if (apiKey) {
     await checkUserRole();
   }
+  
+  // Update user status display
+  updateUserStatus();
 }
 
 // Check user role from API key
@@ -1147,6 +1016,41 @@ async function checkUserRole() {
   } catch (error) {
     console.error('Error checking user role:', error);
     userRole = null;
+  }
+  
+  // Update user status display after role check
+  updateUserStatus();
+}
+
+// Update user status display
+function updateUserStatus() {
+  const userStatusEl = document.getElementById('userStatus');
+  if (!userStatusEl) return;
+  
+  if (!apiKey) {
+    userStatusEl.textContent = '👤 Guest';
+    userStatusEl.style.color = '#f59e0b'; // Orange/warning
+    userStatusEl.title = 'Submitting as guest (5/hour limit). Add API key in Settings for higher limits.';
+  } else if (userRole === 'admin') {
+    userStatusEl.textContent = '👑 Admin';
+    userStatusEl.style.color = '#8b5cf6'; // Purple
+    userStatusEl.title = 'Admin access';
+  } else if (userRole === 'analyst') {
+    userStatusEl.textContent = '✓ Analyst';
+    userStatusEl.style.color = '#10b981'; // Green
+    userStatusEl.title = 'Analyst - submissions auto-verified';
+  } else if (userRole === 'editor') {
+    userStatusEl.textContent = '✎ Editor';
+    userStatusEl.style.color = '#3b82f6'; // Blue
+    userStatusEl.title = 'Editor access';
+  } else if (userRole) {
+    userStatusEl.textContent = '👤 User';
+    userStatusEl.style.color = '#6b7280'; // Gray
+    userStatusEl.title = 'Authenticated user';
+  } else {
+    userStatusEl.textContent = '👤 Guest';
+    userStatusEl.style.color = '#f59e0b'; // Orange
+    userStatusEl.title = 'API key invalid or expired. Submitting as guest.';
   }
 }
 
@@ -2058,6 +1962,22 @@ function updateCaseFromForm() {
   
   // Save to background
   chrome.runtime.sendMessage({ type: 'SET_CURRENT_CASE', case: currentCase });
+  
+  // Notify overlay of the update (for real-time sync)
+  notifyOverlayOfUpdate();
+}
+
+// Debounced notification to overlay to avoid loops
+let overlayNotifyTimer = null;
+function notifyOverlayOfUpdate() {
+  clearTimeout(overlayNotifyTimer);
+  overlayNotifyTimer = setTimeout(() => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]) {
+        chrome.tabs.sendMessage(tabs[0].id, { type: 'SIDEPANEL_UPDATED' });
+      }
+    });
+  }, 200);
 }
 
 // Field quote associations - stores which quote is linked to which field
@@ -3641,10 +3561,8 @@ async function saveCase() {
     return;
   }
   
-  if (!apiKey) {
-    alert('Please enter an API key in the Settings tab.');
-    return;
-  }
+  // Determine if this is a guest submission (no API key)
+  const isGuestSubmission = !apiKey;
   
   // Check for unverified linked quotes
   const unverifiedQuotes = getUnverifiedLinkedQuotes();
@@ -3658,19 +3576,36 @@ async function saveCase() {
     return;
   }
   
+  // Warn guest users about rate limits
+  if (isGuestSubmission) {
+    const proceed = confirm(
+      'You are submitting as a guest.\n\n' +
+      '• Guest submissions are limited to 5 per hour\n' +
+      '• Your submission will be marked for priority review\n' +
+      '• Create an account for higher limits and to track your submissions\n\n' +
+      'Continue with guest submission?'
+    );
+    if (!proceed) return;
+  }
+  
   elements.saveCaseBtn.disabled = true;
   elements.saveCaseBtn.innerHTML = '<div class="spinner white"></div> Saving...';
   
   const incident = buildIncidentObject();
   
   try {
-    // First, create the incident
+    // Build headers - include API key only if we have one
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+    
+    // Create the incident
     const response = await fetch(`${apiUrl}/api/incidents`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
+      headers,
       body: JSON.stringify(incident)
     });
     
@@ -3715,20 +3650,25 @@ async function saveCase() {
         }));
       }
       
-      await fetch(`${apiUrl}/api/incidents/${incidentDbId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify(patchData)
-      });
+      // Only PATCH if we have an API key (guests can't update)
+      if (apiKey) {
+        await fetch(`${apiUrl}/api/incidents/${incidentDbId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify(patchData)
+        });
+      }
     }
     
-    // Show appropriate message based on user role
-    const isAnalyst = userRole === 'analyst' || userRole === 'admin';
-    if (isAnalyst) {
+    // Show appropriate message based on submission type
+    const submissionType = result.submission_type;
+    if (submissionType === 'analyst') {
       alert(`Incident saved and auto-verified as first review!\nID: ${incident.incident_id}\n\nAnother analyst can now provide second verification.`);
+    } else if (submissionType === 'guest') {
+      alert(`Incident submitted as guest!\nID: ${incident.incident_id}\n\n${result.message}\n\nNote: ${result.rate_limit_info}`);
     } else {
       alert(`Incident saved successfully!\nID: ${incident.incident_id}\n\nAwaiting analyst review.`);
     }
@@ -3908,14 +3848,6 @@ function clearCase() {
 // Listen for messages from background
 chrome.runtime.onMessage.addListener((message) => {
   switch (message.type) {
-    case 'SHOW_SYNC_MODAL':
-      // Show sync modal when requested from overlay
-      const modal = document.getElementById('syncModal');
-      if (modal) {
-        modal.style.display = 'flex';
-      }
-      break;
-    
     case 'QUOTE_ADDED':
       pendingQuotes.push(message.quote);
       renderPendingQuotes();

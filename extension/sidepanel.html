@@ -1540,9 +1540,6 @@
   <div class="container">
     <div class="header">
       <h1>ICE Incident Documentation</h1>
-      <div class="header-actions">
-        <button class="header-btn" id="openOverlayBtn" title="Open overlay on page (Alt+O)">Overlay</button>
-      </div>
     </div>
     
     <div class="status-bar">
@@ -1550,6 +1547,7 @@
         <div class="status-dot" id="statusDot"></div>
         <span id="statusText">Connected</span>
       </div>
+      <span id="userStatus" style="font-size: 10px; color: #666;">Guest</span>
       <span id="pageInfo">-</span>
     </div>
     
@@ -2457,10 +2455,6 @@
             <span class="shortcut-desc">Save Case</span>
             <kbd>Alt + S</kbd>
           </div>
-          <div class="shortcut-item">
-            <span class="shortcut-desc">Toggle Overlay</span>
-            <kbd>Alt + O</kbd>
-          </div>
         </div>
         
         <p class="help-text" style="margin-top: 12px; font-size: 11px; color: #666;">
@@ -2468,22 +2462,7 @@
         </p>
       </div>
       
-      <div class="section">
-        <div class="section-header">
-          <span class="section-title">Page Overlay</span>
-        </div>
-        
-        <p class="help-text" style="margin-bottom: 12px; font-size: 11px; line-height: 1.6;">
-          The overlay shows your quotes and case info directly on the page. Use <kbd>Alt + O</kbd> or click "Overlay" in the header.
-        </p>
-        
-        <div style="background: #fff3cd; padding: 10px; border-radius: 6px; margin-bottom: 12px; font-size: 11px; line-height: 1.6;">
-          <strong>Note:</strong> Works on regular websites<br>
-          <strong>❌ Cannot run on:</strong> Chrome system pages (chrome://, extensions, settings)<br>
-          <br>
-          If you see a yellow warning in the status bar, refresh the page to activate the extension.
-        </div>
-      </div>
+
       
       <div class="section">
         <div class="section-header">
@@ -2589,28 +2568,6 @@
             <button class="btn btn-primary" id="submitBugReport">Submit Bug Report</button>
           </div>
         </div>
-      </div>
-    </div>
-    
-    <!-- Sync Direction Modal -->
-    <div id="syncModal" class="modal-container" style="display: none;">
-      <div class="modal-content" style="max-width: 400px;">
-        <h3 style="margin-bottom: 16px; font-size: 16px;">Choose Sync Direction</h3>
-        <p style="color: #666; font-size: 13px; margin-bottom: 20px;">Which way do you want to sync?</p>
-        
-        <button class="btn btn-primary" id="syncToOverlay" style="width: 100%; margin-bottom: 12px; padding: 12px; font-size: 14px;">
-          → Sidepanel to Overlay
-          <div style="font-size: 11px; opacity: 0.8; margin-top: 4px;">Push current sidepanel data to overlay</div>
-        </button>
-        
-        <button class="btn btn-primary" id="syncFromOverlay" style="width: 100%; margin-bottom: 12px; padding: 12px; font-size: 14px;">
-          ← Overlay to Sidepanel
-          <div style="font-size: 11px; opacity: 0.8; margin-top: 4px;">Pull overlay data into sidepanel</div>
-        </button>
-        
-        <button class="btn btn-secondary" id="cancelSync" style="width: 100%; padding: 8px;">
-          Cancel
-        </button>
       </div>
     </div>
     
