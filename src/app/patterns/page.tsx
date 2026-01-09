@@ -1,6 +1,9 @@
 import { getIncidents } from '@/lib/incidents-db';
 import Link from 'next/link';
 
+// Force dynamic rendering to avoid database queries during build
+export const dynamic = 'force-dynamic';
+
 export default async function PatternsPage() {
   // Only get verified incidents
   const incidents = await getIncidents({ includeUnverified: false });

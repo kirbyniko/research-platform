@@ -1,5 +1,8 @@
 import { getIncidents, getIncidentStats } from '@/lib/incidents-db';
 
+// Force dynamic rendering to avoid database queries during build
+export const dynamic = 'force-dynamic';
+
 export default async function DataPage() {
   // Only get verified incidents for public data download
   const incidents = await getIncidents({ includeUnverified: false });
