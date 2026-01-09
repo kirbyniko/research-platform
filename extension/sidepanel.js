@@ -496,6 +496,7 @@ function cacheElements() {
   elements.clearAllDataBtn = document.getElementById('clearAllDataBtn');
   // Overlay and highlight controls
   elements.openOverlayBtn = document.getElementById('openOverlayBtn');
+  elements.syncOverlayBtn = document.getElementById('syncOverlayBtn');
   elements.clearHighlightsBtn = document.getElementById('clearHighlightsBtn');
   // Agency collapsible
   elements.agenciesHeader = document.getElementById('agenciesHeader');
@@ -811,6 +812,11 @@ function setupEventListeners() {
     elements.openOverlayBtn.addEventListener('click', openOverlayOnPage);
   }
   
+  // Sync to overlay button - syncs current data to overlay
+  if (elements.syncOverlayBtn) {
+    elements.syncOverlayBtn.addEventListener('click', syncToOverlay);
+  }
+  
   // Wide mode toggle button
   const wideModeBtn = document.getElementById('wideModeBtn');
   if (wideModeBtn) {
@@ -948,6 +954,55 @@ function toggleWideMode() {
 // Open the overlay panel on the current page
 function openOverlayOnPage() {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs[0]) {
+      const tab = tabs[0];
+      
+      // Check if tab URL is loaded
+      if (!tab.url) {
+        showNotification('Page not loaded yet - wait a moment', 'error');
+        return;
+      }
+      
+      // Check if we can access the page (not chrome:// or extension pages)
+      if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('edge://')) {
+        showNotification('Overlay cannot run on browser system pages. Navigate to a website.', 'error');
+        return;
+      }
+      
+      chrome.tabs.sendMessage(tab.id, { type: 'SHOW_OVERLAY' }, (response) => {
+        if (chrome.runtime.lastError) {
+          showNotification('Overlay not available - refresh the page or wait a moment', 'error');
+          console.log('Content script not ready:', chrome.runtime.lastError.message);
+        } else if (response && response.success) {
+          showNotification('Overlay opened (Alt+O to toggle)', 'success');
+        } else {
+          showNotification('Could not open overlay', 'error');
+        }
+      });
+    }
+  });
+}
+
+// Sync current data to overlay
+function syncToOverlay() {
+  // First sync to background
+  syncQuotesToBackground();
+  
+  // Then tell overlay to refresh
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs[0]) {
+      chrome.tabs.sendMessage(tabs[0].id, { type: 'REFRESH_OVERLAY' }, (response) => {
+        if (chrome.runtime.lastError) {
+          showNotification('Overlay not open - click "Overlay" to open it first', 'error');
+        } else if (response && response.success) {
+          showNotification('✓ Synced to overlay', 'success');
+        } else {
+          showNotification('Could not sync - is overlay open?', 'error');
+        }
+      });
+    }
+  });
+}
     if (tabs[0]) {
       const tab = tabs[0];
       
