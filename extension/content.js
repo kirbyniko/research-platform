@@ -1,4 +1,4 @@
-// ICE Incident Tracker Research Assistant - Content Script
+// ICE Incident Tracker - Content Script
 console.log('ICE Incident Tracker content script loaded');
 
 // Default CSS selectors for major news sites
