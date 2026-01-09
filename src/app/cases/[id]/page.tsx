@@ -1,16 +1,11 @@
 import { redirect, notFound } from 'next/navigation';
-import { getAllCasesFromDb, getCaseByIdFromDb } from '@/lib/cases-db';
 import pool from '@/lib/db';
+
+// Make this page dynamic - no static generation
+export const dynamic = 'force-dynamic';
 
 interface CasePageProps {
   params: Promise<{ id: string }>;
-}
-
-export async function generateStaticParams() {
-  const cases = await getAllCasesFromDb();
-  return cases.map((c) => ({
-    id: c.id,
-  }));
 }
 
 // Legacy /cases/[id] page - redirect to /incidents/[id] if the incident is verified
