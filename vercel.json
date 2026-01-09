@@ -1,0 +1,11 @@
+{
+  "github": {
+    "silent": true,
+    "autoJobCancelation": false
+  },
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  }
+}
