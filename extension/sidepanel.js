@@ -469,7 +469,6 @@ function cacheElements() {
   elements.newCaseBtn = document.getElementById('newCaseBtn');
   elements.clearCaseBtn = document.getElementById('clearCaseBtn');
   elements.addSourceBtn = document.getElementById('addSourceBtn');
-  elements.settingsBtn = document.getElementById('settingsBtn');
   elements.acceptAllBtn = document.getElementById('acceptAllBtn');
   elements.rejectAllBtn = document.getElementById('rejectAllBtn');
   elements.manualAddHeader = document.getElementById('manualAddHeader');
@@ -496,7 +495,6 @@ function cacheElements() {
   elements.clearAllDataBtn = document.getElementById('clearAllDataBtn');
   // Overlay and highlight controls
   elements.openOverlayBtn = document.getElementById('openOverlayBtn');
-  elements.clearHighlightsBtn = document.getElementById('clearHighlightsBtn');
   // Agency collapsible
   elements.agenciesHeader = document.getElementById('agenciesHeader');
   elements.agenciesContent = document.getElementById('agenciesContent');
@@ -801,20 +799,9 @@ function setupEventListeners() {
   // Add source button
   elements.addSourceBtn.addEventListener('click', addCurrentPageAsSource);
   
-  // Settings button - switch to settings tab
-  elements.settingsBtn.addEventListener('click', () => {
-    document.querySelector('.tab[data-tab="settings"]').click();
-  });
-  
   // Open overlay button - opens the floating panel on the page
   if (elements.openOverlayBtn) {
     elements.openOverlayBtn.addEventListener('click', openOverlayOnPage);
-  }
-  
-  // Wide mode toggle button
-  const wideModeBtn = document.getElementById('wideModeBtn');
-  if (wideModeBtn) {
-    wideModeBtn.addEventListener('click', toggleWideMode);
   }
   
   // Bug report button
@@ -878,7 +865,6 @@ function setupEventListeners() {
     elements.clearHighlightsBtn.addEventListener('click', clearAllHighlights);
   }
   
-  // Bulk actions
   elements.acceptAllBtn.addEventListener('click', acceptAllPending);
   elements.rejectAllBtn.addEventListener('click', rejectAllPending);
   
