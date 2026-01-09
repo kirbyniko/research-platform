@@ -46,12 +46,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (result.rows.length === 0) {
           // Create new user
-          await pool.query(
-            `INSERT INTO users (email, name, role, email_verified, auth_provider) 
-             VALUES ($1, $2, $3, true, 'google')`,
+          console.log('[NextAuth] Creating new user:', user.email, 'with role:', defaultRole);
+          const insertResult = await pool.query(
+            `INSERT INTO users (email, name, role, auth_provider) 
+             VALUES ($1, $2, $3, 'google')
+             RETURNING id, email, role`,
             [user.email, user.name, defaultRole]
           );
-          console.log(`[NextAuth] Created new ${defaultRole} user:`, user.email);
+          console.log('[NextAuth] User created successfully:', insertResult.rows[0]);
         } else {
           // Update existing user's auth provider
           // If user is admin email and not already admin, upgrade them
