@@ -70,6 +70,11 @@ let reviewQueue = [];  // Cases awaiting review
 let reviewMode = false;  // Are we reviewing an existing incident?
 let reviewIncidentId = null;  // ID of incident being reviewed
 
+// Guest submission rate limit tracking
+let guestSubmissions = [];  // Array of timestamps
+const GUEST_RATE_LIMIT = 5;  // 5 per hour
+const GUEST_RATE_WINDOW = 60 * 60 * 1000;  // 1 hour in ms
+
 // Constitutional and Legal Reference Database
 const LEGAL_REFERENCES = {
   first_amendment: {
@@ -823,6 +828,29 @@ function setupEventListeners() {
     });
   }
   
+  // Guest submission modal controls
+  const confirmGuestSubmission = document.getElementById('confirmGuestSubmission');
+  if (confirmGuestSubmission) {
+    confirmGuestSubmission.addEventListener('click', () => {
+      document.getElementById('guestSubmissionModal').style.display = 'none';
+      performSave(true);
+    });
+  }
+  const cancelGuestSubmission = document.getElementById('cancelGuestSubmission');
+  if (cancelGuestSubmission) {
+    cancelGuestSubmission.addEventListener('click', () => {
+      document.getElementById('guestSubmissionModal').style.display = 'none';
+    });
+  }
+  const guestSubmissionModal = document.getElementById('guestSubmissionModal');
+  if (guestSubmissionModal) {
+    guestSubmissionModal.addEventListener('click', (e) => {
+      if (e.target.id === 'guestSubmissionModal') {
+        guestSubmissionModal.style.display = 'none';
+      }
+    });
+  }
+  
   // Clear highlights button
   if (elements.clearHighlightsBtn) {
     elements.clearHighlightsBtn.addEventListener('click', clearAllHighlights);
@@ -1028,7 +1056,7 @@ function updateUserStatus() {
   if (!userStatusEl) return;
   
   if (!apiKey) {
-    userStatusEl.textContent = '👤 Guest';
+    userStatusEl.textContent = 'Guest Mode';
     userStatusEl.style.color = '#f59e0b'; // Orange/warning
     userStatusEl.title = 'Submitting as guest (5/hour limit). Add API key in Settings for higher limits.';
   } else if (userRole === 'admin') {
@@ -2113,7 +2141,9 @@ function updateQuotePickerTriggers() {
 }
 
 function resetTriggerText(trigger, field) {
+  if (!trigger) return;
   const preview = trigger.querySelector('.selected-quote-preview');
+  if (!preview) return;
   const isLongField = ['name', 'facility', 'location'].includes(field);
   preview.textContent = isLongField ? '[src] Link quote...' : '[src] Link...';
   trigger.classList.remove('has-quote', 'has-unverified', 'has-matches');
@@ -3539,6 +3569,50 @@ function buildIncidentObject() {
         court_ruling: currentCase.violationRuling || undefined
       };
       break;
+      
+    case 'shooting':
+      incident.shooting_details = {
+        fatal: currentCase.shootingFatal || false,
+        shots_fired: currentCase.shotsFired ? parseInt(currentCase.shotsFired) : undefined,
+        weapon_type: currentCase.weaponType || 'unknown',
+        bodycam_available: currentCase.bodycamAvailable || false,
+        victim_armed: currentCase.victimArmed || false,
+        warning_given: currentCase.warningGiven || false,
+        context: currentCase.shootingContext || 'other'
+      };
+      break;
+      
+    case 'excessive_force':
+      incident.excessive_force_details = {
+        force_type: currentCase.forceTypes || [],
+        victim_restrained_when_force_used: currentCase.victimRestrained || false,
+        victim_complying: currentCase.victimComplying || false,
+        video_evidence: currentCase.videoEvidence || false
+      };
+      break;
+      
+    case 'death_in_custody':
+    case 'death_during_operation':
+    case 'death_at_protest':
+    case 'detention_death':
+      incident.death_details = {
+        cause_of_death: currentCase.deathCause || currentCase.causeOfDeath || '',
+        cause_source: 'unknown',
+        manner_of_death: currentCase.deathManner || undefined,
+        custody_duration: currentCase.deathCustodyDuration || undefined,
+        medical_requests_denied: currentCase.deathMedicalDenied || false
+      };
+      break;
+      
+    case 'protest_suppression':
+      incident.protest_details = {
+        protest_topic: currentCase.protestTopic || '',
+        protest_size: currentCase.protestSize || undefined,
+        permitted: currentCase.protestPermitted || false,
+        dispersal_method: currentCase.dispersalMethod || undefined,
+        arrests_made: currentCase.arrestsMade ? parseInt(currentCase.arrestsMade) : undefined
+      };
+      break;
   }
   
   return incident;
@@ -3561,9 +3635,6 @@ async function saveCase() {
     return;
   }
   
-  // Determine if this is a guest submission (no API key)
-  const isGuestSubmission = !apiKey;
-  
   // Check for unverified linked quotes
   const unverifiedQuotes = getUnverifiedLinkedQuotes();
   if (unverifiedQuotes.length > 0) {
@@ -3576,18 +3647,54 @@ async function saveCase() {
     return;
   }
   
-  // Warn guest users about rate limits
+  // Determine if this is a guest submission (no API key)
+  const isGuestSubmission = !apiKey;
+  
+  // If guest submission, show modal with rate limit info
   if (isGuestSubmission) {
-    const proceed = confirm(
-      'You are submitting as a guest.\n\n' +
-      '• Guest submissions are limited to 5 per hour\n' +
-      '• Your submission will be marked for priority review\n' +
-      '• Create an account for higher limits and to track your submissions\n\n' +
-      'Continue with guest submission?'
-    );
-    if (!proceed) return;
+    showGuestSubmissionModal();
+    return;
   }
   
+  // Proceed with authenticated save
+  await performSave(false);
+}
+
+// Show guest submission confirmation modal
+function showGuestSubmissionModal() {
+  // Load guest submissions from storage
+  chrome.storage.local.get(['guestSubmissions'], (result) => {
+    const now = Date.now();
+    guestSubmissions = (result.guestSubmissions || []).filter(ts => now - ts < GUEST_RATE_WINDOW);
+    
+    const remaining = Math.max(0, GUEST_RATE_LIMIT - guestSubmissions.length);
+    const resetTime = guestSubmissions.length > 0 
+      ? new Date(guestSubmissions[0] + GUEST_RATE_WINDOW)
+      : new Date(now + GUEST_RATE_WINDOW);
+    
+    // Update modal content
+    document.getElementById('guestSubmissionsRemaining').textContent = remaining;
+    document.getElementById('guestRateLimitReset').textContent = resetTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    // Show/hide submit button based on limit
+    const submitBtn = document.getElementById('confirmGuestSubmission');
+    if (remaining === 0) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Rate Limit Reached';
+      submitBtn.style.background = '#9ca3af';
+    } else {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit as Guest';
+      submitBtn.style.background = '#f59e0b';
+    }
+    
+    // Show modal
+    document.getElementById('guestSubmissionModal').style.display = 'flex';
+  });
+}
+
+// Perform the actual save (called after confirmation)
+async function performSave(isGuest) {
   elements.saveCaseBtn.disabled = true;
   elements.saveCaseBtn.innerHTML = '<div class="spinner white"></div> Saving...';
   
@@ -3665,16 +3772,30 @@ async function saveCase() {
     
     // Show appropriate message based on submission type
     const submissionType = result.submission_type;
+    
+    // If guest submission, track it
+    if (isGuest && submissionType === 'guest') {
+      guestSubmissions.push(Date.now());
+      chrome.storage.local.set({ guestSubmissions });
+    }
+    
     if (submissionType === 'analyst') {
       alert(`Incident saved and auto-verified as first review!\nID: ${incident.incident_id}\n\nAnother analyst can now provide second verification.`);
     } else if (submissionType === 'guest') {
-      alert(`Incident submitted as guest!\nID: ${incident.incident_id}\n\n${result.message}\n\nNote: ${result.rate_limit_info}`);
+      const remaining = GUEST_RATE_LIMIT - guestSubmissions.length;
+      alert(`Incident submitted as guest!\nID: ${incident.incident_id}\n\n${result.message}\n\nRemaining submissions this hour: ${remaining}`);
     } else {
       alert(`Incident saved successfully!\nID: ${incident.incident_id}\n\nAwaiting analyst review.`);
     }
   } catch (error) {
     console.error('Save error:', error);
-    alert('Failed to save incident: ' + error.message);
+    
+    // Check if it's a rate limit error
+    if (error.message.includes('Rate limit') || error.message.includes('Too many')) {
+      alert('Rate limit exceeded. Please try again later.');
+    } else {
+      alert('Failed to save incident: ' + error.message);
+    }
   } finally {
     elements.saveCaseBtn.disabled = false;
     elements.saveCaseBtn.textContent = reviewMode ? 'Submit Verification' : 'Save Incident';

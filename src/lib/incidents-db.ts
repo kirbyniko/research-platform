@@ -99,12 +99,20 @@ export async function createIncident(incident: Omit<Incident, 'id' | 'created_at
     // Insert type-specific details
     const detailsMap: Record<string, unknown> = {
       death: incident.death_details,
+      death_in_custody: incident.death_details,
+      death_during_operation: incident.death_details,
+      death_at_protest: incident.death_details,
+      detention_death: incident.death_details,
       injury: incident.injury_details,
       arrest: incident.arrest_details,
       rights_violation: incident.violation_details,
       deportation: incident.deportation_details,
       family_separation: incident.family_separation_details,
       workplace_raid: incident.workplace_raid_details,
+      shooting: incident.shooting_details,
+      excessive_force: incident.excessive_force_details,
+      protest_suppression: incident.protest_details,
+      medical_neglect: incident.death_details, // Medical neglect uses death details
     };
 
     const details = detailsMap[incident.incident_type];
@@ -113,6 +121,14 @@ export async function createIncident(incident: Omit<Incident, 'id' | 'created_at
         INSERT INTO incident_details (incident_id, detail_type, details)
         VALUES ($1, $2, $3)
       `, [incidentId, incident.incident_type, JSON.stringify(details)]);
+    }
+
+    // Insert violation_details_map (case law per violation)
+    if (incident.violation_details_map && Object.keys(incident.violation_details_map).length > 0) {
+      await client.query(`
+        INSERT INTO incident_details (incident_id, detail_type, details)
+        VALUES ($1, 'violation_legal_basis', $2)
+      `, [incidentId, JSON.stringify(incident.violation_details_map)]);
     }
 
     // Insert outcome if present
@@ -688,6 +704,26 @@ async function buildIncidentFromRow(client: PoolClient, row: Record<string, unkn
         break;
       case 'workplace_raid':
         incident.workplace_raid_details = details as unknown as WorkplaceRaidDetails;
+        break;
+      case 'shooting':
+        incident.shooting_details = details as unknown as import('@/types/incident').ShootingDetails;
+        break;
+      case 'excessive_force':
+        incident.excessive_force_details = details as unknown as import('@/types/incident').ExcessiveForceDetails;
+        break;
+      case 'protest_suppression':
+      case 'protest':
+        incident.protest_details = details as unknown as import('@/types/incident').ProtestDetails;
+        break;
+      case 'death_in_custody':
+      case 'death_during_operation':
+      case 'death_at_protest':
+      case 'detention_death':
+      case 'medical_neglect':
+        incident.death_details = details as unknown as DeathDetails;
+        break;
+      case 'violation_legal_basis':
+        incident.violation_details_map = details as unknown as Record<string, import('@/types/incident').ViolationBasis>;
         break;
     }
   }
