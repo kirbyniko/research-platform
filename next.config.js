@@ -8,6 +8,14 @@ const nextConfig = {
   },
   // Ensure Next.js uses this workspace as the root for file tracing
   outputFileTracingRoot: path.join(__dirname),
+  
+  // Enable experimental features for proper server-side rendering
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+  },
+  
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals = config.externals || [];

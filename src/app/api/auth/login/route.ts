@@ -44,6 +44,10 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    return logAndRespond(error, 'Login', 500);
+    console.error('Login error:', error);
+    return NextResponse.json(
+      { error: 'Login failed' },
+      { status: 500 }
+    );
   }
 }
