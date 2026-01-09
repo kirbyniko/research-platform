@@ -209,8 +209,7 @@ export async function POST(request: NextRequest) {
         const boundingBoxes = getBoundingBoxesForRange(
           sentence.startChar,
           sentence.endChar,
-          textItems,
-          pageOffsets
+          textItems
         );
         
         extractedQuotes.push({

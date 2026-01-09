@@ -425,7 +425,7 @@ export default function DashboardPage() {
                   </Link>
                   
                   <Link
-                    href={`/incidents/${incident.incident_id}`}
+                    href={`/incidents/${incident.id}`}
                     className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 text-center"
                   >
                     View Details

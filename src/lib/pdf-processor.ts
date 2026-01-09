@@ -158,8 +158,7 @@ export function getPageForChar(charIndex: number, pageOffsets: PageOffset[]): nu
 export function getBoundingBoxesForRange(
   startChar: number,
   endChar: number,
-  textItems: TextItem[],
-  pageOffsets: PageOffset[]
+  textItems: TextItem[]
 ): Array<{ page: number; x: number; y: number; width: number; height: number }> {
   const boxes: Array<{ page: number; x: number; y: number; width: number; height: number }> = [];
   

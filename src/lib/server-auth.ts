@@ -33,10 +33,10 @@ export async function requireServerAuth(
     const session = await auth();
     if (session?.user) {
       const user: AuthUser = {
-        id: (session.user as any).id || 0,
+        id: (session.user as { id?: number }).id || 0,
         email: session.user.email!,
         name: session.user.name || null,
-        role: ((session.user as any).role || 'user') as RoleLevel,
+        role: ((session.user as { role?: string }).role || 'user') as RoleLevel,
       };
 
       // Check role requirement
