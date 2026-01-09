@@ -496,7 +496,6 @@ function cacheElements() {
   elements.clearAllDataBtn = document.getElementById('clearAllDataBtn');
   // Overlay and highlight controls
   elements.openOverlayBtn = document.getElementById('openOverlayBtn');
-  elements.syncOverlayBtn = document.getElementById('syncOverlayBtn');
   elements.clearHighlightsBtn = document.getElementById('clearHighlightsBtn');
   // Agency collapsible
   elements.agenciesHeader = document.getElementById('agenciesHeader');
@@ -810,11 +809,6 @@ function setupEventListeners() {
   // Open overlay button - opens the floating panel on the page
   if (elements.openOverlayBtn) {
     elements.openOverlayBtn.addEventListener('click', openOverlayOnPage);
-  }
-  
-  // Sync to overlay button - syncs current data to overlay
-  if (elements.syncOverlayBtn) {
-    elements.syncOverlayBtn.addEventListener('click', syncToOverlay);
   }
   
   // Wide mode toggle button
@@ -3956,6 +3950,14 @@ function clearCase() {
 // Listen for messages from background
 chrome.runtime.onMessage.addListener((message) => {
   switch (message.type) {
+    case 'SHOW_SYNC_MODAL':
+      // Show sync modal when requested from overlay
+      const modal = document.getElementById('syncModal');
+      if (modal) {
+        modal.style.display = 'flex';
+      }
+      break;
+    
     case 'QUOTE_ADDED':
       pendingQuotes.push(message.quote);
       renderPendingQuotes();

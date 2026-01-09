@@ -367,6 +367,7 @@ function createOverlay() {
         <span>ICE Documentation</span>
       </div>
       <div class="overlay-header-actions">
+        <button class="overlay-header-btn" id="overlay-sync" title="Sync with sidepanel">↻</button>
         <button class="overlay-header-btn" id="overlay-refresh" title="Refresh data">🔄</button>
         <button class="overlay-header-btn" id="overlay-clear-highlights" title="Clear highlights">🧹</button>
         <button class="overlay-header-btn" id="overlay-minimize" title="Minimize">➖</button>
@@ -492,6 +493,12 @@ function setupOverlayEvents() {
   
   // Refresh button
   document.getElementById('overlay-refresh').addEventListener('click', loadOverlayData);
+  
+  // Sync button - opens sync direction modal
+  document.getElementById('overlay-sync').addEventListener('click', () => {
+    // Request sidepanel to show sync modal
+    chrome.runtime.sendMessage({ type: 'SHOW_SYNC_MODAL' });
+  });
   
   // Clear highlights
   document.getElementById('overlay-clear-highlights').addEventListener('click', () => {
