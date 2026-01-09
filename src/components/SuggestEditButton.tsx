@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { SuggestEditModal } from './SuggestEditModal';
 
 interface FieldDefinition {
@@ -76,17 +77,29 @@ interface User {
 
 export function SuggestEditButton({ incidentId, incidentData }: SuggestEditButtonProps) {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedField, setSelectedField] = useState<FieldDefinition | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   useEffect(() => {
     fetch('/api/auth/me')
       .then(res => res.ok ? res.json() : null)
-      .then(data => data ? setUser(data.user) : null)
-      .catch(() => null);
+      .then(data => {
+        if (data) setUser(data.user);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
+
+  // Check if user came from suggest-edit link
+  useEffect(() => {
+    if (!loading && !user && window.location.hash === '#suggest-edit') {
+      setShowLoginPrompt(true);
+    }
+  }, [loading, user]);
 
   function handleFieldSelect(field: FieldDefinition) {
     setSelectedField(field);
@@ -101,7 +114,39 @@ export function SuggestEditButton({ incidentId, incidentData }: SuggestEditButto
 
   // Only show for logged-in users
   if (!user) {
-    return null;
+    // Show login prompt if user arrived via #suggest-edit anchor
+    if (showLoginPrompt) {
+      return (
+        <div id="suggest-edit" className="relative">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-sm">
+            <p className="text-sm text-blue-800 mb-3">
+              <strong>Want to suggest an edit?</strong> Log in or create an account to propose changes to this record.
+            </p>
+            <div className="flex gap-2">
+              <Link
+                href={`/auth/login?redirect=/incidents/${incidentId}%23suggest-edit`}
+                className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+              >
+                Log In
+              </Link>
+              <Link
+                href={`/auth/register?redirect=/incidents/${incidentId}%23suggest-edit`}
+                className="px-3 py-1.5 border border-blue-600 text-blue-600 text-sm rounded hover:bg-blue-50"
+              >
+                Sign Up
+              </Link>
+              <button
+                onClick={() => setShowLoginPrompt(false)}
+                className="px-3 py-1.5 text-gray-500 text-sm hover:text-gray-700"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return <div id="suggest-edit" />;
   }
 
   const formatValue = (value: any) => {
@@ -113,7 +158,7 @@ export function SuggestEditButton({ incidentId, incidentData }: SuggestEditButto
 
   return (
     <>
-      <div className="relative">
+      <div id="suggest-edit" className="relative">
         <button
           onClick={() => setShowDropdown(!showDropdown)}
           className="flex items-center gap-2 px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"

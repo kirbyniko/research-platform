@@ -1,8 +1,13 @@
 import { NextResponse, NextRequest } from 'next/server';
 import pool from '@/lib/db';
 import { requireServerAuth } from '@/lib/server-auth';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // Rate limit: 5 per hour to prevent spam
+  const rateLimitResponse = rateLimit(request, RateLimitPresets.veryStrict, 'bug-reports');
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const bugReport = await request.json();
     

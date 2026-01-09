@@ -1,19 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 
 // POST /api/check-duplicates - Check for existing cases or sources
 export async function POST(request: NextRequest) {
+  // Rate limit: 20 per minute (standard)
+  const rateLimitResponse = rateLimit(request, RateLimitPresets.standard, 'check-duplicates');
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const { victimName, dateOfDeath, facility, sourceUrls } = await request.json();
 
     const results: {
-      existingCases: Array<{ id: number; victim_name: string; incident_date: string; facility_name: string }>;
-      existingSources: Array<{ url: string; incident_id: number; victim_name: string }>;
+      existingCases: Array<{ id: number; victim_name: string; incident_date: string; facility_name: string; city?: string; state?: string; verification_status: string }>;
+      existingSources: Array<{ url: string; incident_id: number; victim_name: string; verification_status?: string }>;
       hasPotentialDuplicates: boolean;
+      hasVerifiedMatch: boolean;
     } = {
       existingCases: [],
       existingSources: [],
-      hasPotentialDuplicates: false
+      hasPotentialDuplicates: false,
+      hasVerifiedMatch: false
     };
 
     // Check for similar cases by name and/or date
@@ -43,7 +50,7 @@ export async function POST(request: NextRequest) {
       if (conditions.length > 0) {
         // Try with pg_trgm first, fall back to basic matching if extension not available
         let query = `
-          SELECT id, victim_name, incident_date, facility_name, city, state
+          SELECT id, victim_name, incident_date, facility_name, city, state, verification_status
           FROM incidents
           WHERE ${conditions.join(' OR ')}
           ORDER BY incident_date DESC
@@ -74,7 +81,7 @@ export async function POST(request: NextRequest) {
 
             if (basicConditions.length > 0) {
               const basicQuery = `
-                SELECT id, victim_name, incident_date, facility_name, city, state
+                SELECT id, victim_name, incident_date, facility_name, city, state, verification_status
                 FROM incidents
                 WHERE ${basicConditions.join(' OR ')}
                 ORDER BY incident_date DESC
@@ -108,7 +115,7 @@ export async function POST(request: NextRequest) {
         });
 
         const sourceResult = await pool.query(`
-          SELECT s.url, s.incident_id, i.victim_name
+          SELECT s.url, s.incident_id, i.victim_name, i.verification_status
           FROM sources s
           LEFT JOIN incidents i ON s.incident_id = i.id
           WHERE s.url = ANY($1)
@@ -124,7 +131,7 @@ export async function POST(request: NextRequest) {
           `).join(' OR ');
 
           const partialResult = await pool.query(`
-            SELECT s.url, s.incident_id, i.victim_name
+            SELECT s.url, s.incident_id, i.victim_name, i.verification_status
             FROM sources s
             LEFT JOIN incidents i ON s.incident_id = i.id
             WHERE ${domainChecks}
@@ -138,6 +145,11 @@ export async function POST(request: NextRequest) {
 
     results.hasPotentialDuplicates = 
       results.existingCases.length > 0 || results.existingSources.length > 0;
+    
+    // Check if any of the matches are verified
+    results.hasVerifiedMatch = 
+      results.existingCases.some(c => c.verification_status === 'verified') ||
+      results.existingSources.some(s => s.verification_status === 'verified');
 
     return NextResponse.json(results);
   } catch (error) {

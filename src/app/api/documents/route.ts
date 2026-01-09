@@ -123,8 +123,14 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET: List documents or get single document
+// GET: List documents or get single document - requires authentication
 export async function GET(request: NextRequest) {
+  // SECURITY: Require at least viewer role to list documents
+  const authCheck = await requireServerAuth(request, 'viewer');
+  if ('error' in authCheck) {
+    return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const documentId = searchParams.get('id');

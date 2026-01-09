@@ -197,7 +197,7 @@ export default function DocumentAnalyzer({ caseId, onComplete }: DocumentAnalyze
       <div className="p-4 space-y-4">
         {/* Ollama Status */}
         {ollamaStatus && (
-          <div className={`p-3 border ${ollamaStatus.available ? 'border-green-200 bg-green-50' : 'border-yellow-200 bg-yellow-50'}`}>
+          <div className={`p-3 border rounded ${ollamaStatus.available ? 'border-green-200 bg-green-50' : 'border-yellow-200 bg-yellow-50'}`}>
             {ollamaStatus.available ? (
               <div>
                 <p className="text-sm font-medium text-green-800">✓ Ollama Running Locally</p>
@@ -207,18 +207,30 @@ export default function DocumentAnalyzer({ caseId, onComplete }: DocumentAnalyze
               </div>
             ) : (
               <div>
-                <p className="text-sm font-medium text-yellow-800">⚠ Ollama Not Available</p>
+                <p className="text-sm font-medium text-yellow-800">⚠ Ollama Not Running</p>
                 <p className="text-xs text-yellow-700 mt-1">{ollamaStatus.error}</p>
-                {ollamaStatus.installUrl && (
-                  <a 
-                    href={ollamaStatus.installUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-xs underline text-yellow-800 mt-1 inline-block"
-                  >
-                    Install Ollama
-                  </a>
-                )}
+                <div className="mt-3 p-3 bg-white/50 rounded text-xs space-y-2">
+                  <p className="font-medium text-yellow-900">To use AI document analysis:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-yellow-800">
+                    <li>
+                      <a 
+                        href="https://ollama.ai/download" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="underline font-medium hover:text-yellow-900"
+                      >
+                        Download & install Ollama
+                      </a>
+                      {' '}(free, runs locally)
+                    </li>
+                    <li>Open a terminal and run: <code className="bg-yellow-100 px-1 rounded">ollama pull llama3.2</code></li>
+                    <li>Keep Ollama running in the background</li>
+                    <li>Refresh this page</li>
+                  </ol>
+                  <p className="text-yellow-700 mt-2">
+                    💡 Ollama runs AI models on your own computer — your documents stay private and it&apos;s completely free.
+                  </p>
+                </div>
               </div>
             )}
           </div>

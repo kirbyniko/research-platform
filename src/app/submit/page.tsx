@@ -4,9 +4,24 @@ import { useState, useCallback } from 'react';
 import Link from 'next/link';
 
 interface DuplicateResults {
-  existingCases: Array<{ id: number; victim_name: string; incident_date: string; facility_name: string; city?: string; state?: string }>;
-  existingSources: Array<{ url: string; incident_id: number; victim_name: string }>;
+  existingCases: Array<{ id: number; victim_name: string; incident_date: string; facility_name: string; city?: string; state?: string; verification_status: string }>;
+  existingSources: Array<{ url: string; incident_id: number; victim_name: string; verification_status?: string }>;
   hasPotentialDuplicates: boolean;
+  hasVerifiedMatch: boolean;
+}
+
+// Collapsible section component
+function CollapsibleSection({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <button type="button" onClick={() => setIsOpen(!isOpen)} className="w-full px-4 py-3 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100">
+        <span className="font-medium text-gray-700">{title}</span>
+        <span className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}>▼</span>
+      </button>
+      {isOpen && <div className="p-4 space-y-4">{children}</div>}
+    </div>
+  );
 }
 
 export default function GuestSubmitPage() {
@@ -18,7 +33,28 @@ export default function GuestSubmitPage() {
     description: '',
     sourceUrls: '',
     contactEmail: '',
-    incidentType: 'death'
+    incidentType: 'death_in_custody',
+    // Extended fields
+    age: '',
+    gender: '',
+    nationality: '',
+    city: '',
+    state: '',
+    agencies: {} as Record<string, boolean>,
+    causeOfDeath: '',
+    mannerOfDeath: '',
+    custodyDuration: '',
+    medicalDenied: false,
+    // Shooting
+    shotsFired: '',
+    weaponType: '',
+    bodycamAvailable: false,
+    victimArmed: false,
+    shootingContext: '',
+    // Force
+    forceTypes: {} as Record<string, boolean>,
+    victimRestrained: false,
+    victimComplying: false,
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -111,8 +147,7 @@ export default function GuestSubmitPage() {
     }
   }
 
-  // Reset duplicate check when form data changes
-  const handleFormChange = (field: string, value: string) => {
+  const handleFormChange = (field: string, value: string | boolean) => {
     setFormData({ ...formData, [field]: value });
     // Reset duplicate check if key fields change
     if (['victimName', 'dateOfDeath', 'sourceUrls'].includes(field)) {
@@ -144,9 +179,15 @@ export default function GuestSubmitPage() {
                     description: '',
                     sourceUrls: '',
                     contactEmail: '',
-                    incidentType: 'death'
+                    incidentType: 'death_in_custody',
+                    age: '', gender: '', nationality: '', city: '', state: '',
+                    agencies: {}, causeOfDeath: '', mannerOfDeath: '', custodyDuration: '', medicalDenied: false,
+                    shotsFired: '', weaponType: '', bodycamAvailable: false, victimArmed: false, shootingContext: '',
+                    forceTypes: {}, victimRestrained: false, victimComplying: false,
                   });
                   setSubmitted(false);
+                  setDuplicatesChecked(false);
+                  setDuplicateResults(null);
                 }}
                 className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               >
@@ -199,10 +240,25 @@ export default function GuestSubmitPage() {
                 onChange={(e) => handleFormChange('incidentType', e.target.value)}
                 className="w-full px-3 py-2 border rounded"
               >
-                <option value="death">Death in Custody</option>
-                <option value="shooting">ICE Shooting</option>
-                <option value="protest">Protest Incident</option>
-                <option value="other">Other Incident</option>
+                <optgroup label="Deaths">
+                  <option value="death_in_custody">Death in Custody</option>
+                  <option value="death_during_operation">Death During Operation</option>
+                </optgroup>
+                <optgroup label="Force/Violence">
+                  <option value="shooting">Shooting</option>
+                  <option value="excessive_force">Excessive Force</option>
+                  <option value="injury">Injury</option>
+                </optgroup>
+                <optgroup label="Enforcement">
+                  <option value="arrest">Arrest/Detention</option>
+                  <option value="deportation">Deportation</option>
+                  <option value="workplace_raid">Workplace Raid</option>
+                </optgroup>
+                <optgroup label="Rights Issues">
+                  <option value="rights_violation">Rights Violation</option>
+                  <option value="medical_neglect">Medical Neglect</option>
+                </optgroup>
+                <option value="other">Other</option>
               </select>
             </div>
 
@@ -256,6 +312,132 @@ export default function GuestSubmitPage() {
                 className="w-full px-3 py-2 border rounded"
               />
             </div>
+
+            {/* Extended Subject Info */}
+            <CollapsibleSection title="Additional Subject Details (Optional)">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                  <input type="number" value={formData.age} onChange={(e) => handleFormChange('age', e.target.value)} placeholder="Age" className="w-full px-3 py-2 border rounded" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                  <select value={formData.gender} onChange={(e) => handleFormChange('gender', e.target.value)} className="w-full px-3 py-2 border rounded">
+                    <option value="">Select...</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nationality</label>
+                  <input type="text" value={formData.nationality} onChange={(e) => handleFormChange('nationality', e.target.value)} placeholder="Country" className="w-full px-3 py-2 border rounded" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                  <input type="text" value={formData.city} onChange={(e) => handleFormChange('city', e.target.value)} placeholder="City" className="w-full px-3 py-2 border rounded" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                  <input type="text" value={formData.state} onChange={(e) => handleFormChange('state', e.target.value)} placeholder="State" className="w-full px-3 py-2 border rounded" />
+                </div>
+              </div>
+            </CollapsibleSection>
+
+            {/* Agencies Involved */}
+            <CollapsibleSection title="Agencies Involved (Optional)">
+              <div className="grid grid-cols-3 gap-2">
+                {['ice', 'cbp', 'border_patrol', 'local_police', 'state_police', 'dhs', 'private_contractor', 'unknown'].map(agency => (
+                  <label key={agency} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={formData.agencies[agency] || false} onChange={(e) => setFormData({...formData, agencies: {...formData.agencies, [agency]: e.target.checked}})} />
+                    {agency.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                  </label>
+                ))}
+              </div>
+            </CollapsibleSection>
+
+            {/* Death Details - Conditional */}
+            {formData.incidentType.includes('death') && (
+              <CollapsibleSection title="Death Details (Optional)">
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cause of Death</label>
+                    <input type="text" value={formData.causeOfDeath} onChange={(e) => handleFormChange('causeOfDeath', e.target.value)} placeholder="As stated in records" className="w-full px-3 py-2 border rounded" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Manner of Death</label>
+                    <select value={formData.mannerOfDeath} onChange={(e) => handleFormChange('mannerOfDeath', e.target.value)} className="w-full px-3 py-2 border rounded">
+                      <option value="">Unknown</option>
+                      <option value="natural">Natural</option>
+                      <option value="accident">Accident</option>
+                      <option value="suicide">Suicide</option>
+                      <option value="homicide">Homicide</option>
+                      <option value="undetermined">Undetermined</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Custody Duration</label>
+                    <input type="text" value={formData.custodyDuration} onChange={(e) => handleFormChange('custodyDuration', e.target.value)} placeholder="e.g., 6 months" className="w-full px-3 py-2 border rounded" />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={formData.medicalDenied} onChange={(e) => handleFormChange('medicalDenied', e.target.checked)} />
+                    Medical requests denied
+                  </label>
+                </div>
+              </CollapsibleSection>
+            )}
+
+            {/* Shooting Details - Conditional */}
+            {formData.incidentType === 'shooting' && (
+              <CollapsibleSection title="Shooting Details (Optional)">
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Shots Fired</label>
+                      <input type="number" value={formData.shotsFired} onChange={(e) => handleFormChange('shotsFired', e.target.value)} className="w-full px-3 py-2 border rounded" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Weapon Type</label>
+                      <select value={formData.weaponType} onChange={(e) => handleFormChange('weaponType', e.target.value)} className="w-full px-3 py-2 border rounded">
+                        <option value="">Select...</option>
+                        <option value="handgun">Handgun</option>
+                        <option value="rifle">Rifle</option>
+                        <option value="taser">Taser</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={formData.bodycamAvailable} onChange={(e) => handleFormChange('bodycamAvailable', e.target.checked)} /> Bodycam Available</label>
+                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={formData.victimArmed} onChange={(e) => handleFormChange('victimArmed', e.target.checked)} /> Victim Armed</label>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Context</label>
+                    <textarea value={formData.shootingContext} onChange={(e) => handleFormChange('shootingContext', e.target.value)} placeholder="Brief circumstances..." rows={2} className="w-full px-3 py-2 border rounded" />
+                  </div>
+                </div>
+              </CollapsibleSection>
+            )}
+
+            {/* Force Details - Conditional */}
+            {formData.incidentType === 'excessive_force' && (
+              <CollapsibleSection title="Force Details (Optional)">
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    {['physical', 'taser', 'pepper_spray', 'baton', 'rubber_bullets'].map(ft => (
+                      <label key={ft} className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={formData.forceTypes[ft] || false} onChange={(e) => setFormData({...formData, forceTypes: {...formData.forceTypes, [ft]: e.target.checked}})} />
+                        {ft.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                      </label>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={formData.victimRestrained} onChange={(e) => handleFormChange('victimRestrained', e.target.checked)} /> Victim Restrained</label>
+                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={formData.victimComplying} onChange={(e) => handleFormChange('victimComplying', e.target.checked)} /> Victim Complying</label>
+                  </div>
+                </div>
+              </CollapsibleSection>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -317,13 +499,107 @@ export default function GuestSubmitPage() {
                     </svg>
                     <span className="font-medium">No existing records found matching your submission.</span>
                   </div>
+                ) : duplicateResults.hasVerifiedMatch ? (
+                  // Verified match found - redirect to suggest edit
+                  <div>
+                    <div className="flex items-center gap-2 text-blue-700 mb-3">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="font-medium">This case is already verified in our database:</span>
+                    </div>
+
+                    {duplicateResults.existingCases.filter(c => c.verification_status === 'verified').length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-sm font-medium text-blue-800 mb-2">Verified cases matching your submission:</p>
+                        <ul className="space-y-2">
+                          {duplicateResults.existingCases.filter(c => c.verification_status === 'verified').map((c) => (
+                            <li key={c.id} className="text-sm bg-white/50 p-3 rounded border border-blue-200">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <Link 
+                                    href={`/incidents/${c.id}`} 
+                                    className="text-blue-600 hover:underline font-medium"
+                                    target="_blank"
+                                  >
+                                    {c.victim_name || 'Unknown'}
+                                  </Link>
+                                  <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">Verified</span>
+                                  <p className="text-gray-600 text-sm mt-1">
+                                    {new Date(c.incident_date).toLocaleDateString()}
+                                    {c.facility_name && ` at ${c.facility_name}`}
+                                    {c.city && c.state && ` (${c.city}, ${c.state})`}
+                                  </p>
+                                </div>
+                                <Link
+                                  href={`/incidents/${c.id}#suggest-edit`}
+                                  className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 whitespace-nowrap"
+                                >
+                                  Suggest Edit
+                                </Link>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {duplicateResults.existingSources.filter(s => s.verification_status === 'verified').length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-sm font-medium text-blue-800 mb-2">Your source is linked to a verified case:</p>
+                        <ul className="space-y-2">
+                          {duplicateResults.existingSources.filter(s => s.verification_status === 'verified').map((s, i) => (
+                            <li key={i} className="text-sm bg-white/50 p-3 rounded border border-blue-200">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <span className="text-gray-700 font-medium">{s.victim_name || 'Unknown'}</span>
+                                  <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">Verified</span>
+                                  <p className="text-gray-500 text-xs mt-1 break-all">
+                                    Source: {s.url.length > 50 ? s.url.substring(0, 50) + '...' : s.url}
+                                  </p>
+                                </div>
+                                <Link
+                                  href={`/incidents/${s.incident_id}#suggest-edit`}
+                                  className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 whitespace-nowrap"
+                                >
+                                  Suggest Edit
+                                </Link>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <div className="mt-4 pt-3 border-t border-blue-200">
+                      <p className="text-sm text-blue-800 mb-3">
+                        <strong>Want to add information to this verified case?</strong> Click &quot;Suggest Edit&quot; above to propose changes or additions. 
+                        Your suggestions will be reviewed by our team.
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        If this is a <strong>different incident</strong> with a similar name, you can still submit a new report:
+                      </p>
+                      <label className="flex items-center gap-2 cursor-pointer mt-2">
+                        <input
+                          type="checkbox"
+                          checked={confirmSubmit}
+                          onChange={(e) => setConfirmSubmit(e.target.checked)}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-sm text-gray-700">
+                          This is a different incident — submit as a new report
+                        </span>
+                      </label>
+                    </div>
+                  </div>
                 ) : (
+                  // Unverified matches - show warning but allow submission
                   <div>
                     <div className="flex items-center gap-2 text-amber-700 mb-3">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
-                      <span className="font-medium">We may already have this information:</span>
+                      <span className="font-medium">We may already have this information (pending review):</span>
                     </div>
 
                     {duplicateResults.existingCases.length > 0 && (
@@ -339,6 +615,9 @@ export default function GuestSubmitPage() {
                               >
                                 {c.victim_name || 'Unknown'}
                               </Link>
+                              <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded">
+                                {c.verification_status === 'first_review' ? 'Under Review' : 'Pending'}
+                              </span>
                               <span className="text-gray-600">
                                 {' '}&mdash; {new Date(c.incident_date).toLocaleDateString()}
                                 {c.facility_name && ` at ${c.facility_name}`}

@@ -1,16 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import fs from 'fs/promises';
+import path from 'path';
+import { requireAuth } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
-// GET: Serve PDF file
+// GET: Serve PDF file - requires authentication
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ documentId: string }> }
 ) {
+  // SECURITY: Require at least viewer role to access documents
+  const authCheck = await requireAuth('viewer')(request);
+  if ('error' in authCheck) {
+    return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
+  }
+
   try {
     const { documentId } = await params;
+    
+    // Validate documentId is numeric
+    if (!/^\d+$/.test(documentId)) {
+      return NextResponse.json({ error: 'Invalid document ID' }, { status: 400 });
+    }
     
     // Get document from database
     const result = await pool.query(
@@ -24,8 +37,16 @@ export async function GET(
 
     const doc = result.rows[0];
     
+    // SECURITY: Validate storage path is within allowed directory
+    const uploadsDir = path.resolve(process.cwd(), 'uploads', 'documents');
+    const resolvedPath = path.resolve(doc.storage_path);
+    if (!resolvedPath.startsWith(uploadsDir)) {
+      console.error('[documents/file] Path traversal attempt:', doc.storage_path);
+      return NextResponse.json({ error: 'Invalid document path' }, { status: 403 });
+    }
+    
     // Read file
-    const fileBuffer = await fs.readFile(doc.storage_path);
+    const fileBuffer = await fs.readFile(resolvedPath);
     
     // Return PDF
     return new NextResponse(fileBuffer, {
