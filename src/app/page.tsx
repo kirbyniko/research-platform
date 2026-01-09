@@ -2,29 +2,45 @@ import Link from 'next/link';
 import { getIncidents, getIncidentStats } from '@/lib/incidents-db';
 import { IncidentListItem } from '@/components/incidents/IncidentListItem';
 import { StatCard } from '@/components/StatCard';
+import { isDatabaseConfigured } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  // Only get verified incidents (default behavior)
-  const [incidents, stats] = await Promise.all([
-    getIncidents({ limit: 20 }), // Recent verified incidents
-    getIncidentStats(), // Stats for verified incidents only
-  ]);
+  if (!isDatabaseConfigured) {
+    return (
+      <div className="max-w-3xl mx-auto mt-12 p-6 border border-gray-300 bg-gray-50">
+        <h1 className="text-2xl font-bold mb-4">Database Not Configured</h1>
+        <p className="mb-2">
+          The database connection is not configured. Please set the DATABASE_URL environment variable in your deployment settings.
+        </p>
+        <p className="text-sm text-gray-600">
+          For Vercel: Project Settings → Environment Variables → Add DATABASE_URL for Production
+        </p>
+      </div>
+    );
+  }
 
-  // Calculate stats from verified incidents
-  const currentYear = new Date().getFullYear();
-  const deathsThisYear = Object.entries(stats.by_year)
-    .filter(([year]) => parseInt(year) === currentYear)
-    .reduce((sum, [, count]) => sum + count, 0);
-  
-  const facilitiesCount = Object.keys(stats.by_state).length;
-  
-  // Days since last death
-  const lastIncident = incidents[0];
-  const daysSinceLastDeath = lastIncident?.date 
-    ? Math.floor((Date.now() - new Date(lastIncident.date).getTime()) / (1000 * 60 * 60 * 24))
-    : 0;
+  try {
+    // Only get verified incidents (default behavior)
+    const [incidents, stats] = await Promise.all([
+      getIncidents({ limit: 20 }), // Recent verified incidents
+      getIncidentStats(), // Stats for verified incidents only
+    ]);
+
+    // Calculate stats from verified incidents
+    const currentYear = new Date().getFullYear();
+    const deathsThisYear = Object.entries(stats.by_year)
+      .filter(([year]) => parseInt(year) === currentYear)
+      .reduce((sum, [, count]) => sum + count, 0);
+    
+    const facilitiesCount = Object.keys(stats.by_state).length;
+    
+    // Days since last death
+    const lastIncident = incidents[0];
+    const daysSinceLastDeath = lastIncident?.date 
+      ? Math.floor((Date.now() - new Date(lastIncident.date).getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
 
   return (
     <div>
@@ -110,4 +126,18 @@ export default async function Home() {
       </section>
     </div>
   );
+  } catch (error) {
+    console.error('Error loading incidents:', error);
+    return (
+      <div className="max-w-3xl mx-auto mt-12 p-6 border border-red-300 bg-red-50">
+        <h1 className="text-2xl font-bold mb-4 text-red-900">Database Error</h1>
+        <p className="mb-2 text-red-800">
+          Unable to connect to the database. Please check your configuration.
+        </p>
+        <p className="text-sm text-red-600">
+          Error: {error instanceof Error ? error.message : 'Unknown error'}
+        </p>
+      </div>
+    );
+  }
 }

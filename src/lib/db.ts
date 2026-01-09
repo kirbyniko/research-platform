@@ -3,7 +3,7 @@ import { Pool } from 'pg';
 // Handle missing DATABASE_URL during build
 const connectionString = process.env.DATABASE_URL;
 
-if (!connectionString && process.env.NODE_ENV !== 'production') {
+if (!connectionString) {
   console.warn('DATABASE_URL not set - database features will be unavailable');
 }
 
@@ -12,5 +12,8 @@ const pool = new Pool({
   // Don't fail immediately if connection is bad during build
   max: connectionString ? 20 : 0,
 });
+
+// Export flag to check if database is configured
+export const isDatabaseConfigured = !!connectionString;
 
 export default pool;

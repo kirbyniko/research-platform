@@ -1,12 +1,23 @@
 import { getIncidents } from '@/lib/incidents-db';
+import { isDatabaseConfigured } from '@/lib/db';
 import Link from 'next/link';
 
 // Force dynamic rendering to avoid database queries during build
 export const dynamic = 'force-dynamic';
 
 export default async function PatternsPage() {
-  // Only get verified incidents
-  const incidents = await getIncidents({ includeUnverified: false });
+  if (!isDatabaseConfigured) {
+    return (
+      <div className="max-w-3xl mx-auto mt-12 p-6 border border-gray-300 bg-gray-50">
+        <h1 className="text-2xl font-bold mb-4">Database Not Configured</h1>
+        <p>The database connection is not configured. Please set the DATABASE_URL environment variable.</p>
+      </div>
+    );
+  }
+
+  try {
+    // Only get verified incidents
+    const incidents = await getIncidents({ includeUnverified: false });
   
   // Filter to death-related incidents only
   const deathIncidents = incidents.filter(i => 
@@ -150,4 +161,13 @@ export default async function PatternsPage() {
       </section>
     </div>
   );
+  } catch (error) {
+    console.error('Error loading patterns:', error);
+    return (
+      <div className="max-w-3xl mx-auto mt-12 p-6 border border-red-300 bg-red-50">
+        <h1 className="text-2xl font-bold mb-4 text-red-900">Database Error</h1>
+        <p className="text-red-800">Unable to connect to the database.</p>
+      </div>
+    );
+  }
 }

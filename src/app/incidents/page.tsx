@@ -2,6 +2,7 @@ import { getIncidents, getIncidentStats } from '@/lib/incidents-db';
 import { IncidentListItem } from '@/components/incidents/IncidentListItem';
 import { IncidentFilters } from '@/components/incidents/IncidentFilters';
 import { IncidentStats } from '@/components/incidents/IncidentStats';
+import { isDatabaseConfigured } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,8 +11,18 @@ export default async function IncidentsPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  if (!isDatabaseConfigured) {
+    return (
+      <div className="max-w-3xl mx-auto mt-12 p-6 border border-gray-300 bg-gray-50">
+        <h1 className="text-2xl font-bold mb-4">Database Not Configured</h1>
+        <p>The database connection is not configured. Please set the DATABASE_URL environment variable.</p>
+      </div>
+    );
+  }
+
   const params = await searchParams;
   
+  try {
   // Build filters from URL params
   const filters: Record<string, unknown> = {};
   
@@ -89,4 +100,13 @@ export default async function IncidentsPage({
       </div>
     </div>
   );
+  } catch (error) {
+    console.error('Error loading incidents:', error);
+    return (
+      <div className="max-w-3xl mx-auto mt-12 p-6 border border-red-300 bg-red-50">
+        <h1 className="text-2xl font-bold mb-4 text-red-900">Database Error</h1>
+        <p className="text-red-800">Unable to connect to the database.</p>
+      </div>
+    );
+  }
 }
