@@ -400,6 +400,9 @@ function createOverlay() {
       <div class="overlay-tab-content" id="overlay-tab-form">
         <div class="overlay-section">
           <div class="overlay-section-title">📌 Case Information</div>
+          <div style="background: #f0f9ff; border: 1px solid #bae6fd; padding: 12px; border-radius: 6px; margin-bottom: 12px; font-size: 12px; color: #0c4a6e;">
+            💡 <strong>Tip:</strong> For full form with all fields, amendments, and source linking, use the extension sidepanel. Changes sync automatically!
+          </div>
           <div class="overlay-form-group">
             <label class="overlay-form-label">Subject Name</label>
             <input type="text" class="overlay-form-input" id="overlay-case-name" placeholder="Last name, First name">
@@ -892,6 +895,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       success: true, 
       data: overlayData 
     });
+  } else if (message.type === 'SIDEPANEL_UPDATED') {
+    // Sidepanel data changed, refresh overlay
+    if (overlayVisible) {
+      loadOverlayData();
+    }
+    sendResponse({ success: true });
   }
   return true;
 });
