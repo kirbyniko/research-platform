@@ -10,10 +10,7 @@
     "sidePanel"
   ],
   "host_permissions": [
-    "http://localhost:3000/*",
-    "http://localhost:3001/*",
-    "http://localhost:3002/*",
-    "https://cdn.jsdelivr.net/*"
+    "<all_urls>"
   ],
   "externally_connectable": {
     "matches": [
