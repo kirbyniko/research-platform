@@ -829,6 +829,36 @@ function setupEventListeners() {
     reportBugBtn.addEventListener('click', openBugReportModal);
   }
   
+  // Sync modal controls
+  const syncToOverlayBtn = document.getElementById('syncToOverlay');
+  if (syncToOverlayBtn) {
+    syncToOverlayBtn.addEventListener('click', () => {
+      document.getElementById('syncModal').style.display = 'none';
+      syncSidepanelToOverlay();
+    });
+  }
+  const syncFromOverlayBtn = document.getElementById('syncFromOverlay');
+  if (syncFromOverlayBtn) {
+    syncFromOverlayBtn.addEventListener('click', () => {
+      document.getElementById('syncModal').style.display = 'none';
+      syncOverlayToSidepanel();
+    });
+  }
+  const cancelSyncBtn = document.getElementById('cancelSync');
+  if (cancelSyncBtn) {
+    cancelSyncBtn.addEventListener('click', () => {
+      document.getElementById('syncModal').style.display = 'none';
+    });
+  }
+  const syncModal = document.getElementById('syncModal');
+  if (syncModal) {
+    syncModal.addEventListener('click', (e) => {
+      if (e.target.id === 'syncModal') {
+        syncModal.style.display = 'none';
+      }
+    });
+  }
+  
   // Bug report modal controls
   const closeBugReportModal = document.getElementById('closeBugReportModal');
   if (closeBugReportModal) {
@@ -985,6 +1015,15 @@ function openOverlayOnPage() {
 
 // Sync current data to overlay
 function syncToOverlay() {
+  // Show modal to choose sync direction
+  const modal = document.getElementById('syncModal');
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+}
+
+// Sync FROM sidepanel TO overlay
+function syncSidepanelToOverlay() {
   // First sync to background
   syncQuotesToBackground();
   
@@ -995,9 +1034,51 @@ function syncToOverlay() {
         if (chrome.runtime.lastError) {
           showNotification('Overlay not open - click "Overlay" to open it first', 'error');
         } else if (response && response.success) {
-          showNotification('✓ Synced to overlay', 'success');
+          showNotification('✓ Synced sidepanel → overlay', 'success');
         } else {
           showNotification('Could not sync - is overlay open?', 'error');
+        }
+      });
+    }
+  });
+}
+
+// Sync FROM overlay TO sidepanel
+function syncOverlayToSidepanel() {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs[0]) {
+      // Request current overlay state
+      chrome.tabs.sendMessage(tabs[0].id, { type: 'GET_OVERLAY_STATE' }, (response) => {
+        if (chrome.runtime.lastError) {
+          showNotification('Overlay not open - click "Overlay" to open it first', 'error');
+        } else if (response && response.data) {
+          // Load overlay data into sidepanel
+          const overlayData = response.data;
+          
+          // Merge quotes
+          if (overlayData.pendingQuotes) {
+            pendingQuotes = overlayData.pendingQuotes;
+          }
+          if (overlayData.verifiedQuotes) {
+            verifiedQuotes = overlayData.verifiedQuotes;
+          }
+          if (overlayData.sources) {
+            sources = overlayData.sources;
+          }
+          if (overlayData.currentCase) {
+            currentCase = overlayData.currentCase;
+            populateFormFromCase(currentCase);
+          }
+          
+          // Update UI
+          renderPendingQuotes();
+          renderVerifiedQuotes();
+          renderSources();
+          updateCounts();
+          
+          showNotification('✓ Synced overlay → sidepanel', 'success');
+        } else {
+          showNotification('Could not get overlay data', 'error');
         }
       });
     }

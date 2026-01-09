@@ -879,6 +879,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       loadOverlayData();
     }
     sendResponse({ success: true });
+  } else if (message.type === 'GET_OVERLAY_STATE') {
+    // Return current overlay data for syncing to sidepanel
+    sendResponse({ 
+      success: true, 
+      data: overlayData 
+    });
   }
   return true;
 });
