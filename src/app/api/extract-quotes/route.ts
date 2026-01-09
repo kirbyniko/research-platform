@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireDescopeAuth } from '@/lib/descope-auth';
-import { requireAuth } from '@/lib/auth';
+import { requireServerAuth } from '@/lib/server-auth';
 import pool from '@/lib/db';
 import { extractPdfWithPositions, getPageForChar, getBoundingBoxesForRange } from '@/lib/pdf-processor';
 import { segmentSentences, getSurroundingContext, Sentence } from '@/lib/sentence-segmenter';
@@ -125,14 +124,9 @@ export async function POST(request: NextRequest) {
     console.log('[extract-quotes] Request received');
     
     // Auth check
-    const descopeAuthFn = await requireDescopeAuth('editor');
-    const descopeResult = await descopeAuthFn(request);
-    if ('error' in descopeResult) {
-      const legacyAuthFn = requireAuth('editor');
-      const legacyResult = await legacyAuthFn(request);
-      if ('error' in legacyResult) {
-        return NextResponse.json({ error: legacyResult.error }, { status: legacyResult.status });
-      }
+    const authResult = await requireServerAuth(request, 'editor');
+    if ('error' in authResult) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
     const body = await request.json();

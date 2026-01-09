@@ -28,12 +28,13 @@ async function runMigration() {
     `);
     
     console.log('\nCreated tables:');
-    tables.rows.forEach(row => {
+    tables.rows.forEach((row: { table_name: string }) => {
       console.log(`  - ${row.table_name}`);
     });
     
-  } catch (error) {
-    console.error('❌ Migration failed:', error.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('❌ Migration failed:', message);
     throw error;
   } finally {
     client.release();

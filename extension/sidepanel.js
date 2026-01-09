@@ -65,6 +65,10 @@ let apiKey = '';
 let currentSelectors = {};
 let isExtracting = false;
 let currentPageIsPdf = false;
+let userRole = null;  // For analyst workflow
+let reviewQueue = [];  // Cases awaiting review
+let reviewMode = false;  // Are we reviewing an existing incident?
+let reviewIncidentId = null;  // ID of incident being reviewed
 
 // Constitutional and Legal Reference Database
 const LEGAL_REFERENCES = {
@@ -818,6 +822,32 @@ function setupEventListeners() {
     wideModeBtn.addEventListener('click', toggleWideMode);
   }
   
+  // Bug report button
+  const reportBugBtn = document.getElementById('reportBugBtn');
+  if (reportBugBtn) {
+    reportBugBtn.addEventListener('click', openBugReportModal);
+  }
+  
+  // Bug report modal controls
+  const closeBugReportModal = document.getElementById('closeBugReportModal');
+  if (closeBugReportModal) {
+    closeBugReportModal.addEventListener('click', closeBugReport);
+  }
+  const cancelBugReport = document.getElementById('cancelBugReport');
+  if (cancelBugReport) {
+    cancelBugReport.addEventListener('click', closeBugReport);
+  }
+  const submitBugReport = document.getElementById('submitBugReport');
+  if (submitBugReport) {
+    submitBugReport.addEventListener('click', submitBugReportHandler);
+  }
+  const bugReportModal = document.getElementById('bugReportModal');
+  if (bugReportModal) {
+    bugReportModal.addEventListener('click', (e) => {
+      if (e.target.id === 'bugReportModal') closeBugReport();
+    });
+  }
+  
   // Clear highlights button
   if (elements.clearHighlightsBtn) {
     elements.clearHighlightsBtn.addEventListener('click', clearAllHighlights);
@@ -861,6 +891,17 @@ function setupEventListeners() {
     apiKey = elements.apiKey.value;
     chrome.storage.local.set({ apiKey });
   });
+  
+  // Get API Key link
+  const getApiKeyLink = document.getElementById('getApiKeyLink');
+  if (getApiKeyLink) {
+    getApiKeyLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      // Open the account page in a new tab
+      const accountUrl = apiUrl.replace(/\/api$/, '').replace(':3001', ':3000') + '/account';
+      chrome.tabs.create({ url: accountUrl });
+    });
+  }
   
   // Settings tab event listeners
   elements.exportJsonBtn.addEventListener('click', exportAsJson);
@@ -980,7 +1021,7 @@ function showNotification(message, type = 'info') {
   setTimeout(() => toast.remove(), 2000);
 }
 
-// Check API connection
+// Check API connection and user role
 async function checkConnection() {
   try {
     const response = await fetch(`${apiUrl}/api/cases`, {
@@ -992,6 +1033,44 @@ async function checkConnection() {
   }
   
   updateConnectionStatus();
+  
+  // Check user role if we have an API key
+  if (apiKey) {
+    await checkUserRole();
+  }
+}
+
+// Check user role from API key
+async function checkUserRole() {
+  try {
+    const response = await fetch(`${apiUrl}/api/auth/me`, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      userRole = data.user?.role || null;
+      
+      // Show/hide review tab based on role
+      const reviewTab = document.getElementById('reviewTab');
+      if (reviewTab) {
+        const isAnalyst = userRole === 'analyst' || userRole === 'admin';
+        reviewTab.style.display = isAnalyst ? '' : 'none';
+        
+        // If analyst, load review queue
+        if (isAnalyst) {
+          loadReviewQueue();
+        }
+      }
+    } else {
+      userRole = null;
+    }
+  } catch (error) {
+    console.error('Error checking user role:', error);
+    userRole = null;
+  }
 }
 
 // Update connection status UI
@@ -2460,6 +2539,114 @@ function closeLegalRefModal() {
   document.getElementById('legalRefModal').classList.remove('active');
 }
 
+// ===========================================
+// Bug Report Functions
+// ===========================================
+
+// Store console errors for bug reports
+let consoleErrors = [];
+const originalConsoleError = console.error;
+console.error = function(...args) {
+  consoleErrors.push({
+    timestamp: new Date().toISOString(),
+    message: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')
+  });
+  // Keep only last 20 errors
+  if (consoleErrors.length > 20) consoleErrors.shift();
+  originalConsoleError.apply(console, args);
+};
+
+function openBugReportModal() {
+  const modal = document.getElementById('bugReportModal');
+  if (modal) {
+    modal.classList.add('active');
+    document.getElementById('bugDescription').focus();
+  }
+}
+
+function closeBugReport() {
+  const modal = document.getElementById('bugReportModal');
+  if (modal) {
+    modal.classList.remove('active');
+    // Clear form
+    document.getElementById('bugDescription').value = '';
+    document.getElementById('bugSteps').value = '';
+  }
+}
+
+async function submitBugReportHandler() {
+  const description = document.getElementById('bugDescription').value.trim();
+  const steps = document.getElementById('bugSteps').value.trim();
+  const includeState = document.getElementById('bugIncludeState').checked;
+  const includeConsole = document.getElementById('bugIncludeConsole').checked;
+  
+  if (!description) {
+    showNotification('Please describe the bug', 'warning');
+    return;
+  }
+  
+  // Gather context
+  const bugReport = {
+    description,
+    steps: steps || null,
+    timestamp: new Date().toISOString(),
+    url: window.location.href,
+    userAgent: navigator.userAgent,
+    extensionVersion: chrome.runtime.getManifest().version
+  };
+  
+  if (includeState) {
+    bugReport.currentCase = currentCase;
+    bugReport.verifiedQuotesCount = verifiedQuotes.length;
+    bugReport.pendingQuotesCount = pendingQuotes.length;
+    bugReport.sourcesCount = sources.length;
+    bugReport.isConnected = isConnected;
+    bugReport.apiUrl = apiUrl;
+  }
+  
+  if (includeConsole) {
+    bugReport.consoleErrors = consoleErrors.slice(-10); // Last 10 errors
+  }
+  
+  // Try to submit to API
+  try {
+    const response = await fetch(`${apiUrl}/api/bug-reports`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(apiKey && { 'Authorization': `Bearer ${apiKey}` })
+      },
+      body: JSON.stringify(bugReport)
+    });
+    
+    if (response.ok) {
+      showNotification('Bug report submitted - thank you!', 'success');
+      closeBugReport();
+    } else {
+      // If API fails, save locally
+      await saveBugReportLocally(bugReport);
+      showNotification('Saved bug report locally (API unavailable)', 'info');
+      closeBugReport();
+    }
+  } catch (error) {
+    console.error('Failed to submit bug report:', error);
+    // Save locally as fallback
+    await saveBugReportLocally(bugReport);
+    showNotification('Saved bug report locally (API unavailable)', 'info');
+    closeBugReport();
+  }
+}
+
+async function saveBugReportLocally(bugReport) {
+  const { bugReports = [] } = await chrome.storage.local.get('bugReports');
+  bugReports.push(bugReport);
+  // Keep only last 50 reports
+  if (bugReports.length > 50) bugReports.shift();
+  await chrome.storage.local.set({ bugReports });
+}
+
+// ===========================================
+
 // Copy legal text to clipboard
 function copyLegalText(violationType, type, caseIdx) {
   const ref = LEGAL_REFERENCES[violationType];
@@ -3328,6 +3515,11 @@ function buildIncidentObject() {
 
 // Save case to API
 async function saveCase() {
+  // If in review mode, submit verification instead
+  if (reviewMode && reviewIncidentId) {
+    return submitVerification();
+  }
+  
   if (!isConnected) {
     alert('Not connected to API. Please ensure the server is running.');
     return;
@@ -3366,7 +3558,7 @@ async function saveCase() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': apiKey
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify(incident)
     });
@@ -3416,19 +3608,112 @@ async function saveCase() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': apiKey
+          'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify(patchData)
       });
     }
     
-    alert(`Incident saved successfully! ID: ${incident.incident_id}`);
+    // Show appropriate message based on user role
+    const isAnalyst = userRole === 'analyst' || userRole === 'admin';
+    if (isAnalyst) {
+      alert(`Incident saved and auto-verified as first review!\nID: ${incident.incident_id}\n\nAnother analyst can now provide second verification.`);
+    } else {
+      alert(`Incident saved successfully!\nID: ${incident.incident_id}\n\nAwaiting analyst review.`);
+    }
   } catch (error) {
     console.error('Save error:', error);
     alert('Failed to save incident: ' + error.message);
   } finally {
     elements.saveCaseBtn.disabled = false;
-    elements.saveCaseBtn.textContent = 'Save Incident';
+    elements.saveCaseBtn.textContent = reviewMode ? 'Submit Verification' : 'Save Incident';
+  }
+}
+
+// Update submit button for review mode
+function updateSubmitButtonForReview() {
+  const saveBtn = document.getElementById('saveCaseBtn');
+  if (saveBtn) {
+    if (reviewMode) {
+      saveBtn.textContent = 'Submit Verification';
+      saveBtn.style.background = '#10b981'; // Green for verification
+    } else {
+      saveBtn.textContent = 'Save Incident';
+      saveBtn.style.background = ''; // Default blue
+    }
+  }
+}
+
+// Submit verification (called from save button when in review mode)
+async function submitVerification() {
+  if (!reviewIncidentId) {
+    alert('No incident loaded for review');
+    return;
+  }
+  
+  const saveBtn = document.getElementById('saveCaseBtn');
+  if (!saveBtn) return;
+  
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = '<div class="spinner white"></div> Submitting...';
+  
+  try {
+    const incident = buildIncidentObject();
+    
+    // Update the incident details
+    const updateResponse = await fetch(`${apiUrl}/api/incidents/${reviewIncidentId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'X-API-Key': apiKey
+      },
+      body: JSON.stringify(incident)
+    });
+    
+    if (!updateResponse.ok) {
+      const error = await updateResponse.json();
+      throw new Error(error.error || 'Failed to update incident');
+    }
+    
+    // Submit verification
+    const verifyResponse = await fetch(`${apiUrl}/api/incidents/${reviewIncidentId}/verify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'X-API-Key': apiKey
+      },
+      body: JSON.stringify({
+        notes: 'Reviewed and verified via extension'
+      })
+    });
+    
+    if (!verifyResponse.ok) {
+      const error = await verifyResponse.json();
+      throw new Error(error.error || 'Failed to submit verification');
+    }
+    
+    alert('Verification submitted successfully!\n\nThe incident has been updated and marked as verified.');
+    
+    // Exit review mode
+    reviewMode = false;
+    reviewIncidentId = null;
+    updateSubmitButtonForReview();
+    
+    // Reload review queue
+    loadReviewQueue();
+    
+    // Switch back to review tab
+    const reviewTab = document.querySelector('.tab[data-tab="review"]');
+    if (reviewTab) reviewTab.click();
+    
+  } catch (error) {
+    console.error('Verification error:', error);
+    alert('Failed to submit verification: ' + error.message);
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Submit Verification';
   }
 }
 
@@ -3932,5 +4217,433 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   }
 });
 
+// ============================================
+// REVIEW QUEUE FUNCTIONS (Analyst Only)
+// ============================================
+
+// Load review queue from API (unverified cases needing first verification)
+async function loadReviewQueue() {
+  const statusEl = document.getElementById('reviewQueueStatus');
+  const listEl = document.getElementById('reviewQueueList');
+  
+  if (!statusEl || !listEl) return;
+  
+  statusEl.style.display = 'block';
+  statusEl.textContent = 'Loading cases...';
+  listEl.style.display = 'none';
+  
+  try {
+    const response = await fetch(`${apiUrl}/api/analyst/unverified-cases?limit=100`, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'X-API-Key': apiKey
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch unverified cases');
+    }
+    
+    const data = await response.json();
+    reviewQueue = data.incidents || [];
+    
+    if (reviewQueue.length === 0) {
+      statusEl.textContent = 'No unverified cases found';
+      statusEl.style.color = '#22c55e';
+      return;
+    }
+    
+    statusEl.style.display = 'none';
+    listEl.style.display = 'block';
+    renderReviewQueue();
+    
+  } catch (error) {
+    console.error('Error loading unverified cases:', error);
+    statusEl.textContent = 'Failed to load cases: ' + error.message;
+    statusEl.style.color = '#ef4444';
+  }
+}
+
+// Render review queue list
+function renderReviewQueue() {
+  const listEl = document.getElementById('reviewQueueList');
+  if (!listEl) return;
+  
+  listEl.innerHTML = reviewQueue.map(incident => `
+    <div class="review-case-card" data-incident-id="${incident.id}" style="
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    ">
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+        <div>
+          <div style="font-weight: 600; font-size: 13px;">${escapeHtml(incident.victim_name || 'Unknown')}</div>
+          <div style="font-size: 11px; color: #666;">
+            ${incident.incident_type?.replace(/_/g, ' ') || 'Incident'}
+          </div>
+        </div>
+        <span style="
+          padding: 2px 8px;
+          background: #fee2e2;
+          color: #991b1b;
+          font-size: 10px;
+          border-radius: 4px;
+        ">Needs Verification</span>
+      </div>
+      
+      <div style="font-size: 11px; color: #888; margin-bottom: 8px;">
+        ${incident.city ? incident.city + ', ' : ''}${incident.state || ''}
+        ${incident.incident_date ? ' • ' + new Date(incident.incident_date).toLocaleDateString() : ''}
+      </div>
+      
+      <div style="display: flex; gap: 8px; font-size: 10px;">
+        <span style="color: #22c55e;">✓ ${incident.fields_needing_review || 0} fields to review</span>
+        <span style="color: #666;">${incident.fields_verified || 0} verified</span>
+      </div>
+      
+      ${incident.first_verifier_name || incident.first_verifier_email ? `
+        <div style="margin-top: 8px; font-size: 10px; color: #888;">
+          1st Review: ${incident.first_verifier_name || incident.first_verifier_email}
+        </div>
+      ` : `
+        <div style="margin-top: 8px; font-size: 10px; color: #f59e0b;">
+          ⚠ Not yet reviewed
+        </div>
+      `}
+    </div>
+  `).join('');
+  
+  // Add click listeners
+  listEl.querySelectorAll('.review-case-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const incidentId = card.dataset.incidentId;
+      console.log('Card clicked, incident ID:', incidentId);
+      loadReviewCaseDetails(parseInt(incidentId));
+    });
+    
+    card.addEventListener('mouseenter', () => {
+      card.style.borderColor = '#3b82f6';
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.borderColor = '#e0e0e0';
+    });
+  });
+}
+
+// Load full case details for review
+async function loadReviewCaseDetails(incidentId) {
+  console.log('loadReviewCaseDetails called with ID:', incidentId);
+  
+  try {
+    const response = await fetch(`${apiUrl}/api/incidents/${incidentId}/verify`, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'X-API-Key': apiKey
+      }
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API error response:', errorText);
+      throw new Error('Failed to load case details');
+    }
+    
+    const data = await response.json();
+    console.log('API data received:', data);
+    
+    // Set review mode
+    reviewMode = true;
+    reviewIncidentId = incidentId;
+    
+    const incident = data.incident;
+    const quotes = data.quotes || [];
+    const incidentSources = data.sources || [];
+    const timeline = data.timeline || [];
+    
+    // Populate currentCase from incident
+    currentCase = {
+      incidentType: incident.incident_type || 'death_in_custody',
+      name: incident.victim_name || '',
+      dateOfDeath: incident.incident_date ? incident.incident_date.split('T')[0] : '',
+      age: incident.subject_age?.toString() || '',
+      country: incident.subject_nationality || '',
+      occupation: incident.subject_occupation || '',
+      facility: incident.facility || '',
+      location: `${incident.city || ''}, ${incident.state || ''}`.trim(),
+      causeOfDeath: incident.cause_of_death || '',
+      agencies: incident.agencies_involved || [],
+      violations: incident.legal_violations || [],
+      deathCause: incident.cause_of_death || '',
+      deathManner: incident.manner_of_death || '',
+      deathCustodyDuration: incident.custody_duration || '',
+      deathMedicalDenied: incident.medical_care_denied || false,
+      summary: incident.summary || ''
+    };
+    
+    // Populate verified quotes
+    verifiedQuotes = quotes.map(q => ({
+      id: q.id,
+      text: q.quote_text || '',
+      quote: q.quote_text || '',
+      source: q.source_url || incidentSources.find(s => s.id === q.source_id)?.url || '',
+      sourceUrl: q.source_url || incidentSources.find(s => s.id === q.source_id)?.url || '',
+      sourceTitle: q.source_title || incidentSources.find(s => s.id === q.source_id)?.title || '',
+      category: q.category || 'general',
+      speaker: q.speaker || '',
+      speakerRole: q.speaker_role || '',
+      context: q.context || '',
+      notes: q.analyst_notes || '',
+      pageNumber: q.page_number || null,
+      confidence: q.confidence || null
+    }));
+    
+    // Populate sources
+    sources = incidentSources.map(s => ({
+      id: s.id,
+      url: s.url,
+      title: s.title,
+      publication: s.publication,
+      author: s.author,
+      publishedDate: s.published_date,
+      credibilityRating: s.credibility_rating
+    }));
+    
+    // Clear pending quotes in review mode
+    pendingQuotes = [];
+    
+    // Update the UI
+    populateCaseForm();
+    renderQuotes();
+    renderPendingQuotes();
+    renderSources();
+    
+    // Update submit button text
+    updateSubmitButtonForReview();
+    
+    // Switch to incident tab
+    const incidentTab = document.querySelector('.tab[data-tab="case"]');
+    if (incidentTab) incidentTab.click();
+    
+    alert(`Loaded incident for review: ${incident.victim_name || 'Unknown'}`);
+    
+  } catch (error) {
+    console.error('Error loading case details:', error);
+    alert('Failed to load case details: ' + error.message);
+  }
+}
+
+// Render review case details with field verification
+function renderReviewCaseDetails(data) {
+  console.log('renderReviewCaseDetails called with data:', data);
+  
+  const contentEl = document.getElementById('reviewCaseContent');
+  if (!contentEl) {
+    console.error('reviewCaseContent element not found');
+    return;
+  }
+  
+  const incident = data.incident;
+  const fieldVerifications = data.field_verifications || [];
+  const sources = data.sources || [];
+  
+  console.log('Incident:', incident);
+  console.log('Field verifications:', fieldVerifications);
+  console.log('Sources:', sources);
+  
+  const fields = [
+    { key: 'victim_name', label: 'Victim Name' },
+    { key: 'incident_date', label: 'Date' },
+    { key: 'incident_type', label: 'Type' },
+    { key: 'city', label: 'City' },
+    { key: 'state', label: 'State' },
+    { key: 'facility', label: 'Facility' },
+    { key: 'summary', label: 'Summary' },
+  ];
+  
+  const getFieldValue = (key) => {
+    if (key === 'victim_name') return incident.victim_name || incident.subject_name || '';
+    if (key === 'incident_date' && incident.incident_date) {
+      return new Date(incident.incident_date).toLocaleDateString();
+    }
+    return incident[key] || '';
+  };
+  
+  const getFieldVerification = (key) => fieldVerifications.find(fv => fv.field_name === key);
+  
+  contentEl.innerHTML = `
+    <div style="margin-bottom: 16px;">
+      <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 4px;">
+        ${escapeHtml(incident.victim_name || incident.subject_name || 'Unknown')}
+      </h3>
+      <p style="font-size: 12px; color: #666;">
+        ${incident.incident_id || ''} • ${incident.incident_type?.replace(/_/g, ' ') || ''}
+      </p>
+    </div>
+    
+    <div style="margin-bottom: 16px;">
+      <h4 style="font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px;">Fields to Verify</h4>
+      
+      ${fields.map(field => {
+        const value = getFieldValue(field.key);
+        const verif = getFieldVerification(field.key);
+        const status = verif?.verification_status || 'pending';
+        const canVerify = status === 'first_review' && verif?.first_verified_by !== null;
+        
+        return `
+          <div style="
+            border: 1px solid ${status === 'verified' ? '#86efac' : status === 'first_review' ? '#93c5fd' : '#e5e7eb'};
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: ${status === 'verified' ? '#f0fdf4' : status === 'first_review' ? '#eff6ff' : '#fafafa'};
+          ">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="font-weight: 500; font-size: 12px;">${field.label}</span>
+              <span style="
+                font-size: 10px;
+                padding: 2px 6px;
+                border-radius: 4px;
+                background: ${status === 'verified' ? '#dcfce7' : status === 'first_review' ? '#dbeafe' : '#f3f4f6'};
+                color: ${status === 'verified' ? '#166534' : status === 'first_review' ? '#1d4ed8' : '#6b7280'};
+              ">${status === 'first_review' ? 'Needs 2nd' : status}</span>
+            </div>
+            
+            <div style="font-size: 13px; color: #374151; margin-bottom: 8px; word-break: break-word;">
+              ${value ? escapeHtml(value) : '<em style="color: #9ca3af;">Not provided</em>'}
+            </div>
+            
+            ${verif?.first_verifier_name ? `
+              <div style="font-size: 10px; color: #6b7280; margin-bottom: 6px;">
+                1st: ${escapeHtml(verif.first_verifier_name)} 
+                ${verif.first_verification_notes ? `- "${escapeHtml(verif.first_verification_notes)}"` : ''}
+              </div>
+            ` : ''}
+            
+            ${canVerify ? `
+              <button onclick="verifyField(${incident.id}, '${field.key}')" style="
+                width: 100%;
+                padding: 6px;
+                background: #2563eb;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 11px;
+                cursor: pointer;
+              ">Verify This Field</button>
+            ` : status === 'verified' ? `
+              <div style="text-align: center; font-size: 11px; color: #22c55e;">✓ Fully Verified</div>
+            ` : ''}
+          </div>
+        `;
+      }).join('')}
+    </div>
+    
+    ${sources.length > 0 ? `
+      <div>
+        <h4 style="font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px;">Sources</h4>
+        ${sources.map(source => `
+          <a href="${escapeHtml(source.url)}" target="_blank" style="
+            display: block;
+            font-size: 11px;
+            color: #2563eb;
+            margin-bottom: 4px;
+            word-break: break-all;
+          ">${escapeHtml(source.title || source.url)}</a>
+        `).join('')}
+      </div>
+    ` : ''}
+    
+    <div style="margin-top: 16px;">
+      <a href="${apiUrl}/dashboard/review/${incident.id}" target="_blank" style="
+        display: block;
+        text-align: center;
+        padding: 10px;
+        background: #f3f4f6;
+        color: #374151;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 12px;
+      ">Open Full Review Page →</a>
+    </div>
+  `;
+  
+  console.log('HTML content set, length:', contentEl.innerHTML.length);
+}
+
+// Verify a field from the extension
+async function verifyField(incidentId, fieldName) {
+  const notes = prompt('Add verification notes (optional):');
+  
+  try {
+    const response = await fetch(`${apiUrl}/api/incidents/${incidentId}/verify-field`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        field_name: fieldName,
+        notes: notes || undefined
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      alert(data.message || 'Field verified successfully!');
+      // Reload the case details
+      loadReviewCaseDetails(incidentId);
+      // Refresh the queue
+      loadReviewQueue();
+    } else {
+      alert('Error: ' + (data.error || 'Verification failed'));
+    }
+  } catch (error) {
+    console.error('Error verifying field:', error);
+    alert('Failed to verify field');
+  }
+}
+
+// Make verifyField available globally for onclick handlers
+window.verifyField = verifyField;
+
+// Setup review tab event listeners
+function setupReviewTabListeners() {
+  const refreshBtn = document.getElementById('refreshReviewQueue');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', loadReviewQueue);
+  }
+  
+  const closeBtn = document.getElementById('closeReviewDetails');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      const detailsSection = document.getElementById('reviewCaseDetails');
+      const queueList = document.getElementById('reviewQueueList');
+      const queueStatus = document.getElementById('reviewQueueStatus');
+      
+      if (detailsSection) detailsSection.style.display = 'none';
+      if (queueList) queueList.style.display = 'block';
+      if (queueStatus) queueStatus.style.display = 'block';
+    });
+  }
+}
+
+// Helper to escape HTML
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 // Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => {
+  init();
+  setupReviewTabListeners();
+});

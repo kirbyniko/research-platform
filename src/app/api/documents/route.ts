@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireDescopeAuth } from '@/lib/descope-auth';
-import { requireAuth } from '@/lib/auth';
+import { requireServerAuth } from '@/lib/server-auth';
 import pool from '@/lib/db';
 import { extractPdfWithPositions } from '@/lib/pdf-processor';
 import fs from 'fs/promises';
@@ -26,20 +25,11 @@ export async function POST(request: NextRequest) {
     console.log('[documents] Upload request received');
     
     // Auth check
-    const descopeAuthFn = await requireDescopeAuth('editor');
-    const descopeResult = await descopeAuthFn(request);
-    let userId: number | null = null;
-    
-    if ('error' in descopeResult) {
-      const legacyAuthFn = requireAuth('editor');
-      const legacyResult = await legacyAuthFn(request);
-      if ('error' in legacyResult) {
-        return NextResponse.json({ error: legacyResult.error }, { status: legacyResult.status });
-      }
-      userId = legacyResult.user?.id || null;
-    } else {
-      userId = descopeResult.user?.id || null;
+    const authResult = await requireServerAuth(request, 'editor');
+    if ('error' in authResult) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
+    const userId = authResult.user?.id || null;
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -213,14 +203,9 @@ export async function GET(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     // Auth check
-    const descopeAuthFn = await requireDescopeAuth('editor');
-    const descopeResult = await descopeAuthFn(request);
-    if ('error' in descopeResult) {
-      const legacyAuthFn = requireAuth('editor');
-      const legacyResult = await legacyAuthFn(request);
-      if ('error' in legacyResult) {
-        return NextResponse.json({ error: legacyResult.error }, { status: legacyResult.status });
-      }
+    const authResult = await requireServerAuth(request, 'editor');
+    if ('error' in authResult) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
     const { searchParams } = new URL(request.url);

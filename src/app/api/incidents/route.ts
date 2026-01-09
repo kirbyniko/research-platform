@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
+import { requireServerAuth } from '@/lib/server-auth';
+import pool from '@/lib/db';
 import {
   createIncident,
   getIncidents,
@@ -86,14 +87,16 @@ export async function GET(request: NextRequest) {
 // POST /api/incidents - Create new incident
 export async function POST(request: NextRequest) {
   try {
-    // Require editor role
-    const authResult = await requireAuth('editor')(request);
+    // Require editor role minimum
+    const authResult = await requireServerAuth(request, 'editor');
     if ('error' in authResult) {
       return NextResponse.json(
         { error: authResult.error },
         { status: authResult.status }
       );
     }
+    
+    const user = authResult.user;
 
     const body = await request.json();
     const incident: Omit<Incident, 'id' | 'created_at' | 'updated_at'> = body;
@@ -113,7 +116,70 @@ export async function POST(request: NextRequest) {
     }
 
     const id = await createIncident(incident);
-    return NextResponse.json({ success: true, id, incident_id: incident.incident_id });
+    
+    // If submitter is an analyst, auto-record their submission and mark fields as first-verified
+    const isAnalyst = user.role === 'analyst' || user.role === 'admin';
+    
+    if (isAnalyst) {
+      try {
+        // Update incident with submitter info and auto first-verification
+        await pool.query(`
+          UPDATE incidents SET 
+            submitted_by = $1,
+            submitted_at = NOW(),
+            submitter_role = $2,
+            first_verified_by = $1,
+            first_verified_at = NOW(),
+            verification_status = 'first_review',
+            victim_name = COALESCE(victim_name, subject_name)
+          WHERE id = $3
+        `, [user.id, user.role, id]);
+        
+        // Create field-level verification records for all fields with values
+        const fieldsToVerify = [
+          { key: 'victim_name', value: incident.subject?.name },
+          { key: 'incident_date', value: incident.date },
+          { key: 'incident_type', value: incident.incident_type },
+          { key: 'city', value: incident.location?.city },
+          { key: 'state', value: incident.location?.state },
+          { key: 'facility', value: incident.location?.facility },
+          { key: 'summary', value: incident.summary },
+        ].filter(f => f.value); // Only create verifications for fields with values
+        
+        for (const field of fieldsToVerify) {
+          await pool.query(`
+            INSERT INTO incident_field_verifications 
+              (incident_id, field_name, field_value, first_verified_by, first_verified_at, verification_status)
+            VALUES ($1, $2, $3, $4, NOW(), 'first_review')
+            ON CONFLICT (incident_id, field_name) DO NOTHING
+          `, [id, field.key, String(field.value), user.id]);
+        }
+      } catch (verifyError) {
+        console.error('Error auto-verifying analyst submission:', verifyError);
+        // Don't fail the whole request if verification fails
+      }
+    } else {
+      // Non-analyst submission - just record who submitted
+      await pool.query(`
+        UPDATE incidents SET 
+          submitted_by = $1,
+          submitted_at = NOW(),
+          submitter_role = $2,
+          verification_status = 'pending',
+          victim_name = COALESCE(victim_name, subject_name)
+        WHERE id = $3
+      `, [user.id, user.role, id]);
+    }
+    
+    return NextResponse.json({ 
+      success: true, 
+      id, 
+      incident_id: incident.incident_id,
+      auto_verified: isAnalyst,
+      message: isAnalyst 
+        ? 'Incident created and auto-verified as first review (analyst submission)'
+        : 'Incident created and pending first review'
+    });
   } catch (error) {
     console.error('Error creating incident:', error);
     

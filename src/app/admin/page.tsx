@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useSession, useUser, getSessionToken, useDescope } from '@descope/react-sdk';
+import { useSession, signOut } from 'next-auth/react';
 import DocumentAnalyzer from '@/components/DocumentAnalyzer';
 
 interface Document {
@@ -27,20 +27,54 @@ interface VerificationData {
     sources: { total: number; verified: number; unverified: number };
     discrepancies: { total: number; verified: number; unverified: number };
   };
-  cases: any[];
-  timeline: any[];
-  sources: any[];
-  discrepancies: any[];
+  cases: Array<{ 
+    id: string | number; 
+    name?: string; 
+    date_of_death?: string;
+    verified?: boolean;
+    verified_by?: string;
+  }>;
+  timeline: Array<{ 
+    id: string | number; 
+    date?: string; 
+    event?: string;
+    verified?: boolean;
+    verified_by?: string;
+    case_name?: string;
+  }>;
+  sources: Array<{ 
+    id: string | number; 
+    name?: string; 
+    title?: string;
+    url?: string;
+    publisher?: string;
+    verified?: boolean;
+    verified_by?: string;
+    case_name?: string;
+  }>;
+  discrepancies: Array<{ 
+    id: string | number; 
+    description?: string;
+    ice_claim?: string;
+    counter_evidence?: string;
+    verified?: boolean;
+    verified_by?: string;
+    case_name?: string;
+  }>;
+}
+
+interface UserData {
+  id: string | number;
+  email: string;
+  name?: string;
+  role: string;
 }
 
 // Inner component that uses the hooks
 function AdminDashboard() {
-  const router = useRouter();
-  const { isAuthenticated, isSessionLoading, sessionToken } = useSession();
-  const { user: descopeUser, isUserLoading } = useUser();
-  const sdk = useDescope();
+  const { data: session, status } = useSession();
   
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UserData | null>(null);
   const [data, setData] = useState<VerificationData | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,18 +90,15 @@ function AdminDashboard() {
 
   // Log every render
   console.log('=== AdminDashboard RENDER ===', {
-    isSessionLoading,
-    isUserLoading,
-    isAuthenticated,
-    hasSessionToken: !!sessionToken,
-    hasDescopeUser: !!descopeUser,
+    status,
+    hasSession: !!session,
     authCheckStarted: authCheckStarted.current,
     hasUser: !!user
   });
 
   useEffect(() => {
-    // Wait for Descope to finish loading
-    if (isSessionLoading || isUserLoading) {
+    // Wait for NextAuth to finish loading
+    if (status === 'loading') {
       console.log('[Admin] Still loading session...');
       return;
     }
@@ -79,21 +110,18 @@ function AdminDashboard() {
     }
     authCheckStarted.current = true;
     
-    console.log('[Admin] Auth check starting, isAuthenticated:', isAuthenticated);
+    console.log('[Admin] Auth check starting, status:', status);
     
     // If not authenticated, redirect to login
-    if (!isAuthenticated) {
+    if (status === 'unauthenticated') {
       console.log('[Admin] NOT AUTHENTICATED - redirecting to login');
-      window.location.href = '/auth/descope';
+      window.location.href = '/auth/login';
       return;
     }
     
     // User is authenticated - fetch their role from our database
-    const token = getSessionToken();
-    console.log('[Admin] Got token:', token ? 'YES' : 'NO');
-    
-    if (!token) {
-      console.log('[Admin] No token despite isAuthenticated=true');
+    if (!session?.user) {
+      console.log('[Admin] No session user');
       setError('Session error - please try logging in again');
       setLoading(false);
       return;
@@ -109,11 +137,7 @@ function AdminDashboard() {
     console.log('[Admin] Fetching user role from backend...');
     
     // Get user role from our backend
-    fetch('/api/auth/descope/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionToken: token }),
-    })
+    fetch('/api/auth/me')
       .then(res => {
         console.log('[Admin] Backend response status:', res.status);
         if (!res.ok) {
@@ -137,7 +161,7 @@ function AdminDashboard() {
           }
           console.log('[Admin] User authorized, loading dashboard data');
           setUser(responseData.user);
-          fetchDashboardData(token);
+          fetchDashboardData();
         } else {
           setError('No user data returned');
           setLoading(false);
@@ -148,17 +172,12 @@ function AdminDashboard() {
         setError('Failed to verify permissions: ' + err.message);
         setLoading(false);
       });
-  }, [isAuthenticated, isSessionLoading, isUserLoading]);
+  }, [status, session]);
 
-  const fetchDashboardData = async (token: string) => {
+  const fetchDashboardData = async () => {
     console.log('[Admin] Fetching dashboard data...');
     try {
-      const res = await fetch('/api/verify', {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-      });
+      const res = await fetch('/api/verify');
 
       console.log('[Admin] Dashboard data response:', res.status);
       
@@ -201,9 +220,6 @@ function AdminDashboard() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const token = getSessionToken();
-    if (!token) return;
-
     setUploadingDoc(true);
     try {
       const formData = new FormData();
@@ -214,7 +230,6 @@ function AdminDashboard() {
 
       const res = await fetch('/api/documents', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
         body: formData
       });
 
@@ -233,10 +248,7 @@ function AdminDashboard() {
     }
   };
 
-  const handleVerify = async (type: string, id: string | number, currentVerified: boolean) => {
-    const token = getSessionToken();
-    if (!token) return;
-
+  const handleVerify = async (type: string, id: string | number, currentVerified: boolean = false) => {
     setVerifying(`${type}-${id}`);
 
     try {
@@ -244,13 +256,12 @@ function AdminDashboard() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ type, id, verified: !currentVerified }),
       });
 
       if (res.ok) {
-        fetchDashboardData(token);
+        fetchDashboardData();
       }
     } catch (err) {
       console.error('Verification failed:', err);
@@ -262,8 +273,8 @@ function AdminDashboard() {
   const handleLogout = async () => {
     console.log('[Admin] Logging out...');
     try {
-      await sdk.logout();
-      console.log('[Admin] Descope logout successful');
+      await signOut({ redirect: false });
+      console.log('[Admin] NextAuth logout successful');
       window.location.href = '/';
     } catch (err) {
       console.error('[Admin] Logout error:', err);
@@ -272,7 +283,7 @@ function AdminDashboard() {
     }
   };
 
-  if (isSessionLoading || isUserLoading || loading) {
+  if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p>Loading...</p>
@@ -301,6 +312,11 @@ function AdminDashboard() {
             <Link href="/" className="text-sm text-gray-600 hover:text-black">
               View Site
             </Link>
+            {user?.role === 'admin' && (
+              <Link href="/admin/users" className="text-sm text-gray-600 hover:text-black">
+                Manage Users
+              </Link>
+            )}
             <button onClick={handleLogout} className="text-sm text-gray-600 hover:text-black">
               Logout
             </button>
@@ -655,8 +671,7 @@ function AdminDashboard() {
                     onComplete={(result) => {
                       console.log('Analysis complete:', result);
                       // Refresh data to show new items
-                      const token = getSessionToken();
-                      if (token) fetchDashboardData(token);
+                      fetchDashboardData();
                     }}
                   />
                 ) : (

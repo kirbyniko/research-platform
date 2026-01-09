@@ -130,6 +130,7 @@ export async function loadDocumentIntoExtension(documentData: DocumentData): Pro
 export async function openExtensionSidepanel(): Promise<void> {
   if (typeof chrome !== 'undefined' && chrome.sidePanel) {
     try {
+      // @ts-expect-error - sidePanel.open() can be called without arguments in newer Chrome versions
       await chrome.sidePanel.open();
     } catch (error) {
       console.error('Failed to open sidepanel:', error);

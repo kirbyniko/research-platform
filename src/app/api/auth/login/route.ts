@@ -18,11 +18,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: result.error }, { status: 401 });
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       message: 'Login successful',
       user: result.user,
       token: result.token,
     });
+
+    // Set HTTP-only cookie for web authentication
+    response.cookies.set('auth_token', result.token!, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    });
+
+    return response;
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(

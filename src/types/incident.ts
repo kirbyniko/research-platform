@@ -160,6 +160,7 @@ export interface IncidentQuote {
   verified: boolean;
   verified_by?: string;
   verified_at?: string;
+  linked_fields?: string[];    // Fields this quote supports (e.g., 'victim_name', 'agency_ice')
 }
 
 // ============================================

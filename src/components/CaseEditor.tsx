@@ -255,7 +255,7 @@ export default function CaseEditor({ caseData, onSave, onCancel }: CaseEditorPro
                     <input
                       type="text"
                       value={editedCase.custody_status}
-                      onChange={(e) => setEditedCase({ ...editedCase, custody_status: e.target.value })}
+                      onChange={(e) => setEditedCase({ ...editedCase, custody_status: e.target.value as 'Detained' | 'Released' | 'Other' })}
                       className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                     />
                   </div>
@@ -319,7 +319,7 @@ export default function CaseEditor({ caseData, onSave, onCancel }: CaseEditorPro
                     <label className="block text-sm font-medium mb-1">Facility Type</label>
                     <select
                       value={editedCase.facility.type}
-                      onChange={(e) => setEditedCase({ ...editedCase, facility: { ...editedCase.facility, type: e.target.value } })}
+                      onChange={(e) => setEditedCase({ ...editedCase, facility: { ...editedCase.facility, type: e.target.value as 'ICE facility' | 'ICE-contracted jail' | 'Other' } })}
                       className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                     >
                       <option value="ICE facility">ICE facility</option>
@@ -327,17 +327,6 @@ export default function CaseEditor({ caseData, onSave, onCancel }: CaseEditorPro
                       <option value="Other">Other</option>
                     </select>
                   </div>
-                  {editedCase.facility.city && (
-                    <div>
-                      <label className="block text-sm font-medium mb-1">City (optional)</label>
-                      <input
-                        type="text"
-                        value={editedCase.facility.city}
-                        onChange={(e) => setEditedCase({ ...editedCase, facility: { ...editedCase.facility, city: e.target.value } })}
-                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                      />
-                    </div>
-                  )}
                 </div>
               </section>
 

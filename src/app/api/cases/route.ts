@@ -3,6 +3,29 @@ import { saveCaseToDb } from '@/lib/cases-db';
 import { Case } from '@/types/case';
 import { requireAuth } from '@/lib/auth';
 
+// HEAD request for connection testing (browser extension)
+export async function HEAD() {
+  return new NextResponse(null, { 
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'HEAD, GET, POST, OPTIONS',
+    }
+  });
+}
+
+// OPTIONS request for CORS preflight
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'HEAD, GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key',
+    }
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Require editor role for creating/editing cases

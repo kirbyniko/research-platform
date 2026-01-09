@@ -1,26 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCaseByIdFromDb } from '@/lib/cases-db';
-import { requireDescopeAuth } from '@/lib/descope-auth';
-import { requireAuth } from '@/lib/auth';
+import { requireServerAuth } from '@/lib/server-auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { caseId: string } }
+  { params }: { params: Promise<{ caseId: string }> }
 ) {
   try {
     // Auth check
-    const descopeAuthFn = await requireDescopeAuth('viewer');
-    const descopeResult = await descopeAuthFn(request);
-    
-    if ('error' in descopeResult) {
-      const legacyAuthFn = requireAuth('viewer');
-      const legacyResult = await legacyAuthFn(request);
-      if ('error' in legacyResult) {
-        return NextResponse.json({ error: legacyResult.error }, { status: legacyResult.status });
-      }
+    const authResult = await requireServerAuth(request, 'viewer');
+    if ('error' in authResult) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
-    const caseData = await getCaseByIdFromDb(params.caseId);
+    const { caseId } = await params;
+    const caseData = await getCaseByIdFromDb(caseId);
 
     if (!caseData) {
       return NextResponse.json({ error: 'Case not found' }, { status: 404 });

@@ -1,17 +1,24 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 import pool from './db';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
+export type UserRole = 'guest' | 'user' | 'analyst' | 'admin' | 'editor' | 'viewer';
+
 export interface User {
   id: number;
   email: string;
   name: string | null;
-  role: 'admin' | 'editor' | 'viewer';
+  role: UserRole;
   email_verified: boolean;
+}
+
+export interface AuthUser extends User {
+  permissions?: string[];
+  authMethod: 'jwt' | 'api_key';
 }
 
 export interface JWTPayload {
@@ -216,52 +223,132 @@ export function validateApiKey(apiKey: string): boolean {
   return apiKey === EXTENSION_API_KEY;
 }
 
+// Get user from database API key
+export async function getUserFromApiKey(apiKey: string): Promise<AuthUser | null> {
+  const keyHash = createHash('sha256').update(apiKey).digest('hex');
+  
+  const result = await pool.query(`
+    SELECT u.id, u.email, u.name, u.role, u.email_verified, ak.permissions, ak.expires_at
+    FROM api_keys ak
+    JOIN users u ON ak.user_id = u.id
+    WHERE ak.key_hash = $1 
+      AND ak.revoked = false 
+      AND ak.expires_at > NOW()
+  `, [keyHash]);
+  
+  if (result.rows[0]) {
+    // Update last_used_at
+    await pool.query(
+      'UPDATE api_keys SET last_used_at = NOW() WHERE key_hash = $1',
+      [keyHash]
+    );
+    
+    return {
+      id: result.rows[0].id,
+      email: result.rows[0].email,
+      name: result.rows[0].name,
+      role: result.rows[0].role,
+      email_verified: result.rows[0].email_verified,
+      permissions: result.rows[0].permissions,
+      authMethod: 'api_key'
+    };
+  }
+  return null;
+}
+
+// Check if user has required role
+export function hasRole(user: AuthUser | User | null, requiredRoles: UserRole[]): boolean {
+  if (!user) return false;
+  return requiredRoles.includes(user.role);
+}
+
+// Check if user has permission
+export function hasPermission(user: AuthUser | null, permission: string): boolean {
+  if (!user) return false;
+  
+  // Admins always have all permissions
+  if (user.role === 'admin') return true;
+  
+  // Check explicit permissions for API key auth
+  if (user.authMethod === 'api_key' && user.permissions) {
+    return user.permissions.includes(permission);
+  }
+  
+  // Default permissions by role for JWT auth
+  const rolePermissions: Record<UserRole, string[]> = {
+    guest: [],
+    viewer: ['view'],
+    user: ['submit'],
+    editor: ['submit', 'edit'],
+    analyst: ['submit', 'verify', 'analyze', 'edit'],
+    admin: ['submit', 'verify', 'analyze', 'admin', 'edit']
+  };
+  
+  return rolePermissions[user.role]?.includes(permission) || false;
+}
+
 // Middleware helper to check authentication (supports both JWT and API Key)
-export function requireAuth(requiredRole?: 'admin' | 'editor' | 'viewer') {
-  return async (request: Request): Promise<{ user: User } | { error: string; status: number }> => {
-    // Check for API key first (X-API-Key header)
-    const apiKey = request.headers.get('X-API-Key');
-    if (apiKey) {
-      if (validateApiKey(apiKey)) {
-        // API key grants editor access
+export function requireAuth(requiredRole?: UserRole) {
+  return async (request: Request): Promise<{ user: AuthUser } | { error: string; status: number }> => {
+    // Check for Bearer token (API key) first
+    const authHeader = request.headers.get('Authorization');
+    
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      
+      // Check if it's a database API key (starts with 'ice_')
+      if (token.startsWith('ice_')) {
+        const apiKeyUser = await getUserFromApiKey(token);
+        if (apiKeyUser) {
+          if (requiredRole) {
+            const roleHierarchy: Record<UserRole, number> = { guest: 0, viewer: 1, user: 2, editor: 3, analyst: 4, admin: 5 };
+            if (roleHierarchy[apiKeyUser.role] < roleHierarchy[requiredRole]) {
+              return { error: 'Insufficient permissions', status: 403 };
+            }
+          }
+          return { user: apiKeyUser };
+        }
+        return { error: 'Invalid or expired API key', status: 401 };
+      }
+      
+      // Otherwise treat as JWT
+      const user = await getUserFromToken(token);
+      if (!user) {
+        return { error: 'Invalid or expired token', status: 401 };
+      }
+
+      if (!user.email_verified) {
+        return { error: 'Email not verified', status: 403 };
+      }
+
+      if (requiredRole) {
+        const roleHierarchy: Record<UserRole, number> = { guest: 0, viewer: 1, user: 2, editor: 3, analyst: 4, admin: 5 };
+        if (roleHierarchy[user.role] < roleHierarchy[requiredRole]) {
+          return { error: 'Insufficient permissions', status: 403 };
+        }
+      }
+
+      return { user: { ...user, authMethod: 'jwt' } };
+    }
+    
+    // Check for legacy X-API-Key header
+    const legacyApiKey = request.headers.get('X-API-Key');
+    if (legacyApiKey) {
+      if (validateApiKey(legacyApiKey)) {
         return {
           user: {
             id: 0,
             email: 'extension@local',
             name: 'Extension User',
-            role: 'editor',
+            role: 'user' as UserRole,
             email_verified: true,
+            authMethod: 'api_key'
           }
         };
       }
       return { error: 'Invalid API key', status: 401 };
     }
     
-    // Fall back to Bearer token auth
-    const authHeader = request.headers.get('Authorization');
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return { error: 'Unauthorized', status: 401 };
-    }
-
-    const token = authHeader.substring(7);
-    const user = await getUserFromToken(token);
-
-    if (!user) {
-      return { error: 'Invalid or expired token', status: 401 };
-    }
-
-    if (!user.email_verified) {
-      return { error: 'Email not verified', status: 403 };
-    }
-
-    if (requiredRole) {
-      const roleHierarchy = { admin: 3, editor: 2, viewer: 1 };
-      if (roleHierarchy[user.role] < roleHierarchy[requiredRole]) {
-        return { error: 'Insufficient permissions', status: 403 };
-      }
-    }
-
-    return { user };
+    return { error: 'Unauthorized', status: 401 };
   };
 }

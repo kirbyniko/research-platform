@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireDescopeAuth } from '@/lib/descope-auth';
-import { requireAuth } from '@/lib/auth';
+import { requireServerAuth } from '@/lib/server-auth';
 import pool from '@/lib/db';
 
 export const runtime = 'nodejs';
@@ -14,20 +13,11 @@ export async function PATCH(
     const { id } = await params;
     
     // Auth check
-    const descopeAuthFn = await requireDescopeAuth('editor');
-    const descopeResult = await descopeAuthFn(request);
-    let userId: number | null = null;
-    
-    if ('error' in descopeResult) {
-      const legacyAuthFn = requireAuth('editor');
-      const legacyResult = await legacyAuthFn(request);
-      if ('error' in legacyResult) {
-        return NextResponse.json({ error: legacyResult.error }, { status: legacyResult.status });
-      }
-      userId = legacyResult.user?.id || null;
-    } else {
-      userId = descopeResult.user?.id || null;
+    const authResult = await requireServerAuth(request, 'editor');
+    if ('error' in authResult) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
+    const userId = authResult.user?.id || null;
 
     const body = await request.json();
     const { status, rejectionReason, edits } = body;
@@ -193,14 +183,9 @@ export async function DELETE(
     const { id } = await params;
     
     // Auth check
-    const descopeAuthFn = await requireDescopeAuth('editor');
-    const descopeResult = await descopeAuthFn(request);
-    if ('error' in descopeResult) {
-      const legacyAuthFn = requireAuth('editor');
-      const legacyResult = await legacyAuthFn(request);
-      if ('error' in legacyResult) {
-        return NextResponse.json({ error: legacyResult.error }, { status: legacyResult.status });
-      }
+    const authResult = await requireServerAuth(request, 'editor');
+    if ('error' in authResult) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
     await pool.query('DELETE FROM extracted_quotes WHERE id = $1', [id]);

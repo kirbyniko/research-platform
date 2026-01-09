@@ -1,29 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { requireDescopeAuth } from '@/lib/descope-auth';
+import { requireServerAuth } from '@/lib/server-auth';
 
 // POST - Analyze a document to extract quotes and timeline
 export async function POST(request: NextRequest) {
   try {
-    // Try Descope auth first, fallback to legacy
-    let authResult;
-    
-    const descopeAuthFn = await requireDescopeAuth('editor');
-    const descopeResult = await descopeAuthFn(request);
-    
-    if (!('error' in descopeResult)) {
-      authResult = descopeResult;
-    } else {
-      // Fallback to legacy auth
-      const legacyAuthFn = requireAuth('editor');
-      const legacyResult = await legacyAuthFn(request);
-      if ('error' in legacyResult) {
-        return NextResponse.json(
-          { error: legacyResult.error },
-          { status: legacyResult.status }
-        );
-      }
-      authResult = legacyResult;
+    // Auth check
+    const authResult = await requireServerAuth(request, 'editor');
+    if ('error' in authResult) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
     const { document, caseId, analysisType } = await request.json();

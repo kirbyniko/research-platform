@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getSessionToken } from '@descope/react-sdk';
 
 interface OllamaStatus {
   available: boolean;
@@ -52,15 +51,7 @@ export default function DocumentAnalyzer({ caseId, onComplete }: DocumentAnalyze
 
   const checkOllamaStatus = async () => {
     try {
-      const token = getSessionToken();
-      if (!token) {
-        console.log('[DocumentAnalyzer] No session token available');
-        return;
-      }
-
-      const response = await fetch(`/api/ollama?vram=${vram}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetch(`/api/ollama?vram=${vram}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -81,17 +72,10 @@ export default function DocumentAnalyzer({ caseId, onComplete }: DocumentAnalyze
     setError('');
 
     try {
-      const token = getSessionToken();
-      if (!token) {
-        setError('Not authenticated');
-        return;
-      }
-
       const response = await fetch('/api/ollama', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ action: 'pull', model }),
       });
@@ -122,18 +106,10 @@ export default function DocumentAnalyzer({ caseId, onComplete }: DocumentAnalyze
     setResult(null);
 
     try {
-      const token = getSessionToken();
-      if (!token) {
-        setError('Not authenticated');
-        setAnalyzing(false);
-        return;
-      }
-
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           document,
@@ -176,20 +152,10 @@ export default function DocumentAnalyzer({ caseId, onComplete }: DocumentAnalyze
         const url = URL.createObjectURL(file);
         setPdfUrl(url);
 
-        const token = getSessionToken();
-        if (!token) {
-          setError('Not authenticated');
-          setAnalyzing(false);
-          return;
-        }
-
-        console.log('[DocumentAnalyzer] Uploading PDF with token:', token ? 'YES' : 'NO');
+        console.log('[DocumentAnalyzer] Uploading PDF');
 
         const response = await fetch('/api/upload-pdf', {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
           body: formData,
         });
 

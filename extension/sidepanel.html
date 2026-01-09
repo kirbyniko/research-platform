@@ -832,6 +832,89 @@
       flex: 1;
     }
     
+    .footer .btn-bug {
+      flex: 0;
+      padding: 8px 12px;
+      background: #f3f4f6;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .footer .btn-bug:hover {
+      background: #e5e7eb;
+    }
+    
+    /* Bug Report Modal */
+    .bug-report-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 10001;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .bug-report-modal.active {
+      display: flex;
+    }
+    
+    .bug-report-content {
+      background: white;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 400px;
+      max-height: 90%;
+      overflow-y: auto;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+    
+    .bug-report-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .bug-report-header h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    
+    .bug-report-body {
+      padding: 16px;
+    }
+    
+    .bug-report-body .form-group {
+      margin-bottom: 12px;
+    }
+    
+    .bug-report-body .form-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+    
+    .bug-report-footer {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid #e0e0e0;
+    }
+    
+    .bug-report-footer .btn {
+      flex: 1;
+    }
+    
     /* Empty state */
     .empty-state {
       text-align: center;
@@ -1454,6 +1537,7 @@
     <div class="tabs">
       <button class="tab active" data-tab="case">Incident</button>
       <button class="tab" data-tab="extract">Extract</button>
+      <button class="tab" data-tab="review" id="reviewTab" style="display: none;">Review</button>
       <button class="tab" data-tab="settings">Settings</button>
     </div>
     
@@ -2279,6 +2363,38 @@
       </div>
     </div>
     
+    <!-- Review Tab (Analyst Only) -->
+    <div class="tab-content" id="tab-review">
+      <div class="wide-tab-header">Review Queue</div>
+      
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Cases Awaiting Your Review</span>
+          <button class="btn btn-small" id="refreshReviewQueue">↻ Refresh</button>
+        </div>
+        
+        <div id="reviewQueueStatus" style="padding: 12px; text-align: center; color: #666; font-size: 12px;">
+          Loading...
+        </div>
+        
+        <div id="reviewQueueList" style="display: none;">
+          <!-- Cases will be populated here -->
+        </div>
+      </div>
+      
+      <!-- Selected Case Details -->
+      <div class="section" id="reviewCaseDetails" style="display: none;">
+        <div class="section-header">
+          <span class="section-title">Case Details</span>
+          <button class="btn btn-small" id="closeReviewDetails">✕ Close</button>
+        </div>
+        
+        <div id="reviewCaseContent">
+          <!-- Case details will be populated here -->
+        </div>
+      </div>
+    </div>
+    
     <!-- Settings Tab -->
     <div class="tab-content" id="tab-settings">
       <div class="section">
@@ -2295,7 +2411,8 @@
           <label class="form-label">API Key</label>
           <input type="password" class="form-input" id="apiKey" placeholder="Enter your API key">
           <p class="help-text" style="font-size: 11px; color: #666; margin-top: 4px;">
-            Required for saving incidents. Get key from admin.
+            Required for saving incidents. 
+            <a href="#" id="getApiKeyLink" style="color: #3b82f6;">Get your API key →</a>
           </p>
         </div>
         
@@ -2421,7 +2538,42 @@
       </div>
     </div>
     
+    <!-- Bug Report Modal -->
+    <div class="bug-report-modal" id="bugReportModal">
+      <div class="bug-report-content">
+        <div class="bug-report-header">
+          <h3>Report a Bug</h3>
+          <button class="legal-ref-close" id="closeBugReportModal">×</button>
+        </div>
+        <div class="bug-report-body">
+          <div class="form-group">
+            <label class="form-label">What happened?</label>
+            <textarea class="form-input" id="bugDescription" rows="4" placeholder="Describe the bug or unexpected behavior..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Steps to reproduce (optional)</label>
+            <textarea class="form-input" id="bugSteps" rows="3" placeholder="1. Click on...&#10;2. Then...&#10;3. Bug appears"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <input type="checkbox" id="bugIncludeState" checked> Include current extension state (helps debugging)
+            </label>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <input type="checkbox" id="bugIncludeConsole" checked> Include recent console errors
+            </label>
+          </div>
+          <div class="bug-report-footer">
+            <button class="btn btn-secondary" id="cancelBugReport">Cancel</button>
+            <button class="btn btn-primary" id="submitBugReport">Submit Bug Report</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
     <div class="footer">
+      <button class="btn btn-bug" id="reportBugBtn" title="Report a bug">🐛</button>
       <button class="btn btn-secondary" id="newCaseBtn">New Incident</button>
       <button class="btn btn-primary" id="saveCaseBtn">Save Incident</button>
     </div>

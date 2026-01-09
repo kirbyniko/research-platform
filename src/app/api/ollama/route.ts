@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { requireDescopeAuth } from '@/lib/descope-auth';
+import { requireServerAuth } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
@@ -19,18 +18,12 @@ const MODEL_RECOMMENDATIONS = {
 // GET - Check Ollama status and list models
 export async function GET(request: NextRequest) {
   try {
-    // Try Descope auth first, fallback to legacy
-    const descopeAuthFn = await requireDescopeAuth('editor');
-    const descopeResult = await descopeAuthFn(request);
-    if ('error' in descopeResult) {
-      const legacyAuthFn = requireAuth('editor');
-      const legacyResult = await legacyAuthFn(request);
-      if ('error' in legacyResult) {
-        return NextResponse.json(
-          { error: legacyResult.error },
-          { status: legacyResult.status }
-        );
-      }
+    const authResult = await requireServerAuth(request, 'editor');
+    if ('error' in authResult) {
+      return NextResponse.json(
+        { error: authResult.error },
+        { status: authResult.status }
+      );
     }
 
     // Check if Ollama is running
@@ -50,7 +43,7 @@ export async function GET(request: NextRequest) {
       const installedModels = data.models || [];
 
       // Get recommendations based on VRAM
-      let recommendations = [];
+      let recommendations: string[] = [];
       if (vramParam) {
         const vram = parseInt(vramParam);
         const closestVram = Object.keys(MODEL_RECOMMENDATIONS)
@@ -88,18 +81,12 @@ export async function GET(request: NextRequest) {
 // POST - Pull/download a model
 export async function POST(request: NextRequest) {
   try {
-    // Try Descope auth first, fallback to legacy
-    const descopeAuthFn = await requireDescopeAuth('editor');
-    const descopeResult = await descopeAuthFn(request);
-    if ('error' in descopeResult) {
-      const legacyAuthFn = requireAuth('editor');
-      const legacyResult = await legacyAuthFn(request);
-      if ('error' in legacyResult) {
-        return NextResponse.json(
-          { error: legacyResult.error },
-          { status: legacyResult.status }
-        );
-      }
+    const authResult = await requireServerAuth(request, 'editor');
+    if ('error' in authResult) {
+      return NextResponse.json(
+        { error: authResult.error },
+        { status: authResult.status }
+      );
     }
 
     const { action, model } = await request.json();

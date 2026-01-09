@@ -2,18 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useSession } from '@descope/nextjs-sdk/client';
+import { useSession } from 'next-auth/react';
 import QuoteCard from '@/components/verification/QuoteCard';
 import { ExtensionBridge } from '@/components/ExtensionBridge';
-
-interface Quote {
-  id: number;
-  quote_text: string;
-  text?: string; // Legacy support
-  page_number: number;
-  category: string;
-  status: string;
-}
+import type { Quote } from '@/components/verification/PDFViewer';
 
 interface Document {
   id: number;
@@ -30,7 +22,7 @@ export default function VerificationPage() {
   const params = useParams();
   const router = useRouter();
   const documentId = params?.documentId as string;
-  const { sessionToken } = useSession();
+  const { data: session, status } = useSession();
 
   const [document, setDocument] = useState<Document | null>(null);
   const [caseData, setCaseData] = useState<any>(null);
@@ -65,16 +57,13 @@ export default function VerificationPage() {
     sourceUrls: ''
   });
 
-  // Helper to get auth headers
+  // Helper to get auth headers (NextAuth handles cookies automatically)
   const getAuthHeaders = useCallback(() => {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json'
     };
-    if (sessionToken) {
-      headers['Authorization'] = `Bearer ${sessionToken}`;
-    }
     return headers;
-  }, [sessionToken]);
+  }, []);
 
   // Load document and quotes
   const loadDocument = useCallback(async () => {
@@ -376,7 +365,7 @@ export default function VerificationPage() {
                 sourceTitle: document?.original_filename || '',
                 sourceType: 'document',
                 quotes: quotes.map(q => ({
-                  text: q.quote_text || q.text || '',
+                  text: q.quote_text || '',
                   category: q.category,
                   status: q.status
                 }))

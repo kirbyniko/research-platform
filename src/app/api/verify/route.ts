@@ -1,37 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { requireDescopeAuth } from '@/lib/descope-auth';
+import { requireServerAuth } from '@/lib/server-auth';
 import pool from '@/lib/db';
 
 // GET - List all unverified items
 export async function GET(request: NextRequest) {
   try {
-    // Try Descope auth first, fallback to legacy
-    let authResult;
+    const authResult = await requireServerAuth(request, 'editor');
     
-    console.log('[verify API] Starting auth check');
-    
-    // Try Descope auth
-    const descopeAuthFn = await requireDescopeAuth('editor');
-    const descopeResult = await descopeAuthFn(request);
-    console.log('[verify API] Descope auth result:', 'error' in descopeResult ? descopeResult.error : 'success');
-    
-    if (!('error' in descopeResult)) {
-      authResult = descopeResult;
-    } else {
-      // Fallback to legacy auth
-      console.log('[verify API] Trying legacy auth');
-      const legacyAuthFn = requireAuth('editor');
-      const legacyResult = await legacyAuthFn(request);
-      console.log('[verify API] Legacy auth result:', 'error' in legacyResult ? legacyResult.error : 'success');
-      
-      if ('error' in legacyResult) {
-        return NextResponse.json(
-          { error: legacyResult.error },
-          { status: legacyResult.status }
-        );
-      }
-      authResult = legacyResult;
+    if ('error' in authResult) {
+      return NextResponse.json(
+        { error: authResult.error },
+        { status: authResult.status }
+      );
     }
 
     console.log('[verify API] Auth successful, user:', authResult.user?.email);
@@ -115,25 +95,13 @@ export async function GET(request: NextRequest) {
 // POST - Verify an item
 export async function POST(request: NextRequest) {
   try {
-    // Try Descope auth first, fallback to legacy
-    let authResult;
+    const authResult = await requireServerAuth(request, 'editor');
     
-    const descopeAuthFn = await requireDescopeAuth('editor');
-    const descopeResult = await descopeAuthFn(request);
-    
-    if (!('error' in descopeResult)) {
-      authResult = descopeResult;
-    } else {
-      // Fallback to legacy auth
-      const legacyAuthFn = requireAuth('editor');
-      const legacyResult = await legacyAuthFn(request);
-      if ('error' in legacyResult) {
-        return NextResponse.json(
-          { error: legacyResult.error },
-          { status: legacyResult.status }
-        );
-      }
-      authResult = legacyResult;
+    if ('error' in authResult) {
+      return NextResponse.json(
+        { error: authResult.error },
+        { status: authResult.status }
+      );
     }
 
     const { type, id, verified } = await request.json();

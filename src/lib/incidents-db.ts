@@ -1,4 +1,5 @@
 import pool from './db';
+import type { PoolClient } from 'pg';
 import type {
   Incident,
   IncidentFilters,
@@ -450,6 +451,8 @@ export async function getIncidentSources(incidentId: number): Promise<IncidentSo
 export async function addIncidentQuote(incidentId: number, quote: Omit<IncidentQuote, 'id'>): Promise<number> {
   const client = await pool.connect();
   try {
+    await client.query('BEGIN');
+    
     const result = await client.query(`
       INSERT INTO incident_quotes (incident_id, source_id, quote_text, category, page_number, paragraph_number, confidence, verified, verified_by)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -465,7 +468,25 @@ export async function addIncidentQuote(incidentId: number, quote: Omit<IncidentQ
       quote.verified ?? false,
       quote.verified_by || null,
     ]);
-    return result.rows[0].id;
+    
+    const quoteId = result.rows[0].id;
+    
+    // Store linked fields if provided
+    if (quote.linked_fields && quote.linked_fields.length > 0) {
+      for (const fieldName of quote.linked_fields) {
+        await client.query(`
+          INSERT INTO quote_field_links (incident_id, quote_id, field_name)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (incident_id, quote_id, field_name) DO NOTHING
+        `, [incidentId, quoteId, fieldName]);
+      }
+    }
+    
+    await client.query('COMMIT');
+    return quoteId;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
   } finally {
     client.release();
   }
@@ -541,7 +562,7 @@ export async function getIncidentTimeline(incidentId: number): Promise<TimelineE
 // HELPERS
 // ============================================
 
-async function buildIncidentFromRow(client: ReturnType<typeof pool.connect> extends Promise<infer T> ? T : never, row: Record<string, unknown>): Promise<Incident> {
+async function buildIncidentFromRow(client: PoolClient, row: Record<string, unknown>): Promise<Incident> {
   const id = row.id as number;
 
   // Get agencies
@@ -706,4 +727,275 @@ function formatTimelineEntry(row: Record<string, unknown>): TimelineEntry {
     quote_id: row.quote_id as number | undefined,
     sequence_order: row.sequence_order as number | undefined,
   };
+}
+
+// ============================================
+// AGENCY CRUD
+// ============================================
+
+export async function addIncidentAgency(incidentId: number, agency: string, role?: string): Promise<number> {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(`
+      INSERT INTO incident_agencies (incident_id, agency, role)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (incident_id, agency) DO UPDATE SET role = EXCLUDED.role
+      RETURNING id
+    `, [incidentId, agency, role || null]);
+    return result.rows[0].id;
+  } finally {
+    client.release();
+  }
+}
+
+export async function updateIncidentAgency(agencyId: number, agency: string, role?: string): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      UPDATE incident_agencies SET agency = $2, role = $3 WHERE id = $1
+    `, [agencyId, agency, role || null]);
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteIncidentAgency(agencyId: number): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query(`DELETE FROM incident_agencies WHERE id = $1`, [agencyId]);
+  } finally {
+    client.release();
+  }
+}
+
+export async function getIncidentAgencies(incidentId: number): Promise<{ id: number; agency: string; role: string | null }[]> {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(`
+      SELECT id, agency, role FROM incident_agencies WHERE incident_id = $1 ORDER BY agency
+    `, [incidentId]);
+    return result.rows;
+  } finally {
+    client.release();
+  }
+}
+
+// ============================================
+// VIOLATION CRUD
+// ============================================
+
+export async function addIncidentViolation(
+  incidentId: number, 
+  violationType: string, 
+  description?: string, 
+  constitutionalBasis?: string
+): Promise<number> {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(`
+      INSERT INTO incident_violations (incident_id, violation_type, description, constitutional_basis)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (incident_id, violation_type) DO UPDATE 
+        SET description = EXCLUDED.description, constitutional_basis = EXCLUDED.constitutional_basis
+      RETURNING id
+    `, [incidentId, violationType, description || null, constitutionalBasis || null]);
+    return result.rows[0].id;
+  } finally {
+    client.release();
+  }
+}
+
+export async function updateIncidentViolation(
+  violationId: number, 
+  violationType: string, 
+  description?: string, 
+  constitutionalBasis?: string
+): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      UPDATE incident_violations 
+      SET violation_type = $2, description = $3, constitutional_basis = $4 
+      WHERE id = $1
+    `, [violationId, violationType, description || null, constitutionalBasis || null]);
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteIncidentViolation(violationId: number): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query(`DELETE FROM incident_violations WHERE id = $1`, [violationId]);
+  } finally {
+    client.release();
+  }
+}
+
+export async function getIncidentViolations(incidentId: number): Promise<{ 
+  id: number; 
+  violation_type: string; 
+  description: string | null;
+  constitutional_basis: string | null;
+}[]> {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(`
+      SELECT id, violation_type, description, constitutional_basis 
+      FROM incident_violations WHERE incident_id = $1 ORDER BY violation_type
+    `, [incidentId]);
+    return result.rows;
+  } finally {
+    client.release();
+  }
+}
+
+// ============================================
+// SOURCE CRUD (Enhanced)
+// ============================================
+
+export async function updateIncidentSource(sourceId: number, source: Partial<IncidentSource>): Promise<void> {
+  const client = await pool.connect();
+  try {
+    const fields: string[] = [];
+    const values: unknown[] = [];
+    let paramIndex = 1;
+    
+    if (source.url !== undefined) { fields.push(`url = $${paramIndex++}`); values.push(source.url); }
+    if (source.title !== undefined) { fields.push(`title = $${paramIndex++}`); values.push(source.title); }
+    if (source.publication !== undefined) { fields.push(`publication = $${paramIndex++}`); values.push(source.publication); }
+    if (source.author !== undefined) { fields.push(`author = $${paramIndex++}`); values.push(source.author); }
+    if (source.published_date !== undefined) { fields.push(`published_date = $${paramIndex++}`); values.push(source.published_date); }
+    if (source.archived_url !== undefined) { fields.push(`archived_url = $${paramIndex++}`); values.push(source.archived_url); }
+    if (source.source_type !== undefined) { fields.push(`source_type = $${paramIndex++}`); values.push(source.source_type); }
+    
+    if (fields.length === 0) return;
+    
+    values.push(sourceId);
+    await client.query(`UPDATE incident_sources SET ${fields.join(', ')} WHERE id = $${paramIndex}`, values);
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteIncidentSource(sourceId: number): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query(`DELETE FROM incident_sources WHERE id = $1`, [sourceId]);
+  } finally {
+    client.release();
+  }
+}
+
+// ============================================
+// QUOTE CRUD (Enhanced)
+// ============================================
+
+export async function updateIncidentQuote(quoteId: number, quote: Partial<IncidentQuote>): Promise<void> {
+  const client = await pool.connect();
+  try {
+    const fields: string[] = [];
+    const values: unknown[] = [];
+    let paramIndex = 1;
+    
+    if (quote.text !== undefined) { fields.push(`quote_text = $${paramIndex++}`); values.push(quote.text); }
+    if (quote.category !== undefined) { fields.push(`category = $${paramIndex++}`); values.push(quote.category); }
+    if (quote.source_id !== undefined) { fields.push(`source_id = $${paramIndex++}`); values.push(quote.source_id); }
+    if (quote.page_number !== undefined) { fields.push(`page_number = $${paramIndex++}`); values.push(quote.page_number); }
+    if (quote.paragraph_number !== undefined) { fields.push(`paragraph_number = $${paramIndex++}`); values.push(quote.paragraph_number); }
+    if (quote.confidence !== undefined) { fields.push(`confidence = $${paramIndex++}`); values.push(quote.confidence); }
+    
+    if (fields.length === 0) return;
+    
+    values.push(quoteId);
+    await client.query(`UPDATE incident_quotes SET ${fields.join(', ')} WHERE id = $${paramIndex}`, values);
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteIncidentQuote(quoteId: number): Promise<void> {
+  const client = await pool.connect();
+  try {
+    // Also delete quote_field_links
+    await client.query(`DELETE FROM quote_field_links WHERE quote_id = $1`, [quoteId]);
+    await client.query(`DELETE FROM incident_quotes WHERE id = $1`, [quoteId]);
+  } finally {
+    client.release();
+  }
+}
+
+export async function updateQuoteFieldLinks(quoteId: number, incidentId: number, fieldNames: string[]): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Remove existing links
+    await client.query(`DELETE FROM quote_field_links WHERE quote_id = $1`, [quoteId]);
+    // Add new links
+    for (const fieldName of fieldNames) {
+      await client.query(`
+        INSERT INTO quote_field_links (incident_id, quote_id, field_name)
+        VALUES ($1, $2, $3)
+      `, [incidentId, quoteId, fieldName]);
+    }
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+// ============================================
+// TIMELINE CRUD (Enhanced)
+// ============================================
+
+export async function updateTimelineEntry(entryId: number, entry: Partial<TimelineEntry>): Promise<void> {
+  const client = await pool.connect();
+  try {
+    const fields: string[] = [];
+    const values: unknown[] = [];
+    let paramIndex = 1;
+    
+    if (entry.date !== undefined) { fields.push(`event_date = $${paramIndex++}`); values.push(entry.date); }
+    if (entry.time !== undefined) { fields.push(`event_time = $${paramIndex++}`); values.push(entry.time); }
+    if (entry.description !== undefined) { fields.push(`description = $${paramIndex++}`); values.push(entry.description); }
+    if (entry.source_id !== undefined) { fields.push(`source_id = $${paramIndex++}`); values.push(entry.source_id); }
+    if (entry.quote_id !== undefined) { fields.push(`quote_id = $${paramIndex++}`); values.push(entry.quote_id); }
+    if (entry.sequence_order !== undefined) { fields.push(`sequence_order = $${paramIndex++}`); values.push(entry.sequence_order); }
+    
+    if (fields.length === 0) return;
+    
+    values.push(entryId);
+    await client.query(`UPDATE incident_timeline SET ${fields.join(', ')} WHERE id = $${paramIndex}`, values);
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteTimelineEntry(entryId: number): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query(`DELETE FROM incident_timeline WHERE id = $1`, [entryId]);
+  } finally {
+    client.release();
+  }
+}
+
+// ============================================
+// TYPE DETAILS CRUD
+// ============================================
+
+export async function updateIncidentDetails(incidentId: number, detailType: string, details: Record<string, unknown>): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      INSERT INTO incident_details (incident_id, detail_type, details)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (incident_id, detail_type) DO UPDATE SET details = EXCLUDED.details
+    `, [incidentId, detailType, JSON.stringify(details)]);
+  } finally {
+    client.release();
+  }
 }

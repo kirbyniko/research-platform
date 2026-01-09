@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireDescopeAuth } from '@/lib/descope-auth';
-import { requireAuth } from '@/lib/auth';
+import { requireServerAuth } from '@/lib/server-auth';
 
 // Ensure Node.js runtime for Buffer and Node libraries
 export const runtime = 'nodejs';
@@ -21,19 +20,13 @@ export async function POST(request: NextRequest) {
     console.log('[upload-pdf] Request received');
     
     // Auth check
-    const descopeAuthFn = await requireDescopeAuth('editor');
-    const descopeResult = await descopeAuthFn(request);
-    console.log('[upload-pdf] Auth result:', 'error' in descopeResult ? descopeResult.error : 'success');
-    if ('error' in descopeResult) {
-      const legacyAuthFn = requireAuth('editor');
-      const legacyResult = await legacyAuthFn(request);
-      if ('error' in legacyResult) {
-        console.log('[upload-pdf] Auth failed:', legacyResult.error);
-        return NextResponse.json(
-          { error: legacyResult.error },
-          { status: legacyResult.status }
-        );
-      }
+    const authResult = await requireServerAuth(request, 'editor');
+    if ('error' in authResult) {
+      console.log('[upload-pdf] Auth failed:', authResult.error);
+      return NextResponse.json(
+        { error: authResult.error },
+        { status: authResult.status }
+      );
     }
 
     console.log('[upload-pdf] Auth successful, parsing form data');

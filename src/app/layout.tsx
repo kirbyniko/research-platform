@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import './globals.css';
-import { DescopeProvider } from '@/components/DescopeProvider';
+import { AuthProvider } from '@/components/AuthProvider';
+import Navigation from '@/components/Navigation';
 
 export const metadata: Metadata = {
   title: 'ICE Deaths Documentation Project',
@@ -16,24 +16,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <DescopeProvider>
-        <header className="border-b border-gray-200">
-          <nav className="max-w-6xl mx-auto px-4 py-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <Link href="/" className="text-xl font-semibold">
-                ICE Deaths Documentation
-              </Link>
-              <ul className="flex flex-wrap gap-6 text-sm">
-                <li><Link href="/" className="hover:underline">Home</Link></li>
-                <li><Link href="/incidents" className="hover:underline">Incidents</Link></li>
-                <li><Link href="/cases" className="hover:underline">Deaths</Link></li>
-                <li><Link href="/patterns" className="hover:underline">Patterns</Link></li>
-                <li><Link href="/methodology" className="hover:underline">Methodology</Link></li>
-                <li><Link href="/data" className="hover:underline">Data</Link></li>
-              </ul>
-            </div>
-          </nav>
-        </header>
+        <AuthProvider>
+        <Navigation />
         <main className="max-w-6xl mx-auto px-4 py-8">
           {children}
         </main>
@@ -43,7 +27,7 @@ export default function RootLayout({
             <p className="mt-2">All data is version-controlled and open for verification.</p>
           </div>
         </footer>
-        </DescopeProvider>
+        </AuthProvider>
       </body>
     </html>
   );
