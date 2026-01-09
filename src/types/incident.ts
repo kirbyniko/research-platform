@@ -418,6 +418,8 @@ export interface IncidentFilters {
   offset?: number;
   sort_by?: 'date' | 'created_at' | 'updated_at';
   sort_order?: 'asc' | 'desc';
+  // Internal flag - if true, includes unverified incidents (for analysts)
+  includeUnverified?: boolean;
 }
 
 export interface IncidentStats {

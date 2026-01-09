@@ -1,8 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { requestPasswordReset } from '@/lib/auth';
 import { sendPasswordResetEmail } from '@/lib/email';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // Rate limit: 5 per hour to prevent abuse
+  const rateLimitResponse = rateLimit(request, RateLimitPresets.veryStrict, 'forgot-password');
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const { email } = await request.json();
 

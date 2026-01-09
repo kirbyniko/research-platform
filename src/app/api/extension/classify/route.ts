@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireServerAuth } from '@/lib/server-auth';
 
 // Sentence classification using Ollama
 async function classifySentence(sentence: string): Promise<{ category: string; confidence: number }> {
@@ -61,6 +62,15 @@ Category:`;
 
 export async function POST(request: NextRequest) {
   try {
+    // Require user role to use classification
+    const authResult = await requireServerAuth(request, 'user');
+    if ('error' in authResult) {
+      return NextResponse.json(
+        { error: authResult.error },
+        { status: authResult.status }
+      );
+    }
+
     const { sentences } = await request.json();
     
     if (!sentences || !Array.isArray(sentences)) {

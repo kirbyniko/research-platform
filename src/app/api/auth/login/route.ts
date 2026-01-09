@@ -1,7 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { loginUser } from '@/lib/auth';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
+import { logAndRespond, SafeErrors } from '@/lib/security';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // Rate limit: 10 attempts per minute to prevent brute force
+  const rateLimitResponse = rateLimit(request, RateLimitPresets.strict, 'login');
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const { email, password } = await request.json();
 
@@ -15,7 +21,11 @@ export async function POST(request: Request) {
     const result = await loginUser(email, password);
 
     if (result.error) {
-      return NextResponse.json({ error: result.error }, { status: 401 });
+      // Generic message to prevent user enumeration
+      return NextResponse.json(
+        { error: 'Invalid email or password' },
+        { status: 401 }
+      );
     }
 
     const response = NextResponse.json({
@@ -35,10 +45,6 @@ export async function POST(request: Request) {
 
     return response;
   } catch (error) {
-    console.error('Login error:', error);
-    return NextResponse.json(
-      { error: 'Login failed' },
-      { status: 500 }
-    );
+    return logAndRespond(error, 'Login', 500);
   }
 }

@@ -1,42 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
-
-// Rate limiting map (in production, use Redis)
-const submissionTimes = new Map<string, number[]>();
-const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour
-const MAX_SUBMISSIONS = 5; // Max 5 submissions per hour per IP
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const submissions = submissionTimes.get(ip) || [];
-  
-  // Filter to only submissions in the last hour
-  const recentSubmissions = submissions.filter(time => now - time < RATE_LIMIT_WINDOW);
-  submissionTimes.set(ip, recentSubmissions);
-  
-  return recentSubmissions.length >= MAX_SUBMISSIONS;
-}
-
-function recordSubmission(ip: string) {
-  const submissions = submissionTimes.get(ip) || [];
-  submissions.push(Date.now());
-  submissionTimes.set(ip, submissions);
-}
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 
 // POST - Submit guest report
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // Rate limit: 5 per hour per IP (very strict for guest submissions)
+  const rateLimitResponse = rateLimit(request, RateLimitPresets.veryStrict, 'guest-submit');
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
-    // Get IP for rate limiting
-    const forwarded = request.headers.get('x-forwarded-for');
-    const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
-    
-    if (isRateLimited(ip)) {
-      return NextResponse.json(
-        { error: 'Too many submissions. Please try again later.' },
-        { status: 429 }
-      );
-    }
-    
     const body = await request.json();
     const { 
       victimName,
@@ -70,6 +42,10 @@ export async function POST(request: Request) {
     };
     
     // Save to database
+    // Get IP for logging
+    const forwarded = request.headers.get('x-forwarded-for');
+    const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
+
     const result = await pool.query(`
       INSERT INTO guest_submissions (submission_data, ip_address, email, status)
       VALUES ($1, $2, $3, 'pending')
@@ -79,8 +55,6 @@ export async function POST(request: Request) {
       ip,
       contactEmail?.trim() || null
     ]);
-    
-    recordSubmission(ip);
     
     return NextResponse.json({
       success: true,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { requireServerAuth } from '@/lib/server-auth';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 import crypto from 'crypto';
 
 // Helper to get current user from auth result
@@ -93,6 +94,10 @@ export async function GET(request: NextRequest) {
 
 // POST - Create a new API key
 export async function POST(request: NextRequest) {
+  // Rate limit: 10 key creations per day
+  const rateLimitResponse = rateLimit(request, RateLimitPresets.apiKeyCreation, 'api-key-create');
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const user = await getCurrentUser(request);
     

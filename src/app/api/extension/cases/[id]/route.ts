@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { requireServerAuth } from '@/lib/server-auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Require user role to read cases
+    const authResult = await requireServerAuth(request, 'user');
+    if ('error' in authResult) {
+      return NextResponse.json(
+        { error: authResult.error },
+        { status: authResult.status }
+      );
+    }
+
     const { id } = await params;
     
     // Fetch case by ID (numeric) or case_id (string)
@@ -84,6 +94,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Require admin role to delete cases
+    const authResult = await requireServerAuth(request, 'admin');
+    if ('error' in authResult) {
+      return NextResponse.json(
+        { error: authResult.error },
+        { status: authResult.status }
+      );
+    }
+
     const { id } = await params;
     
     // Delete case and related data (cascades if set up)

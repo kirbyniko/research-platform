@@ -97,8 +97,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     async session({ session, token }) {
       if (session.user) {
-        // Extend session with custom fields
-        const extendedUser = session.user as { id?: number; role?: string; name?: string | null };
+        // Extend session with custom fields - cast to unknown first to avoid type overlap errors
+        const extendedUser = session.user as unknown as { id?: number; role?: string; name?: string | null };
         extendedUser.id = token.userId as number | undefined;
         extendedUser.role = token.role as string | undefined;
         if (token.dbName) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { requireServerAuth } from '@/lib/server-auth';
 
 interface Quote {
   id: string;
@@ -29,6 +30,12 @@ interface CaseData {
 
 export async function POST(request: NextRequest) {
   try {
+    // Require user role minimum to submit via extension
+    const authResult = await requireServerAuth(request, 'user');
+    if ('error' in authResult) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+    
     const caseData: CaseData = await request.json();
     
     if (!caseData.name) {

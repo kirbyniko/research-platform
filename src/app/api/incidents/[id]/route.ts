@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
+import { requireServerAuth } from '@/lib/server-auth';
 import {
   getIncidentById,
   updateIncident,
@@ -16,10 +17,25 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    
+    // Check if user is requesting unverified incidents (requires analyst role)
+    const includeUnverified = searchParams.get('include_unverified') === 'true';
+    
+    if (includeUnverified) {
+      // SECURITY: Only analysts can see unverified incidents
+      const authResult = await requireServerAuth(request, 'analyst');
+      if ('error' in authResult) {
+        return NextResponse.json(
+          { error: 'Analyst access required to view unverified incidents' },
+          { status: 403 }
+        );
+      }
+    }
     
     // Try parsing as number first, then use as string (incident_id)
     const numericId = parseInt(id);
-    const incident = await getIncidentById(isNaN(numericId) ? id : numericId);
+    const incident = await getIncidentById(isNaN(numericId) ? id : numericId, includeUnverified);
     
     if (!incident) {
       return NextResponse.json(

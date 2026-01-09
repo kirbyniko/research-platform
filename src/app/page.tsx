@@ -1,12 +1,30 @@
 import Link from 'next/link';
-import { getAllCasesFromDb } from '@/lib/cases-db';
-import { getCaseStats } from '@/lib/cases';
-import { CaseListItem } from '@/components/CaseListItem';
+import { getIncidents, getIncidentStats } from '@/lib/incidents-db';
+import { IncidentListItem } from '@/components/incidents/IncidentListItem';
 import { StatCard } from '@/components/StatCard';
 
+export const dynamic = 'force-dynamic';
+
 export default async function Home() {
-  const cases = await getAllCasesFromDb();
-  const stats = getCaseStats(cases);
+  // Only get verified incidents (default behavior)
+  const [incidents, stats] = await Promise.all([
+    getIncidents({ limit: 20 }), // Recent verified incidents
+    getIncidentStats(), // Stats for verified incidents only
+  ]);
+
+  // Calculate stats from verified incidents
+  const currentYear = new Date().getFullYear();
+  const deathsThisYear = Object.entries(stats.by_year)
+    .filter(([year]) => parseInt(year) === currentYear)
+    .reduce((sum, [, count]) => sum + count, 0);
+  
+  const facilitiesCount = Object.keys(stats.by_state).length;
+  
+  // Days since last death
+  const lastIncident = incidents[0];
+  const daysSinceLastDeath = lastIncident?.date 
+    ? Math.floor((Date.now() - new Date(lastIncident.date).getTime()) / (1000 * 60 * 60 * 24))
+    : 0;
 
   return (
     <div>
@@ -21,21 +39,21 @@ export default async function Home() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard 
-            number={stats.totalDeaths} 
-            label="Total documented deaths" 
+            number={stats.total_incidents} 
+            label="Total documented incidents" 
           />
           <StatCard 
-            number={stats.deathsThisYear} 
-            label={`Deaths in ${new Date().getFullYear()}`} 
+            number={deathsThisYear} 
+            label={`Incidents in ${currentYear}`} 
           />
           <StatCard 
-            number={stats.daysSinceLastDeath} 
-            label="Days since last recorded death"
-            highlight={stats.daysSinceLastDeath < 30}
+            number={daysSinceLastDeath} 
+            label="Days since last recorded incident"
+            highlight={daysSinceLastDeath < 30}
           />
           <StatCard 
-            number={stats.facilitiesCount} 
-            label="Facilities involved" 
+            number={facilitiesCount} 
+            label="States involved" 
           />
         </div>
 
@@ -71,18 +89,21 @@ export default async function Home() {
 
       <section>
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">All Cases</h2>
-          <Link href="/cases" className="text-sm underline">
+          <h2 className="text-xl font-semibold">Recent Verified Incidents</h2>
+          <Link href="/incidents" className="text-sm underline">
             View all with filters →
           </Link>
         </div>
 
-        {cases.length === 0 ? (
-          <p className="text-gray-500 py-8">No cases documented yet.</p>
+        {incidents.length === 0 ? (
+          <div className="text-gray-500 py-8 text-center bg-gray-50 rounded-lg">
+            <p className="mb-2">No verified incidents published yet.</p>
+            <p className="text-sm">Incidents are reviewed and verified by our team before publication.</p>
+          </div>
         ) : (
-          <div>
-            {cases.map((c) => (
-              <CaseListItem key={c.id} caseData={c} />
+          <div className="space-y-4">
+            {incidents.map((incident) => (
+              <IncidentListItem key={incident.id} incident={incident} />
             ))}
           </div>
         )}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireServerAuth } from '@/lib/server-auth';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 import pool from '@/lib/db';
 import {
   createIncident,
@@ -13,14 +14,30 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     
+    // Check if user is requesting unverified incidents (requires analyst role)
+    const includeUnverified = searchParams.get('include_unverified') === 'true';
+    
+    if (includeUnverified) {
+      // SECURITY: Only analysts can see unverified incidents
+      const authResult = await requireServerAuth(request, 'analyst');
+      if ('error' in authResult) {
+        return NextResponse.json(
+          { error: 'Analyst access required to view unverified incidents' },
+          { status: 403 }
+        );
+      }
+    }
+    
     // Check if requesting stats
     if (searchParams.get('stats') === 'true') {
-      const stats = await getIncidentStats();
+      const stats = await getIncidentStats(includeUnverified);
       return NextResponse.json(stats);
     }
 
     // Build filters from query params
-    const filters: IncidentFilters = {};
+    const filters: IncidentFilters = {
+      includeUnverified, // Pass through for verified-only filtering
+    };
     
     const type = searchParams.get('type');
     if (type) filters.type = type as IncidentFilters['type'];
@@ -86,6 +103,10 @@ export async function GET(request: NextRequest) {
 
 // POST /api/incidents - Create new incident
 export async function POST(request: NextRequest) {
+  // Rate limit: 60 per minute for authenticated users
+  const rateLimitResponse = rateLimit(request, RateLimitPresets.standard, 'incidents-create');
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     // Require editor role minimum
     const authResult = await requireServerAuth(request, 'editor');

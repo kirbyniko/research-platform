@@ -1,8 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createUser } from '@/lib/auth';
 import { sendVerificationEmail } from '@/lib/email';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // Rate limit: 10 attempts per minute to prevent spam
+  const rateLimitResponse = rateLimit(request, RateLimitPresets.strict, 'register');
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const { email, password, name } = await request.json();
 

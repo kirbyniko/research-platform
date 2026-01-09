@@ -60,7 +60,7 @@ let verifiedQuotes = [];
 let pendingQuotes = [];
 let sources = [];
 let isConnected = false;
-let apiUrl = 'http://localhost:3001';
+let apiUrl = 'http://localhost:3000';
 let apiKey = '';
 let currentSelectors = {};
 let isExtracting = false;
@@ -3394,11 +3394,45 @@ function renderSources() {
     return;
   }
   
-  elements.sourceList.innerHTML = sources.map(source => `
-    <a href="${source.url}" class="source-item" target="_blank" title="${source.title}">
-      ${truncate(source.title || source.url, 40)}
-    </a>
+  elements.sourceList.innerHTML = sources.map((source, index) => `
+    <div class="source-item" style="display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 4px;">
+      <a href="${escapeHtml(source.url)}" target="_blank" title="${escapeHtml(source.title || '')}" style="flex: 1; color: #2563eb; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+        ${escapeHtml(truncate(source.title || source.url, 40))}
+      </a>
+      <button class="btn btn-sm btn-danger" onclick="deleteSource(${index})" title="Delete source and all associated quotes">✕</button>
+    </div>
   `).join('');
+}
+
+// Delete source and all associated quotes
+function deleteSource(index) {
+  const source = sources[index];
+  if (!source) return;
+  
+  // Find all quotes from this source
+  const quotesFromSource = verifiedQuotes.filter(q => 
+    q.source === source.url || q.sourceUrl === source.url
+  );
+  
+  const confirmMsg = quotesFromSource.length > 0 
+    ? `Delete this source and ${quotesFromSource.length} associated quote${quotesFromSource.length > 1 ? 's' : ''}?`
+    : `Delete this source?`;
+  
+  if (!confirm(confirmMsg)) return;
+  
+  // Remove the source
+  sources.splice(index, 1);
+  
+  // Remove all quotes from this source
+  if (quotesFromSource.length > 0) {
+    verifiedQuotes = verifiedQuotes.filter(q => 
+      q.source !== source.url && q.sourceUrl !== source.url
+    );
+    renderQuotes();
+  }
+  
+  renderSources();
+  syncQuotesToBackground();
 }
 
 // Truncate text
@@ -4282,7 +4316,7 @@ function renderReviewQueue() {
         <div>
           <div style="font-weight: 600; font-size: 13px;">${escapeHtml(incident.victim_name || 'Unknown')}</div>
           <div style="font-size: 11px; color: #666;">
-            ${incident.incident_type?.replace(/_/g, ' ') || 'Incident'}
+            ${escapeHtml(incident.incident_type?.replace(/_/g, ' ') || 'Incident')}
           </div>
         </div>
         <span style="
@@ -4295,7 +4329,7 @@ function renderReviewQueue() {
       </div>
       
       <div style="font-size: 11px; color: #888; margin-bottom: 8px;">
-        ${incident.city ? incident.city + ', ' : ''}${incident.state || ''}
+        ${escapeHtml(incident.city ? incident.city + ', ' : '')}${escapeHtml(incident.state || '')}
         ${incident.incident_date ? ' • ' + new Date(incident.incident_date).toLocaleDateString() : ''}
       </div>
       
@@ -4426,8 +4460,6 @@ async function loadReviewCaseDetails(incidentId) {
     // Switch to incident tab
     const incidentTab = document.querySelector('.tab[data-tab="case"]');
     if (incidentTab) incidentTab.click();
-    
-    alert(`Loaded incident for review: ${incident.victim_name || 'Unknown'}`);
     
   } catch (error) {
     console.error('Error loading case details:', error);

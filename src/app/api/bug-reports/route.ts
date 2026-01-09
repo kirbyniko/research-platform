@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import pool from '@/lib/db';
+import { requireServerAuth } from '@/lib/server-auth';
 
 export async function POST(request: Request) {
   try {
@@ -72,8 +73,14 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
+    // Require admin to view bug reports
+    const authResult = await requireServerAuth(request, 'admin');
+    if ('error' in authResult) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+    
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '50');
     const status = searchParams.get('status'); // 'open', 'resolved', 'all'

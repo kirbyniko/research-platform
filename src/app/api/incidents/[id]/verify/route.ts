@@ -117,7 +117,7 @@ export async function POST(
 
 // GET - Get verification status and history
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {

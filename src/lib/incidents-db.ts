@@ -153,12 +153,14 @@ export async function createIncident(incident: Omit<Incident, 'id' | 'created_at
 // READ
 // ============================================
 
-export async function getIncidentById(id: number | string): Promise<Incident | null> {
+export async function getIncidentById(id: number | string, includeUnverified: boolean = false): Promise<Incident | null> {
   const client = await pool.connect();
   try {
     const idColumn = typeof id === 'number' ? 'id' : 'incident_id';
+    // SECURITY: Only return double-verified incidents by default (for public access)
+    const verifiedCondition = includeUnverified ? '' : "AND verification_status = 'verified'";
     const result = await client.query(`
-      SELECT * FROM incidents WHERE ${idColumn} = $1
+      SELECT * FROM incidents WHERE ${idColumn} = $1 ${verifiedCondition}
     `, [id]);
 
     if (result.rows.length === 0) return null;
@@ -228,7 +230,13 @@ export async function getIncidents(filters: IncidentFilters = {}): Promise<Incid
       params.push(filters.year_end);
     }
 
-    // Verified filter
+    // SECURITY: Only show double-verified incidents by default (for public access)
+    // Analysts can set includeUnverified=true to see all incidents
+    if (!filters.includeUnverified) {
+      conditions.push(`verification_status = 'verified'`);
+    }
+
+    // Legacy verified filter (for backward compatibility with boolean column)
     if (filters.verified !== undefined) {
       conditions.push(`verified = $${paramIndex++}`);
       params.push(filters.verified);
@@ -273,34 +281,47 @@ export async function getIncidents(filters: IncidentFilters = {}): Promise<Incid
   }
 }
 
-export async function getIncidentStats(): Promise<IncidentStats> {
+export async function getIncidentStats(includeUnverified: boolean = false): Promise<IncidentStats> {
   const client = await pool.connect();
   try {
-    const totalResult = await client.query('SELECT COUNT(*) as count FROM incidents');
-    const verifiedResult = await client.query('SELECT COUNT(*) as count FROM incidents WHERE verified = true');
+    // SECURITY: By default, only count double-verified incidents for public display
+    const verifiedCondition = includeUnverified ? '' : "WHERE verification_status = 'verified'";
+    const verifiedJoinCondition = includeUnverified ? '' : "AND i.verification_status = 'verified'";
+    
+    const totalResult = await client.query(`SELECT COUNT(*) as count FROM incidents ${verifiedCondition}`);
+    const verifiedResult = await client.query(`SELECT COUNT(*) as count FROM incidents WHERE verification_status = 'verified'`);
     
     const byTypeResult = await client.query(`
-      SELECT incident_type, COUNT(*) as count FROM incidents GROUP BY incident_type
+      SELECT incident_type, COUNT(*) as count FROM incidents ${verifiedCondition} GROUP BY incident_type
     `);
     
     const byAgencyResult = await client.query(`
-      SELECT agency, COUNT(*) as count FROM incident_agencies GROUP BY agency
+      SELECT agency, COUNT(*) as count FROM incident_agencies ia
+      JOIN incidents i ON ia.incident_id = i.id ${verifiedJoinCondition ? 'WHERE 1=1 ' + verifiedJoinCondition : ''}
+      GROUP BY agency
     `);
     
     const byStateResult = await client.query(`
-      SELECT state, COUNT(*) as count FROM incidents WHERE state IS NOT NULL GROUP BY state
+      SELECT state, COUNT(*) as count FROM incidents 
+      WHERE state IS NOT NULL ${includeUnverified ? '' : "AND verification_status = 'verified'"} 
+      GROUP BY state
     `);
     
     const byYearResult = await client.query(`
       SELECT EXTRACT(YEAR FROM incident_date)::int as year, COUNT(*) as count 
-      FROM incidents WHERE incident_date IS NOT NULL 
+      FROM incidents 
+      WHERE incident_date IS NOT NULL ${includeUnverified ? '' : "AND verification_status = 'verified'"} 
       GROUP BY year ORDER BY year
     `);
 
+    const allTotal = includeUnverified 
+      ? parseInt(totalResult.rows[0].count)
+      : parseInt(verifiedResult.rows[0].count);
+
     return {
-      total_incidents: parseInt(totalResult.rows[0].count),
+      total_incidents: allTotal,
       verified_count: parseInt(verifiedResult.rows[0].count),
-      unverified_count: parseInt(totalResult.rows[0].count) - parseInt(verifiedResult.rows[0].count),
+      unverified_count: includeUnverified ? allTotal - parseInt(verifiedResult.rows[0].count) : 0,
       by_type: Object.fromEntries(byTypeResult.rows.map((r: { incident_type: string; count: string }) => [r.incident_type, parseInt(r.count)])) as Record<IncidentType, number>,
       by_agency: Object.fromEntries(byAgencyResult.rows.map((r: { agency: string; count: string }) => [r.agency, parseInt(r.count)])) as Record<AgencyType, number>,
       by_state: Object.fromEntries(byStateResult.rows.map((r: { state: string; count: string }) => [r.state, parseInt(r.count)])),
