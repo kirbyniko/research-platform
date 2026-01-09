@@ -1078,34 +1078,6 @@ function syncOverlayToSidepanel() {
     }
   });
 }
-    if (tabs[0]) {
-      const tab = tabs[0];
-      
-      // Check if tab URL is loaded
-      if (!tab.url) {
-        showNotification('Page not loaded yet - wait a moment', 'error');
-        return;
-      }
-      
-      // Check if we can access the page (not chrome:// or extension pages)
-      if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('edge://')) {
-        showNotification('Overlay cannot run on browser system pages. Navigate to a website.', 'error');
-        return;
-      }
-      
-      chrome.tabs.sendMessage(tab.id, { type: 'SHOW_OVERLAY' }, (response) => {
-        if (chrome.runtime.lastError) {
-          showNotification('Overlay not available - refresh the page or wait a moment', 'error');
-          console.log('Content script not ready:', chrome.runtime.lastError.message);
-        } else if (response && response.success) {
-          showNotification('Overlay opened (Alt+O to toggle)', 'success');
-        } else {
-          showNotification('Could not open overlay', 'error');
-        }
-      });
-    }
-  });
-}
 
 // Clear all highlights on the current page
 function clearAllHighlights() {
