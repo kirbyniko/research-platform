@@ -1,5 +1,5 @@
-// ICE Deaths Research Assistant - Content Script
-console.log('ICE Deaths content script loaded');
+// ICE Incident Tracker Research Assistant - Content Script
+console.log('ICE Incident Tracker content script loaded');
 
 // Default CSS selectors for major news sites
 const DEFAULT_SELECTORS = {

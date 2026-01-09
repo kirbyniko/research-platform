@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "ICE Deaths Research Assistant",
-  "version": "1.0.0",
-  "description": "Extract and validate case data from news articles and documents for the ICE Deaths documentation project",
+  "name": "ICE Incident Tracker Research Assistant",
+  "version": "1.0",
+  "description": "Extract and validate case data from news articles and documents for the ICE Incident Tracker project",
   "permissions": [
     "activeTab",
     "storage",

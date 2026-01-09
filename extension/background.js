@@ -1,4 +1,4 @@
-// ICE Deaths Research Assistant - Background Service Worker
+// ICE Incident Tracker Research Assistant - Background Service Worker
 
 const API_BASE = 'https://ice-deaths.vercel.app/api';
 
@@ -10,7 +10,7 @@ let sources = [];
 
 // Initialize extension
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('ICE Deaths Research Assistant installed');
+  console.log('ICE Incident Tracker Research Assistant installed');
   
   // Create context menu
   chrome.contextMenus.create({
