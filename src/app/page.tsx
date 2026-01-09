@@ -46,9 +46,9 @@ export default async function Home() {
     <div>
       <section className="mb-12">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Deaths in ICE Custody</h1>
+          <h1 className="text-3xl font-bold mb-2">ICE Incident Tracker</h1>
           <p className="text-gray-600">
-            A documentation project presenting verified records of deaths connected to 
+            A documentation project presenting verified records of incidents connected to 
             U.S. Immigration and Customs Enforcement.
           </p>
         </div>
@@ -86,18 +86,6 @@ export default async function Home() {
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
             >
               Submit a Report
-            </Link>
-            <Link 
-              href="/methodology" 
-              className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100 transition-colors text-sm"
-            >
-              Our Methodology
-            </Link>
-            <Link 
-              href="/data" 
-              className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100 transition-colors text-sm"
-            >
-              Download Data
             </Link>
           </div>
         </div>

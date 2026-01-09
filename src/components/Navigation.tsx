@@ -60,17 +60,13 @@ export default function Navigation() {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors">
-            ICE Deaths Documentation
+            ICE Incident Tracker
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6">
             <ul className="flex gap-6 text-sm">
               <li><Link href="/incidents" className={navLinkClass('/incidents')}>Incidents</Link></li>
-              <li><Link href="/cases" className={navLinkClass('/cases')}>Deaths</Link></li>
-              <li><Link href="/patterns" className={navLinkClass('/patterns')}>Patterns</Link></li>
-              <li><Link href="/methodology" className={navLinkClass('/methodology')}>Methodology</Link></li>
-              <li><Link href="/data" className={navLinkClass('/data')}>Data</Link></li>
             </ul>
 
             <div className="h-5 w-px bg-gray-300" />
@@ -185,9 +181,6 @@ export default function Navigation() {
             <ul className="flex flex-col gap-3 text-sm">
               <li><Link href="/incidents" className={navLinkClass('/incidents')} onClick={() => setMenuOpen(false)}>Incidents</Link></li>
               <li><Link href="/cases" className={navLinkClass('/cases')} onClick={() => setMenuOpen(false)}>Deaths</Link></li>
-              <li><Link href="/patterns" className={navLinkClass('/patterns')} onClick={() => setMenuOpen(false)}>Patterns</Link></li>
-              <li><Link href="/methodology" className={navLinkClass('/methodology')} onClick={() => setMenuOpen(false)}>Methodology</Link></li>
-              <li><Link href="/data" className={navLinkClass('/data')} onClick={() => setMenuOpen(false)}>Data</Link></li>
             </ul>
             
             <div className="mt-4 pt-4 border-t border-gray-100">

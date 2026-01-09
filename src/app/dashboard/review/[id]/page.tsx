@@ -268,7 +268,7 @@ export default function ReviewPage() {
 
       {/* Header */}
       <div className="mb-6 pb-4 border-b">
-        <Link href="/dashboard/review" className="text-blue-600 hover:underline text-sm">← Back to Queue</Link>
+        <Link href="/dashboard" className="text-blue-600 hover:underline text-sm">← Back to Queue</Link>
         <h1 className="text-2xl font-bold mt-2">{incident.victim_name || incident.subject_name || 'Unknown'}</h1>
         <p className="text-gray-500 text-sm">{incident.incident_id} • {incident.incident_type}</p>
         <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium ${incident.verification_status === 'verified' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>

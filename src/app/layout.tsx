@@ -4,8 +4,8 @@ import { AuthProvider } from '@/components/AuthProvider';
 import Navigation from '@/components/Navigation';
 
 export const metadata: Metadata = {
-  title: 'ICE Deaths Documentation Project',
-  description: 'Verified records of deaths connected to U.S. Immigration and Customs Enforcement',
+  title: 'ICE Incident Tracker',
+  description: 'Verified records of incidents connected to U.S. Immigration and Customs Enforcement',
 };
 
 export default function RootLayout({
@@ -23,7 +23,7 @@ export default function RootLayout({
         </main>
         <footer className="border-t border-gray-200 mt-16">
           <div className="max-w-6xl mx-auto px-4 py-8 text-sm text-gray-600">
-            <p>This project documents deaths in ICE custody using publicly available sources.</p>
+            <p>This project documents incidents connected to ICE using publicly available sources.</p>
             <p className="mt-2">All data is version-controlled and open for verification.</p>
           </div>
         </footer>

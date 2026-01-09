@@ -425,22 +425,11 @@ export default function DashboardPage() {
                   </Link>
                   
                   <Link
-                    href={`/incidents/${incident.id}`}
+                    href={`/incidents/${incident.incident_id}`}
                     className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 text-center"
                   >
                     View Details
                   </Link>
-                  
-                  {(incident.verification_status === 'pending' || 
-                    (incident.verification_status === 'first_review' && incident.first_verified_by_email !== user?.email)) && (
-                    <button
-                      onClick={() => openVerifyModal(incident)}
-                      disabled={verifyingId === incident.id}
-                      className="px-3 py-2 text-sm bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50"
-                    >
-                      {verifyingId === incident.id ? 'Processing...' : 'Quick Verify'}
-                    </button>
-                  )}
                   
                   {incident.verification_status === 'first_review' && incident.first_verified_by_email === user?.email && (
                     <span className="px-3 py-2 text-xs text-gray-500 text-center">
