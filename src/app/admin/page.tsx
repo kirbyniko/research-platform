@@ -330,8 +330,8 @@ function AdminDashboard() {
           <div className="grid grid-cols-4 gap-4 mb-8">
             <div className="bg-white p-4 border border-gray-200">
               <h3 className="text-sm text-gray-500 uppercase">Incidents</h3>
-              <p className="text-2xl font-bold">{data.summary.incidents.verified} / {data.summary.incidents.total}</p>
-              <p className="text-sm text-red-600">{data.summary.incidents.unverified} unverified</p>
+              <p className="text-2xl font-bold">{data.summary.cases.verified} / {data.summary.cases.total}</p>
+              <p className="text-sm text-red-600">{data.summary.cases.unverified} unverified</p>
             </div>
             <div className="bg-white p-4 border border-gray-200">
               <h3 className="text-sm text-gray-500 uppercase">Timeline Events</h3>
