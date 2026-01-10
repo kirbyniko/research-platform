@@ -346,10 +346,6 @@ function AdminDashboard() {
               <p className="text-2xl font-bold">{data.summary.quotes.verified} / {data.summary.quotes.total}</p>
               <p className="text-sm text-red-600">{data.summary.quotes.unverified} unverified</p>
             </div>
-              <h3 className="text-sm text-gray-500 uppercase">Discrepancies</h3>
-              <p className="text-2xl font-bold">{data.summary.discrepancies.verified} / {data.summary.discrepancies.total}</p>
-              <p className="text-sm text-red-600">{data.summary.discrepancies.unverified} unverified</p>
-            </div>
           </div>
         )}
 
