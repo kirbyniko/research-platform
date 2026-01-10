@@ -30,15 +30,14 @@ export async function POST(request: NextRequest) {
       let paramIndex = 1;
 
       if (victimName && victimName.trim().length > 2) {
-        // Use fuzzy matching for names
+        // Use basic matching for names
         conditions.push(`(
           LOWER(victim_name) LIKE LOWER($${paramIndex}) OR
-          LOWER(victim_name) LIKE LOWER($${paramIndex + 1}) OR
-          similarity(LOWER(victim_name), LOWER($${paramIndex + 2})) > 0.3
+          LOWER(victim_name) LIKE LOWER($${paramIndex + 1})
         )`);
         const nameTrimmed = victimName.trim();
-        params.push(`%${nameTrimmed}%`, `${nameTrimmed}%`, nameTrimmed);
-        paramIndex += 3;
+        params.push(`%${nameTrimmed}%`, `${nameTrimmed}%`);
+        paramIndex += 2;
       }
 
       if (dateOfDeath) {
@@ -48,7 +47,6 @@ export async function POST(request: NextRequest) {
       }
 
       if (conditions.length > 0) {
-        // Try with pg_trgm first, fall back to basic matching if extension not available
         const query = `
           SELECT id, victim_name, incident_date, facility_name, city, state, verification_status
           FROM incidents
@@ -57,44 +55,8 @@ export async function POST(request: NextRequest) {
           LIMIT 10
         `;
 
-        try {
-          const caseResult = await pool.query(query, params);
-          results.existingCases = caseResult.rows;
-        } catch (err: unknown) {
-          // If similarity function fails (extension not installed), use basic matching
-          const error = err as Error;
-          if (error.message?.includes('similarity')) {
-            const basicConditions: string[] = [];
-            const basicParams: (string | null)[] = [];
-            let idx = 1;
-
-            if (victimName && victimName.trim().length > 2) {
-              basicConditions.push(`(LOWER(victim_name) LIKE LOWER($${idx}) OR LOWER(victim_name) LIKE LOWER($${idx + 1}))`);
-              const nameTrimmed = victimName.trim();
-              basicParams.push(`%${nameTrimmed}%`, `${nameTrimmed}%`);
-              idx += 2;
-            }
-
-            if (dateOfDeath) {
-              basicConditions.push(`incident_date = $${idx}`);
-              basicParams.push(dateOfDeath);
-            }
-
-            if (basicConditions.length > 0) {
-              const basicQuery = `
-                SELECT id, victim_name, incident_date, facility_name, city, state, verification_status
-                FROM incidents
-                WHERE ${basicConditions.join(' OR ')}
-                ORDER BY incident_date DESC
-                LIMIT 10
-              `;
-              const caseResult = await pool.query(basicQuery, basicParams);
-              results.existingCases = caseResult.rows;
-            }
-          } else {
-            throw err;
-          }
-        }
+        const caseResult = await pool.query(query, params);
+        results.existingCases = caseResult.rows;
       }
     }
 

@@ -18,67 +18,63 @@ export async function GET(request: NextRequest) {
 
     const client = await pool.connect();
     try {
-      // Get unverified cases
-      const casesResult = await client.query(`
-        SELECT id, name, date_of_death, verified, verified_by, verified_at
-        FROM cases
-        ORDER BY verified ASC, date_of_death DESC
+      // Get unverified incidents
+      const incidentsResult = await client.query(`
+        SELECT id, incident_id, victim_name, incident_date, verification_status
+        FROM incidents
+        ORDER BY verification_status ASC, incident_date DESC
       `);
 
       // Get unverified timeline events
       const timelineResult = await client.query(`
-        SELECT t.id, t.case_id, t.date, t.event, t.verified, c.name as case_name
-        FROM timeline_events t
-        JOIN cases c ON t.case_id = c.id
-        ORDER BY t.verified ASC, t.date DESC
+        SELECT t.id, t.incident_id, t.date, t.description, i.victim_name as incident_name
+        FROM incident_timeline t
+        JOIN incidents i ON t.incident_id = i.id
+        ORDER BY t.date DESC
       `);
 
       // Get unverified sources
       const sourcesResult = await client.query(`
-        SELECT s.id, s.case_id, s.title, s.publisher, s.url, s.verified, c.name as case_name
-        FROM sources s
-        JOIN cases c ON s.case_id = c.id
-        ORDER BY s.verified ASC, s.date DESC
+        SELECT s.id, s.incident_id, s.title, s.publication, s.url, s.source_type, i.victim_name as incident_name
+        FROM incident_sources s
+        JOIN incidents i ON s.incident_id = i.id
+        ORDER BY s.date_published DESC NULLS LAST
       `);
 
-      // Get unverified discrepancies
-      const discrepanciesResult = await client.query(`
-        SELECT d.id, d.case_id, d.ice_claim, d.counter_evidence, d.verified, c.name as case_name
-        FROM discrepancies d
-        JOIN cases c ON d.case_id = c.id
-        ORDER BY d.verified ASC
+      // Get unverified quotes
+      const quotesResult = await client.query(`
+        SELECT q.id, q.incident_id, q.quote_text, q.category, q.verified, i.victim_name as incident_name
+        FROM incident_quotes q
+        JOIN incidents i ON q.incident_id = i.id
+        ORDER BY q.verified ASC, q.created_at DESC
       `);
 
       // Summary counts
       const summary = {
-        cases: {
-          total: casesResult.rows.length,
-          verified: casesResult.rows.filter((r: any) => r.verified).length,
-          unverified: casesResult.rows.filter((r: any) => !r.verified).length,
+        incidents: {
+          total: incidentsResult.rows.length,
+          verified: incidentsResult.rows.filter((r: any) => r.verification_status === 'verified').length,
+          unverified: incidentsResult.rows.filter((r: any) => r.verification_status !== 'verified').length,
         },
         timeline: {
           total: timelineResult.rows.length,
-          verified: timelineResult.rows.filter((r: any) => r.verified).length,
-          unverified: timelineResult.rows.filter((r: any) => !r.verified).length,
         },
         sources: {
           total: sourcesResult.rows.length,
-          verified: sourcesResult.rows.filter((r: any) => r.verified).length,
-          unverified: sourcesResult.rows.filter((r: any) => !r.verified).length,
         },
-        discrepancies: {
-          total: discrepanciesResult.rows.length,
-          verified: discrepanciesResult.rows.filter((r: any) => r.verified).length,
-          unverified: discrepanciesResult.rows.filter((r: any) => !r.verified).length,
+        quotes: {
+          total: quotesResult.rows.length,
+          verified: quotesResult.rows.filter((r: any) => r.verified).length,
+          unverified: quotesResult.rows.filter((r: any) => !r.verified).length,
         },
       };
 
       return NextResponse.json({
         summary,
-        cases: casesResult.rows,
+        incidents: incidentsResult.rows,
         timeline: timelineResult.rows,
         sources: sourcesResult.rows,
-        discrepancies: discrepanciesResult.rows,
+        quotes: quotesResult.rows,
       });
     } finally {
       client.release();

@@ -61,7 +61,7 @@ export async function PUT(
 ) {
   try {
     // Require editor role
-    const authResult = await requireAuth('editor')(request);
+    const authResult = await requireServerAuth(request, 'editor');
     if ('error' in authResult) {
       return NextResponse.json(
         { error: authResult.error },
