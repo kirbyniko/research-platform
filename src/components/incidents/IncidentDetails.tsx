@@ -1,11 +1,76 @@
+'use client';
+
 import type { Incident } from '@/types/incident';
+import { useState } from 'react';
+import { useSourceVisibility } from './SourceToggle';
 
 interface IncidentDetailsProps {
   incident: Incident;
 }
 
+// Helper component to show a field value with its supporting evidence
+function FieldWithEvidence({ 
+  label, 
+  value, 
+  fieldName, 
+  fieldQuoteMap 
+}: { 
+  label: string; 
+  value: string | number | boolean; 
+  fieldName: string; 
+  fieldQuoteMap?: Record<string, { quote_id: number; quote_text: string; source_id: number; source_title?: string; source_url?: string }[]>;
+}) {
+  const [showEvidence, setShowEvidence] = useState(false);
+  const { showSources } = useSourceVisibility();
+  const evidence = fieldQuoteMap?.[fieldName];
+  const hasEvidence = evidence && evidence.length > 0;
+
+  const displayValue = typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value;
+
+  return (
+    <>
+      <dt className="text-gray-500">{label}</dt>
+      <dd className="text-gray-900">
+        <div className="flex items-center gap-2">
+          <span>{displayValue}</span>
+          {hasEvidence && showSources && (
+            <button
+              onClick={() => setShowEvidence(!showEvidence)}
+              className="text-xs text-blue-600 hover:text-blue-800 underline"
+              title="View source evidence"
+            >
+              [{evidence.length} {evidence.length === 1 ? 'source' : 'sources'}]
+            </button>
+          )}
+        </div>
+        {showEvidence && hasEvidence && showSources && (
+          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded text-xs space-y-2">
+            {evidence.map((ev, idx) => (
+              <div key={idx} className="space-y-1">
+                <div className="text-gray-700 italic">
+                  &ldquo;{ev.quote_text.substring(0, 150)}{ev.quote_text.length > 150 ? '...' : ''}&rdquo;
+                </div>
+                {ev.source_url && (
+                  <a 
+                    href={ev.source_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-700 hover:text-blue-900 underline block"
+                  >
+                    📄 {ev.source_title || 'View source'}
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </dd>
+    </>
+  );
+}
+
 export function IncidentDetails({ incident }: IncidentDetailsProps) {
-  const isDeathType = ['death_in_custody', 'death_during_operation', 'death_at_protest', 'death'].includes(incident.incident_type);
+  const isDeathType = ['death_in_custody', 'death_during_operation', 'death_at_protest', 'death', 'detention_death'].includes(incident.incident_type);
   
   return (
     <section className="bg-white border border-gray-200 rounded-lg p-6">
@@ -13,31 +78,31 @@ export function IncidentDetails({ incident }: IncidentDetailsProps) {
       
       {/* Type-specific details */}
       {isDeathType && incident.death_details && (
-        <DeathDetails details={incident.death_details} />
+        <DeathDetails details={incident.death_details} fieldQuoteMap={incident.field_quote_map} />
       )}
       
       {incident.incident_type === 'shooting' && incident.shooting_details && (
-        <ShootingDetails details={incident.shooting_details} />
+        <ShootingDetails details={incident.shooting_details} fieldQuoteMap={incident.field_quote_map} />
       )}
       
       {incident.incident_type === 'excessive_force' && incident.excessive_force_details && (
-        <ExcessiveForceDetails details={incident.excessive_force_details} />
+        <ExcessiveForceDetails details={incident.excessive_force_details} fieldQuoteMap={incident.field_quote_map} />
       )}
       
       {(incident.incident_type === 'protest_suppression' || incident.incident_type === 'death_at_protest') && incident.protest_details && (
-        <ProtestDetails details={incident.protest_details} />
+        <ProtestDetails details={incident.protest_details} fieldQuoteMap={incident.field_quote_map} />
       )}
       
       {incident.incident_type === 'injury' && incident.injury_details && (
-        <InjuryDetails details={incident.injury_details} />
+        <InjuryDetails details={incident.injury_details} fieldQuoteMap={incident.field_quote_map} />
       )}
       
       {incident.incident_type === 'arrest' && incident.arrest_details && (
-        <ArrestDetails details={incident.arrest_details} />
+        <ArrestDetails details={incident.arrest_details} fieldQuoteMap={incident.field_quote_map} />
       )}
       
       {incident.incident_type === 'rights_violation' && incident.violation_details && (
-        <ViolationDetails details={incident.violation_details} />
+        <ViolationDetails details={incident.violation_details} fieldQuoteMap={incident.field_quote_map} />
       )}
       
       {/* Subject details */}
@@ -46,28 +111,36 @@ export function IncidentDetails({ incident }: IncidentDetailsProps) {
           <h3 className="text-sm font-semibold text-gray-700 mb-3">Subject Information</h3>
           <dl className="grid grid-cols-2 gap-3 text-sm">
             {incident.subject.gender && (
-              <>
-                <dt className="text-gray-500">Gender</dt>
-                <dd className="text-gray-900">{incident.subject.gender}</dd>
-              </>
+              <FieldWithEvidence 
+                label="Gender" 
+                value={incident.subject.gender} 
+                fieldName="subject_gender" 
+                fieldQuoteMap={incident.field_quote_map} 
+              />
             )}
             {incident.subject.immigration_status && (
-              <>
-                <dt className="text-gray-500">Immigration Status</dt>
-                <dd className="text-gray-900">{incident.subject.immigration_status}</dd>
-              </>
+              <FieldWithEvidence 
+                label="Immigration Status" 
+                value={incident.subject.immigration_status} 
+                fieldName="subject_immigration_status" 
+                fieldQuoteMap={incident.field_quote_map} 
+              />
             )}
             {incident.subject.years_in_us && (
-              <>
-                <dt className="text-gray-500">Years in US</dt>
-                <dd className="text-gray-900">{incident.subject.years_in_us}</dd>
-              </>
+              <FieldWithEvidence 
+                label="Years in US" 
+                value={incident.subject.years_in_us} 
+                fieldName="subject_years_in_us" 
+                fieldQuoteMap={incident.field_quote_map} 
+              />
             )}
             {incident.subject.family_in_us !== undefined && (
-              <>
-                <dt className="text-gray-500">Family in US</dt>
-                <dd className="text-gray-900">{incident.subject.family_in_us ? 'Yes' : 'No'}</dd>
-              </>
+              <FieldWithEvidence 
+                label="Family in US" 
+                value={incident.subject.family_in_us} 
+                fieldName="subject_family_in_us" 
+                fieldQuoteMap={incident.field_quote_map} 
+              />
             )}
           </dl>
         </div>
@@ -98,33 +171,41 @@ export function IncidentDetails({ incident }: IncidentDetailsProps) {
   );
 }
 
-function DeathDetails({ details }: { details: Incident['death_details'] }) {
+function DeathDetails({ details, fieldQuoteMap }: { details: Incident['death_details']; fieldQuoteMap?: Incident['field_quote_map'] }) {
   if (!details) return null;
   return (
     <dl className="grid grid-cols-2 gap-3 text-sm">
       {details.cause_of_death && (
-        <>
-          <dt className="text-gray-500">Cause of Death</dt>
-          <dd className="text-gray-900">{details.cause_of_death}</dd>
-        </>
+        <FieldWithEvidence 
+          label="Cause of Death" 
+          value={details.cause_of_death} 
+          fieldName="cause_of_death" 
+          fieldQuoteMap={fieldQuoteMap} 
+        />
       )}
       {details.manner_of_death && (
-        <>
-          <dt className="text-gray-500">Manner of Death</dt>
-          <dd className="text-gray-900">{details.manner_of_death}</dd>
-        </>
+        <FieldWithEvidence 
+          label="Manner of Death" 
+          value={details.manner_of_death} 
+          fieldName="manner_of_death" 
+          fieldQuoteMap={fieldQuoteMap} 
+        />
       )}
       {details.custody_duration && (
-        <>
-          <dt className="text-gray-500">Custody Duration</dt>
-          <dd className="text-gray-900">{details.custody_duration}</dd>
-        </>
+        <FieldWithEvidence 
+          label="Custody Duration" 
+          value={details.custody_duration} 
+          fieldName="custody_duration" 
+          fieldQuoteMap={fieldQuoteMap} 
+        />
       )}
       {details.cause_source && (
-        <>
-          <dt className="text-gray-500">Cause Source</dt>
-          <dd className="text-gray-900">{details.cause_source}</dd>
-        </>
+        <FieldWithEvidence 
+          label="Cause Source" 
+          value={details.cause_source} 
+          fieldName="cause_source" 
+          fieldQuoteMap={fieldQuoteMap} 
+        />
       )}
       {details.medical_requests_denied && (
         <>
@@ -133,60 +214,74 @@ function DeathDetails({ details }: { details: Incident['death_details'] }) {
         </>
       )}
       {details.autopsy_performed !== undefined && (
-        <>
-          <dt className="text-gray-500">Autopsy Performed</dt>
-          <dd className="text-gray-900">{details.autopsy_performed ? 'Yes' : 'No'}</dd>
-        </>
+        <FieldWithEvidence 
+          label="Autopsy Performed" 
+          value={details.autopsy_performed} 
+          fieldName="autopsy_performed" 
+          fieldQuoteMap={fieldQuoteMap} 
+        />
       )}
     </dl>
   );
 }
 
-function InjuryDetails({ details }: { details: Incident['injury_details'] }) {
+function InjuryDetails({ details, fieldQuoteMap }: { details: Incident['injury_details']; fieldQuoteMap?: Incident['field_quote_map'] }) {
   if (!details) return null;
   return (
     <dl className="grid grid-cols-2 gap-3 text-sm">
       {details.injury_type && (
-        <>
-          <dt className="text-gray-500">Injury Type</dt>
-          <dd className="text-gray-900">{details.injury_type}</dd>
-        </>
+        <FieldWithEvidence 
+          label="Injury Type" 
+          value={details.injury_type} 
+          fieldName="injury_type" 
+          fieldQuoteMap={fieldQuoteMap} 
+        />
       )}
       {details.severity && (
-        <>
-          <dt className="text-gray-500">Severity</dt>
-          <dd className="text-gray-900 capitalize">{details.severity}</dd>
-        </>
+        <FieldWithEvidence 
+          label="Severity" 
+          value={details.severity} 
+          fieldName="severity" 
+          fieldQuoteMap={fieldQuoteMap} 
+        />
       )}
       {details.cause && (
-        <>
-          <dt className="text-gray-500">Cause</dt>
-          <dd className="text-gray-900">{details.cause}</dd>
-        </>
+        <FieldWithEvidence 
+          label="Cause" 
+          value={details.cause} 
+          fieldName="injury_cause" 
+          fieldQuoteMap={fieldQuoteMap} 
+        />
       )}
       {details.weapon_used && (
-        <>
-          <dt className="text-gray-500">Weapon Used</dt>
-          <dd className="text-gray-900">{details.weapon_used}</dd>
-        </>
+        <FieldWithEvidence 
+          label="Weapon Used" 
+          value={details.weapon_used} 
+          fieldName="weapon_used" 
+          fieldQuoteMap={fieldQuoteMap} 
+        />
       )}
       {details.hospitalized !== undefined && (
-        <>
-          <dt className="text-gray-500">Hospitalized</dt>
-          <dd className="text-gray-900">{details.hospitalized ? 'Yes' : 'No'}</dd>
-        </>
+        <FieldWithEvidence 
+          label="Hospitalized" 
+          value={details.hospitalized} 
+          fieldName="hospitalized" 
+          fieldQuoteMap={fieldQuoteMap} 
+        />
       )}
       {details.permanent_damage !== undefined && (
-        <>
-          <dt className="text-gray-500">Permanent Damage</dt>
-          <dd className="text-gray-900">{details.permanent_damage ? 'Yes' : 'No'}</dd>
-        </>
+        <FieldWithEvidence 
+          label="Permanent Damage" 
+          value={details.permanent_damage} 
+          fieldName="permanent_damage" 
+          fieldQuoteMap={fieldQuoteMap} 
+        />
       )}
     </dl>
   );
 }
 
-function ArrestDetails({ details }: { details: Incident['arrest_details'] }) {
+function ArrestDetails({ details, fieldQuoteMap }: { details: Incident['arrest_details']; fieldQuoteMap?: Incident['field_quote_map'] }) {
   if (!details) return null;
   return (
     <div className="space-y-4">
@@ -239,7 +334,7 @@ function ArrestDetails({ details }: { details: Incident['arrest_details'] }) {
   );
 }
 
-function ViolationDetails({ details }: { details: Incident['violation_details'] }) {
+function ViolationDetails({ details, fieldQuoteMap }: { details: Incident['violation_details']; fieldQuoteMap?: Incident['field_quote_map'] }) {
   if (!details) return null;
   return (
     <div className="space-y-4">
@@ -293,7 +388,7 @@ function ViolationDetails({ details }: { details: Incident['violation_details'] 
   );
 }
 
-function ShootingDetails({ details }: { details: Incident['shooting_details'] }) {
+function ShootingDetails({ details, fieldQuoteMap }: { details: Incident['shooting_details']; fieldQuoteMap?: Incident['field_quote_map'] }) {
   if (!details) return null;
   return (
     <div className="space-y-4">
@@ -368,7 +463,7 @@ function ShootingDetails({ details }: { details: Incident['shooting_details'] })
   );
 }
 
-function ExcessiveForceDetails({ details }: { details: Incident['excessive_force_details'] }) {
+function ExcessiveForceDetails({ details, fieldQuoteMap }: { details: Incident['excessive_force_details']; fieldQuoteMap?: Incident['field_quote_map'] }) {
   if (!details) return null;
   return (
     <div className="space-y-4">
@@ -440,7 +535,7 @@ function ExcessiveForceDetails({ details }: { details: Incident['excessive_force
   );
 }
 
-function ProtestDetails({ details }: { details: Incident['protest_details'] }) {
+function ProtestDetails({ details, fieldQuoteMap }: { details: Incident['protest_details']; fieldQuoteMap?: Incident['field_quote_map'] }) {
   if (!details) return null;
   return (
     <div className="space-y-4">

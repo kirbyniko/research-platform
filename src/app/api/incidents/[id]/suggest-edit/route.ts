@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
+import { requireServerAuth } from '@/lib/server-auth';
 import pool from '@/lib/db';
 
 // POST /api/incidents/[id]/suggest-edit - Submit an edit suggestion
@@ -8,8 +8,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Require at least user role
-    const authResult = await requireAuth('user')(request);
+    // Allow any authenticated user (no minimum role requirement)
+    const authResult = await requireServerAuth(request);
     if ('error' in authResult) {
       return NextResponse.json(
         { error: authResult.error },
@@ -24,7 +24,22 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid incident ID' }, { status: 400 });
     }
 
-    const { fieldName, suggestedValue, reason } = await request.json();
+    // Rate limiting: Check how many suggestions this user has made in the last hour
+    const rateCheck = await pool.query(
+      `SELECT COUNT(*) as count FROM edit_suggestions 
+       WHERE suggested_by = $1 AND created_at > NOW() - INTERVAL '1 hour'`,
+      [authResult.user.id]
+    );
+
+    const suggestionsLastHour = parseInt(rateCheck.rows[0].count);
+    if (suggestionsLastHour >= 10) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. You can submit up to 10 edit suggestions per hour.' },
+        { status: 429 }
+      );
+    }
+
+    const { fieldName, suggestedValue, reason, supportingQuote, sourceUrl, sourceTitle } = await request.json();
 
     if (!fieldName || suggestedValue === undefined) {
       return NextResponse.json(
@@ -84,10 +99,10 @@ export async function POST(
     // Insert the suggestion
     const result = await pool.query(
       `INSERT INTO edit_suggestions 
-       (incident_id, suggested_by, field_name, current_value, suggested_value, reason)
-       VALUES ($1, $2, $3, $4, $5, $6)
+       (incident_id, suggested_by, field_name, current_value, suggested_value, reason, supporting_quote, source_url, source_title)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING id, created_at`,
-      [incidentId, authResult.user.id, fieldName, currentValue, suggestedValue, reason]
+      [incidentId, authResult.user.id, fieldName, currentValue, suggestedValue, reason, supportingQuote, sourceUrl, sourceTitle]
     );
 
     return NextResponse.json({

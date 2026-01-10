@@ -39,11 +39,18 @@ export async function requireServerAuth(
         role: ((session.user as { role?: string }).role || 'user') as RoleLevel,
       };
 
+      console.log('[requireServerAuth] User from session:', user);
+      console.log('[requireServerAuth] Required role:', requiredRole);
+      console.log('[requireServerAuth] User role level:', roleHierarchy[user.role]);
+      console.log('[requireServerAuth] Required role level:', requiredRole ? roleHierarchy[requiredRole] : 'none');
+
       // Check role requirement
       if (requiredRole && !hasRequiredRole(user.role, requiredRole)) {
+        console.log('[requireServerAuth] Role check FAILED');
         return { error: 'Insufficient permissions', status: 403 };
       }
 
+      console.log('[requireServerAuth] Role check PASSED');
       return { user };
     }
 

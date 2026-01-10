@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { LEGAL_REFERENCES, getCaseLawForViolation, VIOLATION_TO_LEGAL_KEY } from '@/lib/legal-references';
 import type { LegalCase } from '@/lib/legal-references';
@@ -14,12 +15,24 @@ interface Incident {
   subject_gender: string | null; subject_nationality: string | null;
   subject_immigration_status: string | null; summary: string | null;
   verified: boolean; verification_status: string;
+  first_verified_by?: number | null;
+  second_verified_by?: number | null;
 }
-interface Source { id: number; url: string; title: string | null; publication: string | null; source_type: string; }
+interface Source { id: number; url: string; title: string | null; publication: string | null; source_type: string; source_priority?: string | null; }
 interface Quote { id: number; quote_text: string; category: string | null; source_id: number | null; linked_fields: string[] | null; source_title?: string | null; source_url?: string | null; verified?: boolean; }
 interface Agency { id: number; agency: string; role: string | null; }
 interface Violation { id: number; violation_type: string; description: string | null; constitutional_basis: string | null; }
-interface TimelineEntry { id: number; event_date: string | null; description: string; sequence_order: number | null; source_id: number | null; }
+interface TimelineEntry { 
+  id: number; 
+  event_date?: string | null;
+  date?: string | null; 
+  description: string; 
+  sequence_order: number | null; 
+  source_id?: number | null; 
+  quote_id?: number | null;
+  quote?: { id: number; quote_text: string; source_id?: number };
+  source?: { id: number; title?: string; url?: string };
+}
 interface IncidentDetails { [key: string]: unknown; }
 
 // Field definitions
@@ -467,6 +480,8 @@ function QuoteAutoSuggest({
 
 export default function ReviewPage() {
   const params = useParams();
+  const router = useRouter();
+  const { data: session } = useSession();
   const incidentId = params.id as string;
 
   const [loading, setLoading] = useState(true);
@@ -481,11 +496,22 @@ export default function ReviewPage() {
   const [fieldQuoteMap, setFieldQuoteMap] = useState<Record<string, number>>({});
   const [editedIncident, setEditedIncident] = useState<Record<string, unknown>>({});
   const [incidentDetails, setIncidentDetails] = useState<IncidentDetails>({});
-  const [newSource, setNewSource] = useState({ url: '', title: '', publication: '', source_type: 'news' });
-  const [newQuote, setNewQuote] = useState({ text: '', category: '', source_id: '' });
-  const [newTimeline, setNewTimeline] = useState({ event_date: '', description: '', sequence_order: '', source_id: '' });
+  const [newSource, setNewSource] = useState({ url: '', title: '', publication: '', source_type: 'news', source_priority: 'secondary' });
+  const [newQuote, setNewQuote] = useState({ text: '', category: 'testimony', source_id: '' });
+  const [newTimeline, setNewTimeline] = useState({ event_date: '', description: '', quote_id: '' });
+  const [editingTimeline, setEditingTimeline] = useState<{ id: number; event_date: string; description: string; quote_id: string } | null>(null);
+  const [draggedTimelineId, setDraggedTimelineId] = useState<number | null>(null);
   const [sectionsOpen, setSectionsOpen] = useState({ details: true, typeDetails: true, agencies: true, violations: true, sources: true, quotes: true, timeline: true });
   const [activeTypingField, setActiveTypingField] = useState<string | null>(null);
+  const [verifiedFields, setVerifiedFields] = useState<Record<string, boolean>>({});
+  const [verifiedSources, setVerifiedSources] = useState<Record<number, boolean>>({});
+  const [verifiedQuotes, setVerifiedQuotes] = useState<Record<number, boolean>>({});
+  const [verifiedTimeline, setVerifiedTimeline] = useState<Record<number, boolean>>({});
+  const [editingSourceId, setEditingSourceId] = useState<number | null>(null);
+  const [editingQuoteId, setEditingQuoteId] = useState<number | null>(null);
+  const [editSourceData, setEditSourceData] = useState<any>({});
+  const [editQuoteData, setEditQuoteData] = useState<any>({});
+  const [highlightUnverified, setHighlightUnverified] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { fetchData(); }, [incidentId]);
@@ -600,7 +626,7 @@ export default function ReviewPage() {
     if (!newSource.url) return;
     const result = await apiCall('sources', 'POST', newSource);
     setSources(prev => [...prev, { ...newSource, id: result.id }]);
-    setNewSource({ url: '', title: '', publication: '', source_type: 'news' });
+    setNewSource({ url: '', title: '', publication: '', source_type: 'news', source_priority: 'secondary' });
   }
 
   async function deleteSource(id: number) {
@@ -609,13 +635,19 @@ export default function ReviewPage() {
     setSources(prev => prev.filter(s => s.id !== id));
   }
 
+  async function updateSource(id: number, updates: Partial<Source>) {
+    await apiCall('sources', 'PUT', { source_id: id, ...updates });
+    setSources(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+    setEditingSourceId(null);
+  }
+
   async function addQuote() {
     if (!newQuote.text) return;
     const payload = { text: newQuote.text, category: newQuote.category || null, source_id: newQuote.source_id ? Number(newQuote.source_id) : null };
     const result = await apiCall('quotes', 'POST', payload);
     const sourceInfo = newQuote.source_id ? sources.find(s => s.id === Number(newQuote.source_id)) : null;
     setQuotes(prev => [...prev, { id: result.id, quote_text: newQuote.text, category: newQuote.category || null, source_id: payload.source_id, linked_fields: null, source_title: sourceInfo?.title || null }]);
-    setNewQuote({ text: '', category: '', source_id: '' });
+    setNewQuote({ text: '', category: 'testimony', source_id: '' });
   }
 
   async function deleteQuote(id: number) {
@@ -623,6 +655,129 @@ export default function ReviewPage() {
     await apiCall('quotes', 'DELETE', { quote_id: id });
     setQuotes(prev => prev.filter(q => q.id !== id));
     setFieldQuoteMap(prev => { const next = { ...prev }; Object.keys(next).forEach(k => { if (next[k] === id) delete next[k]; }); return next; });
+  }
+
+  async function updateQuote(id: number, updates: any) {
+    await apiCall('quotes', 'PUT', { quote_id: id, ...updates });
+    setQuotes(prev => prev.map(q => q.id === id ? { ...q, ...updates } : q));
+    setEditingQuoteId(null);
+  }
+
+  function findUnverifiedFields() {
+    setHighlightUnverified(true);
+    // Check incident_type first
+    if (editedIncident.incident_type && !verifiedFields['incident_type']) {
+      const element = document.querySelector(`[data-field-key="incident_type"]`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => setHighlightUnverified(false), 3000);
+        return;
+      }
+    }
+    // Then check other fields
+    const firstUnverified = fieldsWithData.find(f => !verifiedFields[f.key]);
+    if (firstUnverified) {
+      const element = document.querySelector(`[data-field-key="${firstUnverified.key}"]`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+    setTimeout(() => setHighlightUnverified(false), 3000);
+  }
+
+  function findUnverifiedSources() {
+    const firstUnverified = sources.find(s => !verifiedSources[s.id]);
+    if (firstUnverified) {
+      setSectionsOpen(prev => ({ ...prev, sources: true }));
+      setTimeout(() => {
+        const element = document.querySelector(`[data-source-id="${firstUnverified.id}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('ring-2', 'ring-yellow-400');
+          setTimeout(() => element.classList.remove('ring-2', 'ring-yellow-400'), 3000);
+        }
+      }, 100);
+    }
+  }
+
+  function findUnverifiedQuotes() {
+    const firstUnverified = quotes.find(q => !verifiedQuotes[q.id]);
+    if (firstUnverified) {
+      setSectionsOpen(prev => ({ ...prev, quotes: true }));
+      setTimeout(() => {
+        const element = document.querySelector(`[data-quote-id="${firstUnverified.id}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('ring-2', 'ring-yellow-400');
+          setTimeout(() => element.classList.remove('ring-2', 'ring-yellow-400'), 3000);
+        }
+      }, 100);
+    }
+  }
+
+  function findUnverifiedTimeline() {
+    const firstUnverified = timeline.find(t => !verifiedTimeline[t.id]);
+    if (firstUnverified) {
+      setSectionsOpen(prev => ({ ...prev, timeline: true }));
+      setTimeout(() => {
+        const element = document.querySelector(`[data-timeline-id="${firstUnverified.id}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('ring-2', 'ring-yellow-400');
+          setTimeout(() => element.classList.remove('ring-2', 'ring-yellow-400'), 3000);
+        }
+      }, 100);
+    }
+  }
+
+  function findFieldsWithoutQuotes() {
+    const keyFields = ['victim_name', 'incident_date', 'city', 'state', 'summary'];
+    const firstUnlinked = keyFields.find(field => {
+      const value = (editedIncident as any)[field] || (incident as any)?.[field];
+      return value && !fieldQuoteMap[field];
+    });
+    
+    if (firstUnlinked) {
+      setSectionsOpen(prev => ({ ...prev, fields: true }));
+      setTimeout(() => {
+        const element = document.querySelector(`[data-field-key="${firstUnlinked}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('ring-4', 'ring-red-400', 'bg-red-50');
+          setTimeout(() => element.classList.remove('ring-4', 'ring-red-400', 'bg-red-50'), 4000);
+        }
+      }, 100);
+    }
+  }
+
+  function findQuotesWithoutSources() {
+    const firstWithoutSource = quotes.find(q => !q.source_id);
+    if (firstWithoutSource) {
+      setSectionsOpen(prev => ({ ...prev, quotes: true }));
+      setTimeout(() => {
+        const element = document.querySelector(`[data-quote-id="${firstWithoutSource.id}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('ring-4', 'ring-red-400', 'bg-red-50');
+          setTimeout(() => element.classList.remove('ring-4', 'ring-red-400', 'bg-red-50'), 4000);
+        }
+      }, 100);
+    }
+  }
+
+  function findUnverifiedQuotesData() {
+    const firstUnverified = quotes.find(q => !q.verified);
+    if (firstUnverified) {
+      setSectionsOpen(prev => ({ ...prev, quotes: true }));
+      setTimeout(() => {
+        const element = document.querySelector(`[data-quote-id="${firstUnverified.id}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('ring-4', 'ring-orange-400', 'bg-orange-50');
+          setTimeout(() => element.classList.remove('ring-4', 'ring-orange-400', 'bg-orange-50'), 4000);
+        }
+      }, 100);
+    }
   }
 
   // Handle typing state for auto-suggest
@@ -651,10 +806,54 @@ export default function ReviewPage() {
 
   async function addTimelineEntry() {
     if (!newTimeline.description) return;
-    const payload = { event_date: newTimeline.event_date || null, description: newTimeline.description, sequence_order: newTimeline.sequence_order ? Number(newTimeline.sequence_order) : null, source_id: newTimeline.source_id ? Number(newTimeline.source_id) : null };
+    const maxOrder = timeline.length > 0 ? Math.max(...timeline.map(t => t.sequence_order || 0)) : 0;
+    const payload = { event_date: newTimeline.event_date || null, description: newTimeline.description, sequence_order: maxOrder + 1, quote_id: newTimeline.quote_id ? Number(newTimeline.quote_id) : null };
     const result = await apiCall('timeline', 'POST', payload);
-    setTimeline(prev => [...prev, { ...payload, id: result.id } as TimelineEntry]);
-    setNewTimeline({ event_date: '', description: '', sequence_order: '', source_id: '' });
+    const newEntry: TimelineEntry = {
+      id: result.id,
+      date: payload.event_date || undefined,
+      description: payload.description,
+      quote_id: payload.quote_id || undefined,
+      sequence_order: payload.sequence_order,
+    };
+    setTimeline(prev => [...prev, newEntry]);
+    setNewTimeline({ event_date: '', description: '', quote_id: '' });
+  }
+
+  async function updateTimelineEntry() {
+    if (!editingTimeline || !editingTimeline.description) return;
+    const payload = { entry_id: editingTimeline.id, event_date: editingTimeline.event_date || null, description: editingTimeline.description, quote_id: editingTimeline.quote_id ? Number(editingTimeline.quote_id) : null };
+    await apiCall('timeline', 'PUT', payload);
+    setTimeline(prev => prev.map(t => t.id === editingTimeline.id ? { ...t, event_date: payload.event_date, description: payload.description, quote_id: payload.quote_id } : t));
+    setEditingTimeline(null);
+  }
+
+  async function reorderTimeline(draggedId: number, targetId: number) {
+    const draggedIndex = timeline.findIndex(t => t.id === draggedId);
+    const targetIndex = timeline.findIndex(t => t.id === targetId);
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    const reordered = [...timeline];
+    const [removed] = reordered.splice(draggedIndex, 1);
+    reordered.splice(targetIndex, 0, removed);
+
+    // Reassign sequence_order
+    const updated = reordered.map((t, i) => ({ ...t, sequence_order: i + 1 }));
+    setTimeline(updated);
+
+    // Save all updated sequence orders
+    try {
+      setSaving(true);
+      await Promise.all(updated.map(t => 
+        fetch(`/api/incidents/${incidentId}/timeline`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ entry_id: t.id, sequence_order: t.sequence_order })
+        })
+      ));
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function deleteTimelineEntry(id: number) {
@@ -669,6 +868,29 @@ export default function ReviewPage() {
   if (error) return <div className="p-8 text-red-600">{error}</div>;
   if (!incident) return <div className="p-8">Not found</div>;
 
+  // Helper to check if a field has real data (not placeholder)
+  const hasRealData = (key: string, val: any) => {
+    if (val === null || val === undefined || val === '') return false;
+    // Check for date placeholders
+    if (typeof val === 'string' && (val === 'mm/dd/yyyy' || val === 'MM/DD/YYYY' || val.match(/^[mMdDyY\/]+$/))) return false;
+    return true;
+  };
+
+  const fieldsWithData = INCIDENT_FIELDS.filter(f => {
+    const val = editedIncident[f.key];
+    return hasRealData(f.key, val);
+  });
+  
+  // Include incident_type in the count if it has a value
+  const totalFieldsCount = fieldsWithData.length + (editedIncident.incident_type ? 1 : 0);
+  const incidentTypeVerified = editedIncident.incident_type ? (verifiedFields['incident_type'] || false) : true;
+  const verifiedCount = fieldsWithData.filter(f => verifiedFields[f.key]).length + (editedIncident.incident_type && incidentTypeVerified ? 1 : 0);
+  const allFieldsVerified = totalFieldsCount === 0 || verifiedCount === totalFieldsCount;
+  
+  const verifiedSourcesCount = Object.values(verifiedSources).filter(Boolean).length;
+  const verifiedQuotesCount = Object.values(verifiedQuotes).filter(Boolean).length;
+  const verifiedTimelineCount = Object.values(verifiedTimeline).filter(Boolean).length;
+
   return (
     <div className="max-w-5xl mx-auto p-6">
       {saving && <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm z-50">Saving...</div>}
@@ -678,17 +900,68 @@ export default function ReviewPage() {
         <Link href="/dashboard" className="text-blue-600 hover:underline text-sm">← Back to Queue</Link>
         <h1 className="text-2xl font-bold mt-2">{incident.victim_name || incident.subject_name || 'Unknown'}</h1>
         <p className="text-gray-500 text-sm">{incident.incident_id} • {incident.incident_type}</p>
-        <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium ${incident.verification_status === 'verified' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-          {incident.verification_status}
-        </span>
+        <div className="flex flex-wrap gap-2 mt-2">
+          <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${incident.verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+            {incident.verification_status || (incident.verified ? 'verified' : 'unverified')}
+          </span>
+          <div className="inline-flex items-center gap-1">
+            <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${allFieldsVerified ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
+              Fields: {verifiedCount}/{totalFieldsCount}
+            </span>
+            {!allFieldsVerified && (
+              <button 
+                onClick={findUnverifiedFields}
+                className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                title="Find unverified fields"
+              >
+                Find
+              </button>
+            )}
+          </div>
+          <div className="inline-flex items-center gap-1">
+            <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${verifiedSourcesCount === sources.length && sources.length > 0 ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
+              Sources: {verifiedSourcesCount}/{sources.length}
+            </span>
+            {verifiedSourcesCount < sources.length && sources.length > 0 && (
+              <button onClick={findUnverifiedSources} className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-medium" title="Find unverified sources">Find</button>
+            )}
+          </div>
+          <div className="inline-flex items-center gap-1">
+            <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${verifiedQuotesCount === quotes.length && quotes.length > 0 ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
+              Quotes: {verifiedQuotesCount}/{quotes.length}
+            </span>
+            {verifiedQuotesCount < quotes.length && quotes.length > 0 && (
+              <button onClick={findUnverifiedQuotes} className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-medium" title="Find unverified quotes">Find</button>
+            )}
+          </div>
+          <div className="inline-flex items-center gap-1">
+            <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${verifiedTimelineCount === timeline.length && timeline.length > 0 ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
+              Timeline: {verifiedTimelineCount}/{timeline.length}
+            </span>
+            {verifiedTimelineCount < timeline.length && timeline.length > 0 && (
+              <button onClick={findUnverifiedTimeline} className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-medium" title="Find unverified timeline events">Find</button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Details Section */}
       <Section title="Incident Details" open={sectionsOpen.details} onToggle={() => toggleSection('details')}>
         {/* Incident Type - Make it prominent */}
-        <div className="mb-4 p-4 bg-gray-50 border border-gray-300 rounded">
+        <div className="mb-4 p-4 bg-gray-50 border border-gray-300 rounded" data-field-key="incident_type">
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-gray-700">Incident Type *</label>
+            <label className={`flex items-center gap-2 text-sm font-medium text-gray-700 transition-all ${editedIncident.incident_type && !verifiedFields['incident_type'] && highlightUnverified ? 'bg-yellow-200 px-2 py-1 rounded animate-pulse' : ''}`}>
+              Incident Type *
+              {editedIncident.incident_type ? (
+                <input 
+                  type="checkbox" 
+                  checked={verifiedFields['incident_type'] || false}
+                  onChange={(e) => setVerifiedFields(prev => ({ ...prev, incident_type: e.target.checked }))}
+                  className="w-4 h-4"
+                  title="Check to confirm you've verified this field"
+                />
+              ) : null}
+            </label>
             <QuotePicker field="incident_type" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
           </div>
           <select 
@@ -727,11 +1000,47 @@ export default function ReviewPage() {
         <div className="grid grid-cols-2 gap-4">
           {INCIDENT_FIELDS.filter(f => f.key !== 'incident_type').map(f => {
             const showAutoSuggest = ['victim_name', 'facility', 'city', 'summary'].includes(f.key);
-            const fieldValue = String(editedIncident[f.key] || '');
+            
+            // Format date values correctly for date inputs (YYYY-MM-DD format)
+            let fieldValue = '';
+            if (f.type === 'date' && editedIncident[f.key]) {
+              try {
+                const dateObj = new Date(editedIncident[f.key] as string);
+                fieldValue = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD
+              } catch (e) {
+                fieldValue = String(editedIncident[f.key] || '');
+              }
+            } else {
+              fieldValue = String(editedIncident[f.key] || '');
+            }
+            
             const isTypingThisField = activeTypingField === f.key;
+            
+            // Check if field has real data
+            const rawValue = editedIncident[f.key];
+            const hasValue = (() => {
+              if (rawValue === null || rawValue === undefined || rawValue === '') return false;
+              // Check for date placeholders (should never happen now with proper formatting)
+              if (typeof rawValue === 'string' && (rawValue === 'mm/dd/yyyy' || rawValue === 'MM/DD/YYYY' || rawValue.match(/^[mMdDyY\\/]+$/))) return false;
+              return true;
+            })();
+            
+            const isVerified = verifiedFields[f.key] || false;
+            const isUnverified = hasValue && !isVerified;
             return (
-            <div key={f.key} className={f.type === 'textarea' ? 'col-span-2' : ''}>
-              <label className="block text-xs text-gray-500 mb-1">{f.label}</label>
+            <div key={f.key} className={f.type === 'textarea' ? 'col-span-2' : ''} data-field-key={f.key}>
+              <label className={`block text-xs text-gray-500 mb-1 flex items-center gap-2 transition-all ${isUnverified && highlightUnverified ? 'bg-yellow-200 px-2 py-1 rounded animate-pulse' : ''}`}>
+                {f.label}
+                {hasValue && (
+                  <input 
+                    type="checkbox" 
+                    checked={isVerified}
+                    onChange={(e) => setVerifiedFields(prev => ({ ...prev, [f.key]: e.target.checked }))}
+                    className="w-4 h-4"
+                    title="Check to confirm you've verified this field"
+                  />
+                )}
+              </label>
               <div className="flex gap-2 items-start">
                 {f.type === 'textarea' ? (
                   <textarea className="flex-1 border rounded px-3 py-2 text-sm" rows={3} value={fieldValue}
@@ -1030,15 +1339,95 @@ export default function ReviewPage() {
           <select className="border rounded px-3 py-2 text-sm" value={newSource.source_type} onChange={e => setNewSource({ ...newSource, source_type: e.target.value })}>
             <option value="news">News</option><option value="government">Government</option><option value="legal">Legal</option><option value="ngo">NGO</option><option value="social_media">Social Media</option>
           </select>
+          <select className="border rounded px-3 py-2 text-sm" value={newSource.source_priority || 'secondary'} onChange={e => setNewSource({ ...newSource, source_priority: e.target.value })}>
+            <option value="primary">Primary</option><option value="secondary">Secondary</option><option value="tertiary">Tertiary</option>
+          </select>
           <button onClick={addSource} disabled={!newSource.url || saving} className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:bg-gray-400">Add</button>
         </div>
         <div className="space-y-2">
           {sources.map(s => (
-            <div key={s.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-              <div><a href={s.url} target="_blank" rel="noopener" className="text-blue-600 hover:underline">{s.title || s.url}</a>
-                {s.publication && <span className="text-gray-500 text-sm ml-2">({s.publication})</span>}
-                <span className="text-xs bg-gray-200 ml-2 px-2 py-0.5 rounded">{s.source_type}</span></div>
-              <button onClick={() => deleteSource(s.id)} className="text-red-600 text-sm hover:underline">Delete</button>
+            <div key={s.id} className="p-3 bg-gray-50 rounded" data-source-id={s.id}>
+              {editingSourceId === s.id ? (
+                <div className="space-y-2">
+                  <input 
+                    className="w-full border rounded px-3 py-2 text-sm" 
+                    placeholder="URL *"
+                    value={editSourceData.url || s.url}
+                    onChange={(e) => setEditSourceData({ ...editSourceData, url: e.target.value })}
+                  />
+                  <div className="flex gap-2">
+                    <input 
+                      className="flex-1 border rounded px-3 py-2 text-sm" 
+                      placeholder="Title"
+                      value={editSourceData.title !== undefined ? editSourceData.title : s.title || ''}
+                      onChange={(e) => setEditSourceData({ ...editSourceData, title: e.target.value })}
+                    />
+                    <input 
+                      className="w-40 border rounded px-3 py-2 text-sm" 
+                      placeholder="Publication"
+                      value={editSourceData.publication !== undefined ? editSourceData.publication : s.publication || ''}
+                      onChange={(e) => setEditSourceData({ ...editSourceData, publication: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <select 
+                      className="border rounded px-3 py-2 text-sm" 
+                      value={editSourceData.source_type || s.source_type}
+                      onChange={(e) => setEditSourceData({ ...editSourceData, source_type: e.target.value })}
+                    >
+                      <option value="news">News</option>
+                      <option value="government">Government</option>
+                      <option value="legal">Legal</option>
+                      <option value="ngo">NGO</option>
+                      <option value="social_media">Social Media</option>
+                    </select>
+                    <select 
+                      className="border rounded px-3 py-2 text-sm" 
+                      value={editSourceData.source_priority || s.source_priority || 'secondary'}
+                      onChange={(e) => setEditSourceData({ ...editSourceData, source_priority: e.target.value })}
+                    >
+                      <option value="primary">Primary</option>
+                      <option value="secondary">Secondary</option>
+                      <option value="tertiary">Tertiary</option>
+                    </select>
+                    <button 
+                      onClick={() => updateSource(s.id, editSourceData)}
+                      disabled={saving}
+                      className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:bg-gray-400"
+                    >
+                      Save
+                    </button>
+                    <button 
+                      onClick={() => { setEditingSourceId(null); setEditSourceData({}); }}
+                      className="px-4 py-2 bg-gray-500 text-white rounded text-sm hover:bg-gray-600"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3 flex-1">
+                    <input 
+                      type="checkbox" 
+                      checked={verifiedSources[s.id] || false}
+                      onChange={(e) => setVerifiedSources(prev => ({ ...prev, [s.id]: e.target.checked }))}
+                      className="w-4 h-4"
+                      title="Check to verify this source"
+                    />
+                    <div>
+                      <a href={s.url} target="_blank" rel="noopener" className="text-blue-600 hover:underline">{s.title || s.url}</a>
+                      {s.publication && <span className="text-gray-500 text-sm ml-2">({s.publication})</span>}
+                      <span className="text-xs bg-gray-200 ml-2 px-2 py-0.5 rounded">{s.source_type}</span>
+                      {s.source_priority && <span className={`text-xs ml-2 px-2 py-0.5 rounded ${s.source_priority === 'primary' ? 'bg-green-100 text-green-700' : s.source_priority === 'secondary' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{s.source_priority}</span>}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => { setEditingSourceId(s.id); setEditSourceData({}); }} className="text-blue-600 text-sm hover:underline">Edit</button>
+                    <button onClick={() => deleteSource(s.id)} className="text-red-600 text-sm hover:underline">Delete</button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
           {sources.length === 0 && <p className="text-gray-500 text-sm text-center py-4">No sources yet</p>}
@@ -1053,21 +1442,93 @@ export default function ReviewPage() {
             <option value="">Select source</option>
             {sources.map(s => <option key={s.id} value={s.id}>{s.title || s.url}</option>)}
           </select>
-          <input placeholder="Category" className="border rounded px-3 py-2 text-sm" value={newQuote.category} onChange={e => setNewQuote({ ...newQuote, category: e.target.value })} />
+          <select className="border rounded px-3 py-2 text-sm" value={newQuote.category || 'testimony'} onChange={e => setNewQuote({ ...newQuote, category: e.target.value })}>
+            <option value="testimony">Testimony</option>
+            <option value="official_statement">Official Statement</option>
+            <option value="eyewitness">Eyewitness</option>
+            <option value="expert">Expert Opinion</option>
+            <option value="court_document">Court Document</option>
+            <option value="news_quote">News Quote</option>
+            <option value="other">Other</option>
+          </select>
           <button onClick={addQuote} disabled={!newQuote.text || saving} className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:bg-gray-400">Add</button>
         </div>
         <div className="space-y-2">
           {quotes.map(q => (
-            <div key={q.id} className="p-3 bg-gray-50 rounded">
-              <p className="text-sm italic">&ldquo;{q.quote_text}&rdquo;</p>
-              <div className="flex justify-between items-center mt-2">
-                <div className="flex gap-2 text-xs text-gray-500">
-                  {q.category && <span className="bg-gray-200 px-2 py-0.5 rounded">{q.category}</span>}
-                  {q.source_title && <span>Source: {q.source_title}</span>}
-                  {q.linked_fields?.length ? <span className="text-blue-600">Linked: {q.linked_fields.join(', ')}</span> : null}
+            <div key={q.id} className="p-3 bg-gray-50 rounded" data-quote-id={q.id}>
+              {editingQuoteId === q.id ? (
+                <div className="space-y-2">
+                  <textarea 
+                    className="w-full border rounded px-3 py-2 text-sm" 
+                    rows={3}
+                    placeholder="Quote text *"
+                    value={editQuoteData.quote_text !== undefined ? editQuoteData.quote_text : q.quote_text}
+                    onChange={(e) => setEditQuoteData({ ...editQuoteData, quote_text: e.target.value })}
+                  />
+                  <div className="flex gap-2">
+                    <select 
+                      className="flex-1 border rounded px-3 py-2 text-sm"
+                      value={editQuoteData.source_id !== undefined ? editQuoteData.source_id : q.source_id || ''}
+                      onChange={(e) => setEditQuoteData({ ...editQuoteData, source_id: parseInt(e.target.value) })}
+                    >
+                      <option value="">Select source</option>
+                      {sources.map(s => <option key={s.id} value={s.id}>{s.title || s.url}</option>)}
+                    </select>
+                    <select 
+                      className="flex-1 border rounded px-3 py-2 text-sm"
+                      value={editQuoteData.category || q.category || 'testimony'}
+                      onChange={(e) => setEditQuoteData({ ...editQuoteData, category: e.target.value })}
+                    >
+                      <option value="testimony">Testimony</option>
+                      <option value="official_statement">Official Statement</option>
+                      <option value="eyewitness">Eyewitness</option>
+                      <option value="expert">Expert Opinion</option>
+                      <option value="court_document">Court Document</option>
+                      <option value="news_quote">News Quote</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => updateQuote(q.id, editQuoteData)}
+                      disabled={saving}
+                      className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:bg-gray-400"
+                    >
+                      Save
+                    </button>
+                    <button 
+                      onClick={() => { setEditingQuoteId(null); setEditQuoteData({}); }}
+                      className="px-4 py-2 bg-gray-500 text-white rounded text-sm hover:bg-gray-600"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
-                <button onClick={() => deleteQuote(q.id)} className="text-red-600 text-sm hover:underline">Delete</button>
-              </div>
+              ) : (
+                <div className="flex items-start gap-3">
+                  <input 
+                    type="checkbox" 
+                    checked={verifiedQuotes[q.id] || false}
+                    onChange={(e) => setVerifiedQuotes(prev => ({ ...prev, [q.id]: e.target.checked }))}
+                    className="w-4 h-4 mt-1"
+                    title="Check to verify this quote"
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm italic">&ldquo;{q.quote_text}&rdquo;</p>
+                    <div className="flex justify-between items-center mt-2">
+                      <div className="flex gap-2 text-xs text-gray-500">
+                        {q.category && <span className="bg-gray-200 px-2 py-0.5 rounded">{q.category}</span>}
+                        {q.source_title && <span>Source: {q.source_title}</span>}
+                        {q.linked_fields?.length ? <span className="text-blue-600">Linked: {q.linked_fields.join(', ')}</span> : null}
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => { setEditingQuoteId(q.id); setEditQuoteData({}); }} className="text-blue-600 text-sm hover:underline">Edit</button>
+                        <button onClick={() => deleteQuote(q.id)} className="text-red-600 text-sm hover:underline">Delete</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
           {quotes.length === 0 && <p className="text-gray-500 text-sm text-center py-4">No quotes yet</p>}
@@ -1076,28 +1537,335 @@ export default function ReviewPage() {
 
       {/* Timeline Section */}
       <Section title={`Timeline (${timeline.length})`} open={sectionsOpen.timeline} onToggle={() => toggleSection('timeline')}>
+        <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+          💡 <strong>Tip:</strong> Drag and drop entries to reorder. Timeline order is saved automatically.
+        </div>
         <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded mb-3">
           <input type="date" className="border rounded px-3 py-2 text-sm" value={newTimeline.event_date} onChange={e => setNewTimeline({ ...newTimeline, event_date: e.target.value })} />
-          <input type="number" placeholder="#" className="w-16 border rounded px-3 py-2 text-sm" value={newTimeline.sequence_order} onChange={e => setNewTimeline({ ...newTimeline, sequence_order: e.target.value })} />
           <input placeholder="Description *" className="flex-1 min-w-[200px] border rounded px-3 py-2 text-sm" value={newTimeline.description} onChange={e => setNewTimeline({ ...newTimeline, description: e.target.value })} />
-          <select className="border rounded px-3 py-2 text-sm" value={newTimeline.source_id} onChange={e => setNewTimeline({ ...newTimeline, source_id: e.target.value })}>
-            <option value="">Link source</option>
-            {sources.map(s => <option key={s.id} value={s.id}>{s.title || s.url}</option>)}
+          <select className="border rounded px-3 py-2 text-sm" value={newTimeline.quote_id} onChange={e => setNewTimeline({ ...newTimeline, quote_id: e.target.value })}>
+            <option value="">Link quote</option>
+            {quotes.map(q => <option key={q.id} value={q.id}>{q.quote_text.substring(0, 50)}{q.quote_text.length > 50 ? '...' : ''}</option>)}
           </select>
           <button onClick={addTimelineEntry} disabled={!newTimeline.description || saving} className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:bg-gray-400">Add</button>
         </div>
         <div className="space-y-2">
           {timeline.sort((a, b) => (a.sequence_order || 0) - (b.sequence_order || 0)).map(t => (
-            <div key={t.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-              <div><span className="font-mono text-sm mr-2">{t.event_date || 'No date'}</span>
-                {t.sequence_order && <span className="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded mr-2">#{t.sequence_order}</span>}
-                <span>{t.description}</span></div>
-              <button onClick={() => deleteTimelineEntry(t.id)} className="text-red-600 text-sm hover:underline">Delete</button>
+            <div 
+              key={t.id}
+              data-timeline-id={t.id}
+              draggable
+              onDragStart={() => setDraggedTimelineId(t.id)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => {
+                if (draggedTimelineId && draggedTimelineId !== t.id) {
+                  reorderTimeline(draggedTimelineId, t.id);
+                }
+                setDraggedTimelineId(null);
+              }}
+              className={`p-3 bg-gray-50 rounded cursor-move border-2 transition-all ${draggedTimelineId === t.id ? 'border-blue-500 opacity-50' : 'border-transparent hover:border-gray-300'}`}
+            >
+              <div className="flex items-start gap-3">
+                <span className="text-gray-400 mt-1" style={{ cursor: 'grab' }}>⋮⋮</span>
+                <input 
+                  type="checkbox" 
+                  checked={verifiedTimeline[t.id] || false}
+                  onChange={(e) => setVerifiedTimeline(prev => ({ ...prev, [t.id]: e.target.checked }))}
+                  className="w-4 h-4 mt-1"
+                  title="Check to verify this timeline entry"
+                />
+                <div className="flex-1">
+              {editingTimeline?.id === t.id ? (
+                <div className="flex flex-wrap gap-2">
+                  <input type="date" className="border rounded px-3 py-2 text-sm" value={editingTimeline.event_date} onChange={e => setEditingTimeline({ ...editingTimeline, event_date: e.target.value })} />
+                  <input className="flex-1 min-w-[200px] border rounded px-3 py-2 text-sm" value={editingTimeline.description} onChange={e => setEditingTimeline({ ...editingTimeline, description: e.target.value })} />
+                  <select className="border rounded px-3 py-2 text-sm" value={editingTimeline.quote_id} onChange={e => setEditingTimeline({ ...editingTimeline, quote_id: e.target.value })}>
+                    <option value="">Link quote</option>
+                    {quotes.map(q => <option key={q.id} value={q.id}>{q.quote_text.substring(0, 50)}{q.quote_text.length > 50 ? '...' : ''}</option>)}
+                  </select>
+                  <button onClick={updateTimelineEntry} className="px-3 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700">Save</button>
+                  <button onClick={() => setEditingTimeline(null)} className="px-3 py-2 bg-gray-400 text-white rounded text-sm hover:bg-gray-500">Cancel</button>
+                </div>
+              ) : (
+                <div className="flex justify-between items-center">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">#{t.sequence_order}</span>
+                      <span className="font-mono text-sm text-gray-600">{t.date || 'No date'}</span>
+                    </div>
+                    <p className="text-sm mb-1">{t.description}</p>
+                    {t.quote && (
+                      <div className="mt-2 pl-3 border-l-2 border-blue-300">
+                        <p className="text-xs italic text-gray-600">&ldquo;{t.quote.quote_text}&rdquo;</p>
+                        {t.source && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Source: {t.source.title || t.source.url}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => setEditingTimeline({ id: t.id, event_date: t.date || '', description: t.description, quote_id: String(t.quote_id || '') })} className="text-blue-600 text-sm hover:underline">Edit</button>
+                    <button onClick={() => deleteTimelineEntry(t.id)} className="text-red-600 text-sm hover:underline">Delete</button>
+                  </div>
+                </div>
+              )}
+                </div>
+              </div>
             </div>
           ))}
           {timeline.length === 0 && <p className="text-gray-500 text-sm text-center py-4">No timeline entries yet</p>}
         </div>
       </Section>
+
+      {/* Final Submit Section */}
+      <div className="mt-8 p-6 bg-gray-50 border-2 border-gray-300 rounded-lg">
+        {/* Helper Find Buttons */}
+        <div className="mb-4 p-3 bg-white border border-gray-300 rounded">
+          <p className="text-sm font-medium text-gray-700 mb-2">Quick Find Tools:</p>
+          <div className="flex flex-wrap gap-2">
+            {(() => {
+              const keyFields = ['victim_name', 'incident_date', 'city', 'state', 'summary'];
+              const unlinkedFields = keyFields.filter(field => {
+                const value = (editedIncident as any)[field] || (incident as any)?.[field];
+                return value && !fieldQuoteMap[field];
+              });
+              return unlinkedFields.length > 0 && (
+                <button
+                  onClick={findFieldsWithoutQuotes}
+                  className="px-3 py-1 bg-red-100 text-red-700 border border-red-300 rounded text-sm hover:bg-red-200"
+                >
+                  🔍 Find Fields Missing Quotes ({unlinkedFields.length})
+                </button>
+              );
+            })()}
+            {quotes.filter(q => !q.source_id).length > 0 && (
+              <button
+                onClick={findQuotesWithoutSources}
+                className="px-3 py-1 bg-red-100 text-red-700 border border-red-300 rounded text-sm hover:bg-red-200"
+              >
+                🔍 Find Quotes Without Sources ({quotes.filter(q => !q.source_id).length})
+              </button>
+            )}
+            {quotes.filter(q => !q.verified).length > 0 && (
+              <button
+                onClick={findUnverifiedQuotesData}
+                className="px-3 py-1 bg-orange-100 text-orange-700 border border-orange-300 rounded text-sm hover:bg-orange-200"
+              >
+                🔍 Find Unverified Quotes ({quotes.filter(q => !q.verified).length})
+              </button>
+            )}
+          </div>
+        </div>
+        
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="font-semibold text-lg mb-1">Complete Review</h3>
+            <p className="text-sm text-gray-600">All changes have been auto-saved. Review validation checklist before verifying:</p>
+            <ul className="text-xs text-gray-500 mt-2 space-y-1">
+              <li>✓ All key fields (name, date, location) linked to verified quotes</li>
+              <li>✓ All quotes linked to verified sources</li>
+              <li>✓ Timeline entries ordered correctly</li>
+              <li>✓ Summary accurately describes incident</li>
+            </ul>
+          </div>
+          <button
+            onClick={async () => {
+              // Validation
+              const unverifiedQuotes = quotes.filter(q => !q.verified);
+              const quotesWithoutSources = quotes.filter(q => !q.source_id);
+              const keyFields = ['victim_name', 'incident_date', 'city', 'state', 'summary'];
+              const unlinkedFields = keyFields.filter(field => {
+                const value = (editedIncident as any)[field] || (incident as any)?.[field];
+                return value && !fieldQuoteMap[field];
+              });
+
+              // Check field verification (same logic as badge)
+              const fieldsWithData = INCIDENT_FIELDS.filter(f => {
+                const val = editedIncident[f.key];
+                if (val === null || val === undefined || val === '') return false;
+                // Check for date placeholders
+                if (typeof val === 'string' && (val === 'mm/dd/yyyy' || val === 'MM/DD/YYYY' || val.match(/^[mMdDyY\/]+$/))) return false;
+                return true;
+              });
+              
+              // Add incident_type if it has a value
+              const allFieldsToCheck = [...fieldsWithData];
+              if (editedIncident.incident_type) {
+                allFieldsToCheck.push({ key: 'incident_type', label: 'Incident Type', type: 'select' });
+              }
+              
+              const unverifiedFieldsList = allFieldsToCheck.filter(f => !verifiedFields[f.key]);
+
+              // Check sources, quotes, timeline verification
+              const unverifiedSourcesList = sources.filter(s => !verifiedSources[s.id]);
+              const unverifiedQuotesList = quotes.filter(q => !verifiedQuotes[q.id]);
+              const unverifiedTimelineList = timeline.filter(t => !verifiedTimeline[t.id]);
+
+              // DEBUG: Log all validation checks
+              console.log('=== VERIFICATION DEBUG ===');
+              console.log('Unverified quotes (q.verified === false):', unverifiedQuotes);
+              console.log('Quotes without sources:', quotesWithoutSources);
+              console.log('Unlinked fields:', unlinkedFields);
+              console.log('fieldQuoteMap:', fieldQuoteMap);
+              console.log('Unverified fields list:', unverifiedFieldsList.map(f => f.key));
+              console.log('verifiedFields:', verifiedFields);
+              console.log('Unverified sources:', unverifiedSourcesList);
+              console.log('Unverified quotes (checkboxes):', unverifiedQuotesList);
+              console.log('Unverified timeline:', unverifiedTimelineList);
+              console.log('=== END DEBUG ===');
+
+              let blockingErrors: string[] = [];
+              
+              // Critical issues that BLOCK submission
+              if (unlinkedFields.length > 0) {
+                blockingErrors.push(`Key fields missing quote links: ${unlinkedFields.join(', ')}`);
+              }
+              if (quotesWithoutSources.length > 0) {
+                blockingErrors.push(`${quotesWithoutSources.length} quote(s) lack source links`);
+              }
+              if (unverifiedQuotes.length > 0) {
+                blockingErrors.push(`${unverifiedQuotes.length} quote(s) are unverified (verified checkbox in database not checked)`);
+              }
+              
+              // Verification checkboxes are also BLOCKING for review submission
+              if (unverifiedFieldsList.length > 0) {
+                blockingErrors.push(`${unverifiedFieldsList.length} field(s) not checked: ${unverifiedFieldsList.map(f => f.label).join(', ')}`);
+              }
+              if (unverifiedSourcesList.length > 0) {
+                blockingErrors.push(`${unverifiedSourcesList.length} source(s) not checked`);
+              }
+              if (unverifiedQuotesList.length > 0) {
+                blockingErrors.push(`${unverifiedQuotesList.length} quote(s) not checked`);
+              }
+              if (unverifiedTimelineList.length > 0) {
+                blockingErrors.push(`${unverifiedTimelineList.length} timeline event(s) not checked`);
+              }
+
+              // Block if critical errors exist
+              if (blockingErrors.length > 0) {
+                let errorMsg = '❌ CANNOT VERIFY - Critical Issues:\n\n';
+                blockingErrors.forEach(e => {
+                  errorMsg += '• ' + e + '\n';
+                });
+                errorMsg += '\n';
+                
+                // Add helper text about Find buttons
+                if (unlinkedFields.length > 0) {
+                  errorMsg += '💡 Use the "Find Fields Missing Quotes" button below to locate fields that need quotes.\n';
+                }
+                if (quotesWithoutSources.length > 0) {
+                  errorMsg += '💡 Use the "Find Quotes Without Sources" button to locate quotes needing sources.\n';
+                }
+                if (unverifiedQuotes.length > 0) {
+                  errorMsg += '💡 Use the "Find Unverified Quotes" button to locate quotes with unchecked verified boxes.\n';
+                }
+                errorMsg += '\nFix these issues before verifying.';
+                
+                alert(errorMsg);
+                return; // Block submission
+              }
+
+              // Determine confirmation message based on verification status
+              const isFirstReview = incident.verification_status === 'pending';
+              const isSecondReview = incident.verification_status === 'first_review';
+              
+              // Check if current user did the first review
+              const currentUserId = session?.user?.id ? parseInt(session.user.id) : null;
+              const userRole = (session?.user as any)?.role;
+              const isAdmin = userRole === 'admin';
+              const didFirstReview = incident.first_verified_by === currentUserId;
+              
+              // Block if user did first review and is not admin
+              if (isSecondReview && didFirstReview && !isAdmin) {
+                alert('⛔ You cannot perform the second review on an incident you already reviewed.\n\nThis incident needs review by a different analyst to ensure quality.');
+                return;
+              }
+              
+              let confirmMsg = '';
+              if (isFirstReview) {
+                confirmMsg = 'Submit first review? This incident will await a second review before going public.';
+              } else if (isSecondReview) {
+                if (isAdmin && didFirstReview) {
+                  confirmMsg = '⚠️ ADMIN OVERRIDE: You are bypassing the two-analyst requirement.\n\nSubmit second review and publish?';
+                } else {
+                  confirmMsg = 'Submit second review and publish? This will make the incident publicly visible.';
+                }
+              } else {
+                confirmMsg = 'Update verification?';
+              }
+              
+              if (!confirm(confirmMsg)) return;
+
+              // Check if user is logged in
+              if (!currentUserId) {
+                alert('You must be logged in to submit a review');
+                return;
+              }
+
+              try {
+                setSaving(true);
+                const response = await fetch(`/api/incidents/${incident.id}/review`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ user_id: currentUserId })
+                });
+                
+                if (!response.ok) {
+                  const errorData = await response.json();
+                  throw new Error(errorData.error || 'Failed to submit review');
+                }
+                
+                const result = await response.json();
+                
+                // Show appropriate success message
+                if (result.verification_status === 'first_review') {
+                  alert('✅ First review submitted! This incident will await a second review before going public.');
+                } else if (result.verification_status === 'verified') {
+                  alert('✅ Second review complete! Incident is now publicly visible.');
+                }
+                
+                router.push('/dashboard');
+              } catch (err) {
+                alert('Failed to submit review: ' + (err instanceof Error ? err.message : 'Unknown error'));
+                console.error(err);
+              } finally {
+                setSaving(false);
+              }
+            }}
+            disabled={saving}
+            className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            {saving ? 'Submitting...' : 
+             incident.verification_status === 'pending' ? 'Submit First Review' :
+             incident.verification_status === 'first_review' ? 'Submit Second Review & Publish' :
+             'Update Verification'}
+          </button>
+          
+          {/* Show lock notice if user did first review */}
+          {incident.verification_status === 'first_review' && 
+           incident.first_verified_by === (session?.user?.id ? parseInt(session.user.id) : null) &&
+           (session?.user as any)?.role !== 'admin' && (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                <strong>🔒 Locked:</strong> You completed the first review. This incident requires a second review by a different analyst.
+              </p>
+            </div>
+          )}
+          
+          {/* Show admin override notice */}
+          {incident.verification_status === 'first_review' && 
+           incident.first_verified_by === (session?.user?.id ? parseInt(session.user.id) : null) &&
+           (session?.user as any)?.role === 'admin' && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>👑 Admin Override:</strong> You can bypass the two-analyst requirement and complete both reviews.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -173,7 +173,8 @@ export async function getIncidentById(id: number | string, includeUnverified: bo
   const client = await pool.connect();
   try {
     const idColumn = typeof id === 'number' ? 'id' : 'incident_id';
-    // SECURITY: Only return double-verified incidents by default (for public access)
+    // SECURITY: Only return publicly verified incidents by default (for public access)
+    // includeUnverified allows analysts to see pending/first_review incidents
     const verifiedCondition = includeUnverified ? '' : "AND verification_status = 'verified'";
     const result = await client.query(`
       SELECT * FROM incidents WHERE ${idColumn} = $1 ${verifiedCondition}
@@ -381,6 +382,7 @@ export async function updateIncident(id: number, updates: Partial<Incident>): Pr
       subject_occupation: updates.subject?.occupation,
       summary: updates.summary,
       verified: updates.verified,
+      verification_status: updates.verified ? 'verified' : undefined,
       verification_notes: updates.verification_notes,
       tags: updates.tags,
     };
@@ -421,6 +423,113 @@ export async function updateIncident(id: number, updates: Partial<Incident>): Pr
     }
 
     await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+// ============================================
+// TWO-ANALYST REVIEW WORKFLOW
+// ============================================
+
+export async function submitIncidentReview(
+  incidentId: number,
+  userId: number,
+  userRole?: string
+): Promise<{ success: boolean; verification_status?: string; message?: string; error?: string }> {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    // Get current incident status
+    const incidentResult = await client.query(`
+      SELECT verification_status, first_review_by, verified
+      FROM incidents
+      WHERE id = $1
+    `, [incidentId]);
+    
+    if (incidentResult.rows.length === 0) {
+      return { success: false, error: 'Incident not found' };
+    }
+    
+    const incident = incidentResult.rows[0];
+    const currentStatus = incident.verification_status;
+    const firstReviewBy = incident.first_review_by;
+    const isAdmin = userRole === 'admin';
+    
+    // Handle workflow based on current status
+    if (currentStatus === 'pending') {
+      // First review
+      await client.query(`
+        UPDATE incidents
+        SET 
+          verification_status = 'first_review',
+          first_review_by = $1,
+          first_review_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `, [userId, incidentId]);
+      
+      await client.query('COMMIT');
+      return {
+        success: true,
+        verification_status: 'first_review',
+        message: 'First review submitted successfully'
+      };
+      
+    } else if (currentStatus === 'first_review') {
+      // Second review - check if same user (unless admin)
+      if (firstReviewBy === userId && !isAdmin) {
+        await client.query('ROLLBACK');
+        return {
+          success: false,
+          error: 'You cannot submit the second review for an incident you already reviewed. Another analyst must complete the second review.'
+        };
+      }
+      
+      // Second review by different analyst (or admin override) - publish
+      await client.query(`
+        UPDATE incidents
+        SET 
+          verification_status = 'verified',
+          second_review_by = $1,
+          second_review_at = CURRENT_TIMESTAMP,
+          verified = true,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `, [userId, incidentId]);
+      
+      await client.query('COMMIT');
+      return {
+        success: true,
+        verification_status: 'verified',
+        message: isAdmin && firstReviewBy === userId 
+          ? 'Admin override: Second review complete - incident is now public'
+          : 'Second review complete - incident is now public'
+      };
+      
+    } else {
+      // Already verified - allow update
+      await client.query(`
+        UPDATE incidents
+        SET 
+          second_review_by = $1,
+          second_review_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `, [userId, incidentId]);
+      
+      await client.query('COMMIT');
+      return {
+        success: true,
+        verification_status: 'verified',
+        message: 'Verification updated'
+      };
+    }
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -587,9 +696,65 @@ export async function getIncidentTimeline(incidentId: number): Promise<TimelineE
   const client = await pool.connect();
   try {
     const result = await client.query(`
-      SELECT * FROM incident_timeline WHERE incident_id = $1 ORDER BY COALESCE(sequence_order, 0), event_date
+      SELECT 
+        it.*,
+        q.quote_text,
+        q.source_id as quote_source_id,
+        s.title as source_title,
+        s.url as source_url
+      FROM incident_timeline it
+      LEFT JOIN incident_quotes q ON it.quote_id = q.id
+      LEFT JOIN incident_sources s ON q.source_id = s.id
+      WHERE it.incident_id = $1 
+      ORDER BY COALESCE(it.sequence_order, 0), it.event_date
     `, [incidentId]);
     return result.rows.map(formatTimelineEntry);
+  } finally {
+    client.release();
+  }
+}
+
+// Get field-quote mappings for an incident (which quotes support which fields)
+export async function getIncidentFieldQuoteMappings(incidentId: number): Promise<Record<string, { quote_id: number; quote_text: string; source_id: number; source_title?: string; source_url?: string }[]>> {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(`
+      SELECT 
+        qfl.field_name,
+        qfl.quote_id,
+        q.quote_text,
+        q.source_id,
+        s.title as source_title,
+        s.url as source_url
+      FROM quote_field_links qfl
+      JOIN incident_quotes q ON qfl.quote_id = q.id
+      JOIN incident_sources s ON q.source_id = s.id
+      WHERE qfl.incident_id = $1
+      ORDER BY qfl.field_name, qfl.quote_id
+    `, [incidentId]);
+    
+    // Group by field_name
+    const mappings: Record<string, { quote_id: number; quote_text: string; source_id: number; source_title?: string; source_url?: string }[]> = {};
+    for (const row of result.rows) {
+      const fieldName = row.field_name as string;
+      if (!mappings[fieldName]) {
+        mappings[fieldName] = [];
+      }
+      mappings[fieldName].push({
+        quote_id: row.quote_id as number,
+        quote_text: row.quote_text as string,
+        source_id: row.source_id as number,
+        source_title: row.source_title as string | undefined,
+        source_url: row.source_url as string | undefined,
+      });
+    }
+    // Keep victim_name and subject_name in sync for evidence lookups
+    if (mappings.victim_name && !mappings.subject_name) {
+      mappings.subject_name = mappings.victim_name;
+    } else if (mappings.subject_name && !mappings.victim_name) {
+      mappings.victim_name = mappings.subject_name;
+    }
+    return mappings;
   } finally {
     client.release();
   }
@@ -601,6 +766,7 @@ export async function getIncidentTimeline(incidentId: number): Promise<TimelineE
 
 async function buildIncidentFromRow(client: PoolClient, row: Record<string, unknown>): Promise<Incident> {
   const id = row.id as number;
+  const victimName = (row as any).victim_name as string | undefined;
 
   // Get agencies
   const agenciesResult = await client.query(`
@@ -626,6 +792,9 @@ async function buildIncidentFromRow(client: PoolClient, row: Record<string, unkn
   // Get timeline
   const timeline = await getIncidentTimeline(id);
 
+  // Get field-quote mappings
+  const fieldQuoteMappings = await getIncidentFieldQuoteMappings(id);
+
   const incident: Incident = {
     id,
     incident_id: row.incident_id as string,
@@ -645,7 +814,7 @@ async function buildIncidentFromRow(client: PoolClient, row: Record<string, unkn
       } : undefined,
     },
     subject: {
-      name: row.subject_name as string | undefined,
+      name: (row.subject_name as string | undefined) || victimName,
       name_public: (row.subject_name_public as boolean) ?? false,
       age: row.subject_age as number | undefined,
       gender: row.subject_gender as string | undefined,
@@ -655,6 +824,7 @@ async function buildIncidentFromRow(client: PoolClient, row: Record<string, unkn
       years_in_us: row.subject_years_in_us as number | undefined,
       family_in_us: row.subject_family_in_us as string | undefined,
     },
+    victim_name: victimName || (row.subject_name as string | undefined),
     summary: (row.summary as string) || '',
     agencies_involved: agenciesResult.rows.map((r: { agency: string }) => r.agency as AgencyType),
     violations_alleged: violationsResult.rows.map((r: { violation_type: string }) => r.violation_type as ViolationType),
@@ -668,6 +838,7 @@ async function buildIncidentFromRow(client: PoolClient, row: Record<string, unkn
       media_coverage_level: row.outcome_media_coverage as Outcome['media_coverage_level'],
     } : undefined,
     verified: (row.verified as boolean) ?? false,
+    verification_status: row.verification_status as 'verified' | 'pending' | 'first_review' | undefined,
     verification_notes: row.verification_notes as string | undefined,
     tags: row.tags as string[] | undefined,
     created_at: row.created_at ? formatDate(row.created_at) : undefined,
@@ -676,6 +847,7 @@ async function buildIncidentFromRow(client: PoolClient, row: Record<string, unkn
     sources,
     quotes,
     timeline,
+    field_quote_map: fieldQuoteMappings,
   };
 
   // Add type-specific details
@@ -775,7 +947,7 @@ function formatQuote(row: Record<string, unknown>): IncidentQuote {
 }
 
 function formatTimelineEntry(row: Record<string, unknown>): TimelineEntry {
-  return {
+  const entry: TimelineEntry = {
     id: row.id as number,
     date: row.event_date ? formatDate(row.event_date) : undefined,
     time: row.event_time as string | undefined,
@@ -784,6 +956,29 @@ function formatTimelineEntry(row: Record<string, unknown>): TimelineEntry {
     quote_id: row.quote_id as number | undefined,
     sequence_order: row.sequence_order as number | undefined,
   };
+  
+  // Add quote text and source info if available (from JOIN)
+  if (row.quote_text) {
+    entry.quote = {
+      id: row.quote_id as number,
+      quote_text: row.quote_text as string,
+      source_id: row.quote_source_id as number | undefined,
+      verified: false, // default, not from this query
+      category: undefined,
+    } as any; // Allow partial quote for display purposes
+    
+    if (row.source_title || row.source_url) {
+      entry.source = {
+        id: row.quote_source_id as number,
+        title: row.source_title as string || '',
+        url: row.source_url as string || '',
+        source_type: 'news',
+        source_priority: 'secondary',
+      } as any; // Allow partial source for display purposes
+    }
+  }
+  
+  return entry;
 }
 
 // ============================================

@@ -25,6 +25,9 @@ export function SuggestEditModal({
 }: SuggestEditModalProps) {
   const [suggestedValue, setSuggestedValue] = useState(currentValue || '');
   const [reason, setReason] = useState('');
+  const [supportingQuote, setSupportingQuote] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [sourceTitle, setSourceTitle] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -46,7 +49,10 @@ export function SuggestEditModal({
         body: JSON.stringify({
           fieldName,
           suggestedValue,
-          reason
+          reason,
+          supportingQuote: supportingQuote || undefined,
+          sourceUrl: sourceUrl || undefined,
+          sourceTitle: sourceTitle || undefined
         })
       });
 
@@ -149,12 +155,57 @@ export function SuggestEditModal({
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}
-                placeholder="Explain why this change should be made (e.g., cite a source)..."
+                placeholder="Explain why this change should be made..."
                 className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Providing a reason with source links helps analysts approve your suggestion faster.
+            </div>
+
+            <div className="mb-4 p-4 border border-blue-200 rounded bg-blue-50">
+              <h3 className="text-sm font-semibold text-gray-900 mb-2">Supporting Evidence (Recommended)</h3>
+              <p className="text-xs text-gray-600 mb-3">
+                Providing evidence helps analysts verify and approve your suggestion faster.
               </p>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Quote from Source
+                  </label>
+                  <textarea
+                    value={supportingQuote}
+                    onChange={(e) => setSupportingQuote(e.target.value)}
+                    rows={2}
+                    placeholder="Paste the relevant quote that supports this edit..."
+                    className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Source URL
+                  </label>
+                  <input
+                    type="url"
+                    value={sourceUrl}
+                    onChange={(e) => setSourceUrl(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Source Title/Description
+                  </label>
+                  <input
+                    type="text"
+                    value={sourceTitle}
+                    onChange={(e) => setSourceTitle(e.target.value)}
+                    placeholder="e.g., ICE Press Release, News Article Title..."
+                    className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
             </div>
 
             {error && (

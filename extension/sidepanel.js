@@ -69,6 +69,7 @@ let userRole = null;  // For analyst workflow
 let reviewQueue = [];  // Cases awaiting review
 let reviewMode = false;  // Are we reviewing an existing incident?
 let reviewIncidentId = null;  // ID of incident being reviewed
+let verifiedFields = {};  // Track which fields have been verified in review mode
 
 // Guest submission rate limit tracking
 let guestSubmissions = [];  // Array of timestamps
@@ -3421,14 +3422,22 @@ function renderSources() {
     return;
   }
   
-  elements.sourceList.innerHTML = sources.map((source, index) => `
+  elements.sourceList.innerHTML = sources.map((source, index) => {
+    const priorityColor = source.priority === 'primary' ? '#10b981' : source.priority === 'tertiary' ? '#9ca3af' : '#3b82f6';
+    return `
     <div class="source-item" style="display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 4px;">
       <a href="${escapeHtml(source.url)}" target="_blank" title="${escapeHtml(source.title || '')}" style="flex: 1; color: #2563eb; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-        ${escapeHtml(truncate(source.title || source.url, 40))}
+        ${escapeHtml(truncate(source.title || source.url, 30))}
       </a>
+      <select onchange="updateSourcePriority(${index}, this.value)" style="padding: 2px 4px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px; background: ${priorityColor}; color: white;">
+        <option value="primary" ${source.priority === 'primary' ? 'selected' : ''}>Primary</option>
+        <option value="secondary" ${source.priority === 'secondary' || !source.priority ? 'selected' : ''}>Secondary</option>
+        <option value="tertiary" ${source.priority === 'tertiary' ? 'selected' : ''}>Tertiary</option>
+      </select>
       <button class="btn btn-sm btn-danger" onclick="deleteSource(${index})" title="Delete source and all associated quotes">✕</button>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 // Delete source and all associated quotes
@@ -3468,6 +3477,14 @@ function truncate(text, maxLength) {
   return text.substring(0, maxLength) + '...';
 }
 
+// Update source priority
+function updateSourcePriority(index, priority) {
+  if (sources[index]) {
+    sources[index].priority = priority;
+    renderSources();
+  }
+}
+
 // Add current page as source
 function addCurrentPageAsSource() {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -3477,6 +3494,7 @@ function addCurrentPageAsSource() {
         sources.push({
           url: tabs[0].url,
           title: tabs[0].title,
+          priority: 'secondary',
           addedAt: new Date().toISOString()
         });
         renderSources();
@@ -3733,7 +3751,8 @@ async function performSave(isGuest) {
           url: s.url,
           title: s.title,
           publication: s.publication || undefined,
-          source_type: 'news_article'
+          source_type: 'news_article',
+          source_priority: s.priority || 'secondary'
         }));
       }
       

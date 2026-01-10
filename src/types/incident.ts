@@ -354,6 +354,7 @@ export interface Incident {
   
   // Who
   subject: Subject;
+  victim_name?: string | null;
   
   // What
   summary: string;               // Brief factual description
@@ -382,12 +383,14 @@ export interface Incident {
   timeline?: TimelineEntry[];
   quotes?: IncidentQuote[];
   sources?: IncidentSource[];
+  field_quote_map?: Record<string, { quote_id: number; quote_text: string; source_id: number; source_title?: string; source_url?: string }[]>;
   
   // Outcome
   outcome?: Outcome;
   
   // Metadata
   verified: boolean;
+  verification_status?: 'pending' | 'first_review' | 'verified';  // Analyst workflow status
   verification_notes?: string;
   related_incident_ids?: string[];  // Link related incidents
   tags?: string[];

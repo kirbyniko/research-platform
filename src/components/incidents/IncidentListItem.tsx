@@ -70,7 +70,7 @@ export function IncidentListItem({ incident }: IncidentListItemProps) {
           </div>
           
           <h3 className="font-medium text-gray-900">
-            {incident.subject?.name || 'Name withheld'}
+            {incident.subject?.name || incident.victim_name || 'Name withheld'}
             {incident.subject?.age && (
               <span className="text-gray-500 font-normal ml-1">
                 ({incident.subject.age})

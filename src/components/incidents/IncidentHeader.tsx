@@ -1,7 +1,66 @@
+'use client';
+
 import type { Incident } from '@/types/incident';
+import { useState } from 'react';
+import { useSourceVisibility } from './SourceToggle';
 
 interface IncidentHeaderProps {
   incident: Incident;
+}
+
+// Mini inline evidence display for header fields
+function InlineEvidence({ 
+  fieldName, 
+  fieldQuoteMap 
+}: { 
+  fieldName: string; 
+  fieldQuoteMap?: Record<string, { quote_id: number; quote_text: string; source_id: number; source_title?: string; source_url?: string }[]>;
+}) {
+  const [show, setShow] = useState(false);
+  const { showSources } = useSourceVisibility();
+  const evidence = fieldQuoteMap?.[fieldName];
+  const hasEvidence = evidence && evidence.length > 0;
+
+  if (!hasEvidence || !showSources) return null;
+
+  return (
+    <span className="relative inline-block ml-1">
+      <button
+        onClick={(e) => { e.preventDefault(); setShow(!show); }}
+        className="text-xs text-blue-600 hover:text-blue-800 underline cursor-pointer"
+        title="View source evidence"
+      >
+        [{evidence.length}]
+      </button>
+      {show && (
+        <div className="absolute left-0 top-full mt-1 w-96 max-w-screen-sm z-50 p-3 bg-white border-2 border-blue-300 rounded shadow-lg text-xs space-y-2">
+          <button 
+            onClick={() => setShow(false)} 
+            className="absolute top-1 right-1 text-gray-400 hover:text-gray-600 font-bold"
+          >
+            ×
+          </button>
+          {evidence.map((ev, idx) => (
+            <div key={idx} className="space-y-1">
+              <div className="text-gray-700 italic text-sm">
+                &ldquo;{ev.quote_text.substring(0, 200)}{ev.quote_text.length > 200 ? '...' : ''}&rdquo;
+              </div>
+              {ev.source_url && (
+                <a 
+                  href={ev.source_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-700 hover:text-blue-900 underline block"
+                >
+                  📄 {ev.source_title || 'View source'}
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </span>
+  );
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -9,6 +68,7 @@ const TYPE_LABELS: Record<string, string> = {
   death_during_operation: 'Death During Operation',
   death_at_protest: 'Death at Protest',
   death: 'Death',
+  detention_death: 'Detention Death',
   shooting: 'Shooting',
   excessive_force: 'Excessive Force',
   injury: 'Injury',
@@ -28,6 +88,7 @@ const TYPE_COLORS: Record<string, string> = {
   death_during_operation: 'bg-red-100 text-red-800 border-red-200',
   death_at_protest: 'bg-red-100 text-red-800 border-red-200',
   death: 'bg-red-100 text-red-800 border-red-200',
+  detention_death: 'bg-red-100 text-red-800 border-red-200',
   shooting: 'bg-red-200 text-red-900 border-red-300',
   excessive_force: 'bg-orange-100 text-orange-800 border-orange-200',
   injury: 'bg-orange-100 text-orange-800 border-orange-200',
@@ -53,6 +114,9 @@ export function IncidentHeader({ incident }: IncidentHeaderProps) {
     incident.location?.country !== 'USA' ? incident.location?.country : null,
   ].filter(Boolean).join(', ') || 'Location unknown';
 
+  const personName = incident.subject?.name || incident.victim_name || 'Name withheld';
+  const nameEvidenceField = incident.field_quote_map?.victim_name ? 'victim_name' : 'subject_name';
+
   return (
     <header className="border-b border-gray-200 pb-6">
       <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -71,33 +135,68 @@ export function IncidentHeader({ incident }: IncidentHeaderProps) {
       </div>
       
       <h1 className="text-3xl font-bold text-gray-900 mb-2">
-        {incident.subject?.name || 'Name withheld'}
+        {personName}
+        <InlineEvidence fieldName={nameEvidenceField} fieldQuoteMap={incident.field_quote_map} />
         {incident.subject?.age && (
           <span className="text-gray-500 font-normal text-2xl ml-2">
-            ({incident.subject.age})
+            ({incident.subject.age}
+            <InlineEvidence fieldName="subject_age" fieldQuoteMap={incident.field_quote_map} />
+            )
           </span>
         )}
       </h1>
       
       <div className="flex flex-wrap gap-4 text-sm text-gray-600">
         <div className="flex items-center gap-1">
-          <span className="text-red-700 font-semibold">{incident.date}</span>
+          <span className="text-red-700 font-semibold">
+            {incident.date}
+            <InlineEvidence fieldName="incident_date" fieldQuoteMap={incident.field_quote_map} />
+          </span>
           {incident.date_precision !== 'exact' && (
             <span className="text-gray-400">({incident.date_precision})</span>
           )}
         </div>
-        <div>{location}</div>
+        <div>
+          {incident.location?.facility && (
+            <>
+              {incident.location.facility}
+              <InlineEvidence fieldName="facility" fieldQuoteMap={incident.field_quote_map} />
+              {(incident.location.city || incident.location.state) && ', '}
+            </>
+          )}
+          {incident.location?.city && (
+            <>
+              {incident.location.city}
+              <InlineEvidence fieldName="city" fieldQuoteMap={incident.field_quote_map} />
+              {incident.location.state && ', '}
+            </>
+          )}
+          {incident.location?.state && (
+            <>
+              {incident.location.state}
+              <InlineEvidence fieldName="state" fieldQuoteMap={incident.field_quote_map} />
+            </>
+          )}
+          {!incident.location?.facility && !incident.location?.city && !incident.location?.state && 'Location unknown'}
+        </div>
         {incident.subject?.nationality && (
-          <div>Nationality: {incident.subject.nationality}</div>
+          <div>
+            Nationality: {incident.subject.nationality}
+            <InlineEvidence fieldName="subject_nationality" fieldQuoteMap={incident.field_quote_map} />
+          </div>
         )}
         {incident.subject?.occupation && (
-          <div>Occupation: {incident.subject.occupation}</div>
+          <div>
+            Occupation: {incident.subject.occupation}
+            <InlineEvidence fieldName="subject_occupation" fieldQuoteMap={incident.field_quote_map} />
+          </div>
         )}
       </div>
       
       {incident.summary && (
         <p className="mt-4 text-gray-700 leading-relaxed">
           {incident.summary}
+          <InlineEvidence fieldName="summary" fieldQuoteMap={incident.field_quote_map} />
         </p>
       )}
       

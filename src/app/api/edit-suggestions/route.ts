@@ -58,11 +58,11 @@ export async function GET(request: NextRequest) {
     // Get stats
     const statsResult = await pool.query(`
       SELECT 
-        COUNT(*) FILTER (WHERE status = 'pending') as pending,
-        COUNT(*) FILTER (WHERE status = 'first_review') as first_review,
-        COUNT(*) FILTER (WHERE status = 'approved') as approved,
-        COUNT(*) FILTER (WHERE status = 'rejected') as rejected,
-        COUNT(*) as total
+        COUNT(*) FILTER (WHERE status = 'pending')::int as pending,
+        COUNT(*) FILTER (WHERE status = 'first_review')::int as first_review,
+        COUNT(*) FILTER (WHERE status = 'approved')::int as approved,
+        COUNT(*) FILTER (WHERE status = 'rejected')::int as rejected,
+        COUNT(*)::int as total
       FROM edit_suggestions
     `);
 

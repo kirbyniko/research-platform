@@ -28,6 +28,9 @@ interface EditSuggestion {
   current_value: string | null;
   suggested_value: string;
   reason: string | null;
+  supporting_quote: string | null;
+  source_url: string | null;
+  source_title: string | null;
   status: 'pending' | 'first_review' | 'approved' | 'rejected';
   incident_victim_name: string;
   incident_date: string;
@@ -84,6 +87,16 @@ export default function DashboardPage() {
   const [showEditReviewModal, setShowEditReviewModal] = useState(false);
   const [selectedEdit, setSelectedEdit] = useState<EditSuggestion | null>(null);
   const [editReviewNotes, setEditReviewNotes] = useState('');
+  
+  // Quote/source selection for edit approval
+  const [availableQuotes, setAvailableQuotes] = useState<any[]>([]);
+  const [availableSources, setAvailableSources] = useState<any[]>([]);
+  const [selectedQuoteId, setSelectedQuoteId] = useState<number | null>(null);
+  const [selectedSourceId, setSelectedSourceId] = useState<number | null>(null);
+  const [loadingQuotes, setLoadingQuotes] = useState(false);
+  const [newQuoteText, setNewQuoteText] = useState('');
+  const [newSourceUrl, setNewSourceUrl] = useState('');
+  const [newSourceTitle, setNewSourceTitle] = useState('');
 
   useEffect(() => {
     checkAuth();
@@ -182,6 +195,14 @@ export default function DashboardPage() {
   }
 
   async function handleEditReview(edit: EditSuggestion, approve: boolean) {
+    // If approving, require some form of evidence: selected quote OR new quote+source OR user-provided
+    const hasUserProvidedEvidence = !!(edit.supporting_quote && edit.source_url);
+    const hasNewEvidence = !!(newQuoteText && newSourceUrl);
+    if (approve && !hasUserProvidedEvidence && !selectedQuoteId && !hasNewEvidence) {
+      setError('Provide evidence: select a quote, or enter a new quote and source.');
+      return;
+    }
+
     setReviewingEditId(edit.id);
     try {
       const res = await fetch(`/api/edit-suggestions/${edit.id}/review`, {
@@ -190,6 +211,10 @@ export default function DashboardPage() {
         body: JSON.stringify({
           approved: approve,
           notes: editReviewNotes || undefined,
+          quote_id: approve ? selectedQuoteId : undefined,
+          new_quote_text: approve && hasNewEvidence ? newQuoteText : undefined,
+          new_source_url: approve && hasNewEvidence ? newSourceUrl : undefined,
+          new_source_title: approve && hasNewEvidence ? newSourceTitle || undefined : undefined,
         }),
       });
       
@@ -197,10 +222,19 @@ export default function DashboardPage() {
         setShowEditReviewModal(false);
         setEditReviewNotes('');
         setSelectedEdit(null);
+        setSelectedQuoteId(null);
+        setSelectedSourceId(null);
+        setAvailableQuotes([]);
+        setAvailableSources([]);
+        setNewQuoteText('');
+        setNewSourceUrl('');
+        setNewSourceTitle('');
+        setError(''); // Clear any previous errors
         fetchEditSuggestions();
       } else {
         const data = await res.json();
         setError(data.error || 'Review failed');
+        // Don't close modal so user can see the error
       }
     } catch {
       setError('Review failed');
@@ -209,10 +243,30 @@ export default function DashboardPage() {
     }
   }
 
-  function openEditReviewModal(edit: EditSuggestion) {
+  async function openEditReviewModal(edit: EditSuggestion) {
     setSelectedEdit(edit);
     setEditReviewNotes('');
+    setSelectedQuoteId(null);
+    setSelectedSourceId(null);
+    setNewQuoteText('');
+    setNewSourceUrl('');
+    setNewSourceTitle('');
     setShowEditReviewModal(true);
+
+    // Fetch quotes and sources via verify-field API (provides both)
+    setLoadingQuotes(true);
+    try {
+      const res = await fetch(`/api/incidents/${edit.incident_id}/verify-field`);
+      if (res.ok) {
+        const data = await res.json();
+        setAvailableQuotes(data.quotes || []);
+        setAvailableSources(data.sources || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch quotes/sources:', error);
+    } finally {
+      setLoadingQuotes(false);
+    }
   }
 
   function openVerifyModal(incident: Incident) {
@@ -257,8 +311,8 @@ export default function DashboardPage() {
     );
   }
 
-  const totalCaseReviews = stats ? stats.pending + stats.first_review : 0;
-  const totalEditReviews = editStats ? editStats.pending + editStats.first_review : 0;
+  const totalCaseReviews = stats ? Number(stats.pending) + Number(stats.first_review) : 0;
+  const totalEditReviews = editStats ? Number(editStats.pending) + Number(editStats.first_review) : 0;
 
   return (
     <div>
@@ -421,7 +475,7 @@ export default function DashboardPage() {
                     href={`/dashboard/review/${incident.id}`}
                     className="px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 text-center"
                   >
-                    Review Fields
+                    {incident.verification_status === 'first_review' && incident.first_verified_by_email === user?.email && user?.role !== 'admin' ? 'View (Locked)' : 'Review Fields'}
                   </Link>
                   
                   <Link
@@ -432,8 +486,8 @@ export default function DashboardPage() {
                   </Link>
                   
                   {incident.verification_status === 'first_review' && incident.first_verified_by_email === user?.email && (
-                    <span className="px-3 py-2 text-xs text-gray-500 text-center">
-                      Awaiting another analyst
+                    <span className="px-3 py-2 text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded text-center">
+                      {user?.role === 'admin' ? '👑 Admin Can Override' : '🔒 Awaiting 2nd Analyst'}
                     </span>
                   )}
                 </div>
@@ -641,7 +695,7 @@ export default function DashboardPage() {
                       </Link>
                       
                       {(edit.status === 'pending' || 
-                        (edit.status === 'first_review' && edit.first_reviewed_by_email !== user?.email)) && (
+                        (edit.status === 'first_review' && (edit.first_reviewed_by_email !== user?.email || user?.role === 'admin'))) && (
                         <button
                           onClick={() => openEditReviewModal(edit)}
                           disabled={reviewingEditId === edit.id}
@@ -651,9 +705,15 @@ export default function DashboardPage() {
                         </button>
                       )}
                       
-                      {edit.status === 'first_review' && edit.first_reviewed_by_email === user?.email && (
+                      {edit.status === 'first_review' && edit.first_reviewed_by_email === user?.email && user?.role !== 'admin' && (
                         <span className="px-3 py-2 text-xs text-gray-500 text-center">
                           Awaiting another analyst
+                        </span>
+                      )}
+                      
+                      {edit.status === 'first_review' && edit.first_reviewed_by_email === user?.email && user?.role === 'admin' && (
+                        <span className="px-3 py-2 text-xs text-blue-600 text-center">
+                          Ready for 2nd review (admin override)
                         </span>
                       )}
                     </div>
@@ -666,7 +726,7 @@ export default function DashboardPage() {
           {/* Edit Review Modal */}
           {showEditReviewModal && selectedEdit && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="p-6">
                   <h2 className="text-xl font-bold mb-4">Review Edit Suggestion</h2>
                   
@@ -695,6 +755,129 @@ export default function DashboardPage() {
                         <p className="text-gray-700">{selectedEdit.reason}</p>
                       </div>
                     )}
+                    
+                    {/* User-provided evidence */}
+                    {(selectedEdit.supporting_quote || selectedEdit.source_url) && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <p className="text-xs font-medium text-green-700 mb-2">✓ Evidence Provided by User</p>
+                        {selectedEdit.supporting_quote && (
+                          <div className="bg-green-50 p-2 rounded mb-2">
+                            <p className="text-xs text-gray-600 mb-1">Quote:</p>
+                            <p className="text-sm text-gray-800">{selectedEdit.supporting_quote}</p>
+                          </div>
+                        )}
+                        {selectedEdit.source_url && (
+                          <div className="text-xs">
+                            <span className="text-gray-600">Source: </span>
+                            <a href={selectedEdit.source_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                              {selectedEdit.source_title || selectedEdit.source_url}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Quote Selection */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-2">
+                      Supporting Quote {!(selectedEdit.supporting_quote && selectedEdit.source_url) && <span className="text-red-600">*</span>}
+                    </label>
+                    {(selectedEdit.supporting_quote && selectedEdit.source_url) ? (
+                      <div className="bg-green-50 border border-green-200 rounded p-3 text-sm">
+                        <p className="text-green-700 font-medium mb-1">
+                          ✓ User provided evidence - no additional quote needed
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          The submitter included a quote and source. You can optionally link to an existing quote, or approve with the user-provided evidence.
+                        </p>
+                      </div>
+                    ) : loadingQuotes ? (
+                      <p className="text-sm text-gray-500">Loading quotes...</p>
+                    ) : availableQuotes.length > 0 ? (
+                      <select
+                        value={selectedQuoteId || ''}
+                        onChange={(e) => {
+                          const quoteId = e.target.value ? parseInt(e.target.value) : null;
+                          setSelectedQuoteId(quoteId);
+                          // Auto-select the source for this quote
+                          if (quoteId) {
+                            const quote = availableQuotes.find(q => q.id === quoteId);
+                            if (quote) {
+                              setSelectedSourceId(quote.source_id);
+                            }
+                          }
+                        }}
+                        className="w-full border border-gray-300 rounded p-2 text-sm"
+                      >
+                        <option value="">Select a quote that supports this edit...</option>
+                        {availableQuotes.map(quote => (
+                          <option key={quote.id} value={quote.id}>
+                            {quote.quote_text.substring(0, 100)}...
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="text-sm text-amber-600">
+                        No quotes available for this incident. 
+                        <Link href={`/incidents/${selectedEdit.incident_id}`} className="underline ml-1">
+                          Add quotes first
+                        </Link>
+                      </p>
+                    )}
+                    {selectedQuoteId && (
+                      <div className="mt-2 p-3 bg-blue-50 rounded text-sm">
+                        <p className="text-xs text-gray-600 mb-1">Selected quote:</p>
+                        <p className="text-gray-800">
+                          {availableQuotes.find(q => q.id === selectedQuoteId)?.quote_text}
+                        </p>
+                        {selectedSourceId && (
+                          <p className="text-xs text-gray-600 mt-2">
+                            Source: {availableSources.find(s => s.id === selectedSourceId)?.title || 'Unknown'}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Or add new evidence */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-2">Or add new evidence</label>
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Quote Text</p>
+                        <textarea
+                          value={newQuoteText}
+                          onChange={(e) => setNewQuoteText(e.target.value)}
+                          rows={2}
+                          placeholder="Paste the quote that supports this edit..."
+                          className="w-full border border-gray-300 rounded p-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Source URL</p>
+                        <input
+                          type="url"
+                          value={newSourceUrl}
+                          onChange={(e) => setNewSourceUrl(e.target.value)}
+                          placeholder="https://..."
+                          className="w-full border border-gray-300 rounded p-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Source Title (optional)</p>
+                        <input
+                          type="text"
+                          value={newSourceTitle}
+                          onChange={(e) => setNewSourceTitle(e.target.value)}
+                          placeholder="e.g., Publication or doc title"
+                          className="w-full border border-gray-300 rounded p-2 text-sm"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        We will save this source and quote to the incident and link it to the field.
+                      </p>
+                    </div>
                   </div>
                   
                   <div className="mb-4">
@@ -710,8 +893,8 @@ export default function DashboardPage() {
                   <div className="flex gap-3">
                     <button
                       onClick={() => handleEditReview(selectedEdit, true)}
-                      disabled={reviewingEditId !== null}
-                      className="flex-1 bg-green-600 text-white py-2 rounded hover:bg-green-700 disabled:opacity-50"
+                      disabled={reviewingEditId !== null || (!selectedQuoteId && !(selectedEdit.supporting_quote && selectedEdit.source_url))}
+                      className="flex-1 bg-green-600 text-white py-2 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {reviewingEditId ? 'Processing...' : 'Approve'}
                     </button>
@@ -734,6 +917,11 @@ export default function DashboardPage() {
                   {selectedEdit.status === 'pending' && (
                     <p className="text-xs text-gray-500 mt-3 text-center">
                       This edit will need a second approval from another analyst before being applied.
+                    </p>
+                  )}
+                  {!selectedQuoteId && !(selectedEdit.supporting_quote && selectedEdit.source_url) && (
+                    <p className="text-xs text-amber-600 mt-3 text-center">
+                      You must select a quote or have user-provided evidence to approve this edit
                     </p>
                   )}
                 </div>

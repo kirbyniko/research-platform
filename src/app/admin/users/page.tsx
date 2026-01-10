@@ -13,15 +13,55 @@ interface User {
   auth_provider: string;
   email_verified: boolean;
   created_at: string;
+  last_login?: string;
+}
+
+interface Activity {
+  id: number;
+  user_id: number;
+  user_email: string;
+  action: string;
+  incident_id: number | null;
+  details: any;
+  timestamp: string;
 }
 
 export default function UsersManagement() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
+  const [activity, setActivity] = useState<Activity[]>([]);
+  const [activeTab, setActiveTab] = useState<'users' | 'activity'>('users');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [updatingUserId, setUpdatingUserId] = useState<number | null>(null);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/admin/users');
+      if (!res.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      const data = await res.json();
+      setUsers(data.users || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchActivity = async () => {
+    try {
+      const res = await fetch('/api/admin/activity');
+      if (!res.ok) throw new Error('Failed to fetch activity');
+      const data = await res.json();
+      setActivity(data.activity);
+    } catch (err) {
+      console.error('Error fetching activity:', err);
+    }
+  };
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -40,23 +80,8 @@ export default function UsersManagement() {
     }
 
     fetchUsers();
+    fetchActivity();
   }, [status, session, router]);
-
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch('/api/users');
-      if (!res.ok) {
-        throw new Error('Failed to fetch users');
-      }
-      const data = await res.json();
-      setUsers(data.users || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load users');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const updateUserRole = async (userId: number, newRole: string) => {
     if (!confirm(`Are you sure you want to change this user's role to ${newRole}?`)) {
@@ -65,10 +90,10 @@ export default function UsersManagement() {
 
     setUpdatingUserId(userId);
     try {
-      const res = await fetch('/api/users', {
-        method: 'PATCH',
+      const res = await fetch(`/api/admin/users/${userId}/role`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, role: newRole }),
+        body: JSON.stringify({ role: newRole }),
       });
 
       if (!res.ok) {
@@ -115,7 +140,34 @@ export default function UsersManagement() {
           </div>
         )}
 
-        <div className="bg-white shadow overflow-hidden">
+        {/* Tabs */}
+        <div className="border-b border-gray-200 mb-6">
+          <div className="flex gap-4">
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`py-2 px-4 border-b-2 ${
+                activeTab === 'users' 
+                  ? 'border-black font-medium' 
+                  : 'border-transparent text-gray-500 hover:text-black'
+              }`}
+            >
+              Users ({users.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('activity')}
+              className={`py-2 px-4 border-b-2 ${
+                activeTab === 'activity' 
+                  ? 'border-black font-medium' 
+                  : 'border-transparent text-gray-500 hover:text-black'
+              }`}
+            >
+              Analyst Activity ({activity.length})
+            </button>
+          </div>
+        </div>
+
+        {activeTab === 'users' && (
+          <div className="bg-white border border-gray-200 overflow-hidden">
           <table className="min-w-full">
             <thead className="bg-gray-50 border-b">
               <tr>
@@ -149,7 +201,7 @@ export default function UsersManagement() {
                       <select
                         value={user.role}
                         onChange={(e) => updateUserRole(user.id, e.target.value)}
-                        disabled={updatingUserId === user.id || isSuperAdmin}
+                        disabled={updatingUserId === user.id || isSuperAdmin || isCurrentUser}
                         className="text-sm border border-gray-300 rounded px-2 py-1 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <option value="guest">Guest</option>
@@ -188,6 +240,65 @@ export default function UsersManagement() {
             </tbody>
           </table>
         </div>
+        )}
+
+        {activeTab === 'activity' && (
+          <div className="bg-white border border-gray-200 overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Time
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    User
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Action
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Incident
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Details
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {activity.map((log) => (
+                  <tr key={log.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {log.user_email}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        log.action.includes('verify') ? 'bg-green-100 text-green-800' :
+                        log.action.includes('update') ? 'bg-blue-100 text-blue-800' :
+                        log.action.includes('delete') ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {log.action}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {log.incident_id ? (
+                        <a href={`/incidents/${log.incident_id}`} className="text-blue-600 hover:underline">
+                          #{log.incident_id}
+                        </a>
+                      ) : '—'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                      {JSON.stringify(log.details)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <div className="mt-6 bg-blue-50 border border-blue-200 p-4">
           <h3 className="font-semibold text-blue-900 mb-2">Role Hierarchy:</h3>

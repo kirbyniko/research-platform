@@ -67,6 +67,7 @@ export default function Navigation() {
           <div className="hidden md:flex items-center gap-6">
             <ul className="flex gap-6 text-sm">
               <li><Link href="/incidents" className={navLinkClass('/incidents')}>Incidents</Link></li>
+              <li><Link href="/legal-help" className={navLinkClass('/legal-help')}>Legal Help</Link></li>
             </ul>
 
             <div className="h-5 w-px bg-gray-300" />
@@ -180,7 +181,7 @@ export default function Navigation() {
           <div className="md:hidden mt-4 pb-4 border-t border-gray-100 pt-4">
             <ul className="flex flex-col gap-3 text-sm">
               <li><Link href="/incidents" className={navLinkClass('/incidents')} onClick={() => setMenuOpen(false)}>Incidents</Link></li>
-              <li><Link href="/cases" className={navLinkClass('/cases')} onClick={() => setMenuOpen(false)}>Deaths</Link></li>
+              <li><Link href="/legal-help" className={navLinkClass('/legal-help')} onClick={() => setMenuOpen(false)}>Legal Help</Link></li>
             </ul>
             
             <div className="mt-4 pt-4 border-t border-gray-100">
