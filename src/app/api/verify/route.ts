@@ -27,10 +27,10 @@ export async function GET(request: NextRequest) {
 
       // Get unverified timeline events
       const timelineResult = await client.query(`
-        SELECT t.id, t.incident_id, t.date, t.description, i.victim_name as incident_name
+        SELECT t.id, t.incident_id, t.event_date, t.description, i.victim_name as incident_name
         FROM incident_timeline t
         JOIN incidents i ON t.incident_id = i.id
-        ORDER BY t.date DESC
+        ORDER BY t.event_date DESC
       `);
 
       // Get unverified sources
