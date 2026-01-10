@@ -191,7 +191,7 @@ function AdminDashboard() {
       }
 
       const dashboardData = await res.json();
-      console.log('[Admin] Dashboard data loaded, cases:', dashboardData.cases?.length);
+      console.log('[Admin] Dashboard data loaded, incidents:', dashboardData.incidents?.length);
       setData(dashboardData);
       
       // Also fetch documents
@@ -329,21 +329,23 @@ function AdminDashboard() {
         {data && (
           <div className="grid grid-cols-4 gap-4 mb-8">
             <div className="bg-white p-4 border border-gray-200">
-              <h3 className="text-sm text-gray-500 uppercase">Cases</h3>
-              <p className="text-2xl font-bold">{data.summary.cases.verified} / {data.summary.cases.total}</p>
-              <p className="text-sm text-red-600">{data.summary.cases.unverified} unverified</p>
+              <h3 className="text-sm text-gray-500 uppercase">Incidents</h3>
+              <p className="text-2xl font-bold">{data.summary.incidents.verified} / {data.summary.incidents.total}</p>
+              <p className="text-sm text-red-600">{data.summary.incidents.unverified} unverified</p>
             </div>
             <div className="bg-white p-4 border border-gray-200">
               <h3 className="text-sm text-gray-500 uppercase">Timeline Events</h3>
-              <p className="text-2xl font-bold">{data.summary.timeline.verified} / {data.summary.timeline.total}</p>
-              <p className="text-sm text-red-600">{data.summary.timeline.unverified} unverified</p>
+              <p className="text-2xl font-bold">{data.summary.timeline.total}</p>
             </div>
             <div className="bg-white p-4 border border-gray-200">
               <h3 className="text-sm text-gray-500 uppercase">Sources</h3>
-              <p className="text-2xl font-bold">{data.summary.sources.verified} / {data.summary.sources.total}</p>
-              <p className="text-sm text-red-600">{data.summary.sources.unverified} unverified</p>
+              <p className="text-2xl font-bold">{data.summary.sources.total}</p>
             </div>
             <div className="bg-white p-4 border border-gray-200">
+              <h3 className="text-sm text-gray-500 uppercase">Quotes</h3>
+              <p className="text-2xl font-bold">{data.summary.quotes.verified} / {data.summary.quotes.total}</p>
+              <p className="text-sm text-red-600">{data.summary.quotes.unverified} unverified</p>
+            </div>
               <h3 className="text-sm text-gray-500 uppercase">Discrepancies</h3>
               <p className="text-2xl font-bold">{data.summary.discrepancies.verified} / {data.summary.discrepancies.total}</p>
               <p className="text-sm text-red-600">{data.summary.discrepancies.unverified} unverified</p>
@@ -354,7 +356,7 @@ function AdminDashboard() {
         {/* Tabs */}
         <div className="border-b border-gray-200 mb-4">
           <div className="flex gap-4">
-            {(['cases', 'timeline', 'sources', 'discrepancies', 'documents', 'analyze'] as const).map((tab) => (
+            {(['incidents', 'timeline', 'sources', 'quotes', 'documents', 'analyze'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -378,7 +380,7 @@ function AdminDashboard() {
         {/* Content */}
         {data && (
           <div className="bg-white border border-gray-200">
-            {activeTab === 'cases' && (
+            {activeTab === 'incidents' && (
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b">
                   <tr>
@@ -390,7 +392,7 @@ function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.cases.map((item) => (
+                  {data.incidents.map((item) => (
                     <tr key={item.id} className="border-b hover:bg-gray-50">
                       <td className="p-3">
                         {item.verified ? (
@@ -503,19 +505,19 @@ function AdminDashboard() {
               </table>
             )}
 
-            {activeTab === 'discrepancies' && (
+            {activeTab === 'quotes' && (
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b">
                   <tr>
                     <th className="text-left p-3">Status</th>
-                    <th className="text-left p-3">Case</th>
-                    <th className="text-left p-3">ICE Claim</th>
-                    <th className="text-left p-3">Counter-Evidence</th>
+                    <th className="text-left p-3">Incident</th>
+                    <th className="text-left p-3">Quote</th>
+                    <th className="text-left p-3">Category</th>
                     <th className="text-left p-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.discrepancies.map((item) => (
+                  {data.quotes?.map((item) => (
                     <tr key={item.id} className="border-b hover:bg-gray-50">
                       <td className="p-3">
                         {item.verified ? (
@@ -524,13 +526,13 @@ function AdminDashboard() {
                           <span className="text-red-600">✗</span>
                         )}
                       </td>
-                      <td className="p-3">{item.case_name}</td>
-                      <td className="p-3 max-w-xs truncate">{item.ice_claim}</td>
-                      <td className="p-3 max-w-xs truncate">{item.counter_evidence}</td>
+                      <td className="p-3">{item.incident_name}</td>
+                      <td className="p-3 max-w-xs truncate">{item.quote_text}</td>
+                      <td className="p-3">{item.category}</td>
                       <td className="p-3">
                         <button
-                          onClick={() => handleVerify('discrepancy', item.id, item.verified)}
-                          disabled={verifying === `discrepancy-${item.id}`}
+                          onClick={() => handleVerify('quote', item.id, item.verified)}
+                          disabled={verifying === `quote-${item.id}`}
                           className="text-sm underline hover:no-underline disabled:opacity-50"
                         >
                           {item.verified ? 'Unverify' : 'Verify'}
@@ -654,7 +656,7 @@ function AdminDashboard() {
                     className="w-full border border-gray-300 p-2 text-sm"
                   >
                     <option value="">-- Select a case --</option>
-                    {data.cases.map((c) => (
+                    {data.incidents.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name} ({c.date_of_death?.split('T')[0]})
                       </option>
