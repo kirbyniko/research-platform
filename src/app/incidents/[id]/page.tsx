@@ -46,7 +46,8 @@ export default async function IncidentDetailPage({
     notFound();
   }
   
-  const incident = await getIncidentById(incidentId);
+  // Include unverified incidents for analysts
+  const incident = await getIncidentById(incidentId, true);
   
   if (!incident) {
     notFound();
