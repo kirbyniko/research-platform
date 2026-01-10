@@ -17,12 +17,13 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0');
     
     // Get cases that are in 'pending' status (need first verification)
+    // Use subject_name for compatibility with older schema (before victim_name column was added)
     const query = `
       SELECT 
         i.id,
         i.incident_id,
         i.incident_type,
-        COALESCE(i.victim_name, i.subject_name) as victim_name,
+        i.subject_name as victim_name,
         i.subject_age as age,
         i.subject_nationality as country_of_origin,
         i.incident_date,
@@ -38,7 +39,9 @@ export async function GET(request: NextRequest) {
         u.email as submitter_email,
         (SELECT COUNT(*) FROM incident_sources WHERE incident_id = i.id) as source_count,
         (SELECT COUNT(*) FROM incident_quotes WHERE incident_id = i.id) as quote_count,
-        (SELECT COUNT(*) FROM incident_timeline WHERE incident_id = i.id) as timeline_count
+        (SELECT COUNT(*) FROM incident_timeline WHERE incident_id = i.id) as timeline_count,
+        0 as fields_needing_review,
+        0 as fields_verified
       FROM incidents i
       LEFT JOIN users u ON i.submitted_by = u.id
       WHERE i.verification_status = 'pending'
