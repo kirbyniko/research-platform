@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
         SELECT s.id, s.incident_id, s.title, s.publication, s.url, s.source_type, i.victim_name as incident_name
         FROM incident_sources s
         JOIN incidents i ON s.incident_id = i.id
-        ORDER BY s.date_published DESC NULLS LAST
+        ORDER BY s.published_date DESC NULLS LAST
       `);
 
       // Get unverified quotes
