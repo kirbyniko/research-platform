@@ -13,6 +13,7 @@ interface FormData {
   detaineeName: string;
   detaineeANumber: string;
   detaineeDOB: string;
+  detaineeAge?: string;
   detaineeNationality: string;
   detaineeAddress: string;
   facilityName: string;
