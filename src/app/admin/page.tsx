@@ -335,16 +335,18 @@ function AdminDashboard() {
             </div>
             <div className="bg-white p-4 border border-gray-200">
               <h3 className="text-sm text-gray-500 uppercase">Timeline Events</h3>
-              <p className="text-2xl font-bold">{data.summary.timeline.total}</p>
+              <p className="text-2xl font-bold">{data.summary.timeline.verified} / {data.summary.timeline.total}</p>
+              <p className="text-sm text-red-600">{data.summary.timeline.unverified} unverified</p>
             </div>
             <div className="bg-white p-4 border border-gray-200">
               <h3 className="text-sm text-gray-500 uppercase">Sources</h3>
-              <p className="text-2xl font-bold">{data.summary.sources.total}</p>
+              <p className="text-2xl font-bold">{data.summary.sources.verified} / {data.summary.sources.total}</p>
+              <p className="text-sm text-red-600">{data.summary.sources.unverified} unverified</p>
             </div>
             <div className="bg-white p-4 border border-gray-200">
-              <h3 className="text-sm text-gray-500 uppercase">Quotes</h3>
-              <p className="text-2xl font-bold">{data.summary.quotes.verified} / {data.summary.quotes.total}</p>
-              <p className="text-sm text-red-600">{data.summary.quotes.unverified} unverified</p>
+              <h3 className="text-sm text-gray-500 uppercase">Discrepancies</h3>
+              <p className="text-2xl font-bold">{data.summary.discrepancies.verified} / {data.summary.discrepancies.total}</p>
+              <p className="text-sm text-red-600">{data.summary.discrepancies.unverified} unverified</p>
             </div>
           </div>
         )}
