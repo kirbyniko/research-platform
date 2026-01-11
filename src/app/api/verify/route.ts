@@ -51,18 +51,22 @@ export async function GET(request: NextRequest) {
 
       // Summary counts
       const summary = {
-        incidents: {
+        cases: {
           total: incidentsResult.rows.length,
           verified: incidentsResult.rows.filter((r: any) => r.verification_status === 'verified').length,
           unverified: incidentsResult.rows.filter((r: any) => r.verification_status !== 'verified').length,
         },
         timeline: {
           total: timelineResult.rows.length,
+          verified: 0,
+          unverified: timelineResult.rows.length,
         },
         sources: {
           total: sourcesResult.rows.length,
+          verified: 0,
+          unverified: sourcesResult.rows.length,
         },
-        quotes: {
+        discrepancies: {
           total: quotesResult.rows.length,
           verified: quotesResult.rows.filter((r: any) => r.verified).length,
           unverified: quotesResult.rows.filter((r: any) => !r.verified).length,
@@ -71,10 +75,10 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({
         summary,
-        incidents: incidentsResult.rows,
+        cases: incidentsResult.rows,
         timeline: timelineResult.rows,
         sources: sourcesResult.rows,
-        quotes: quotesResult.rows,
+        discrepancies: quotesResult.rows,
       });
     } finally {
       client.release();
