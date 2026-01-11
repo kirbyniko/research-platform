@@ -508,9 +508,10 @@ function AdminDashboard() {
                 <thead className="bg-gray-50 border-b">
                   <tr>
                     <th className="text-left p-3">Status</th>
-                    <th className="text-left p-3">Incident</th>
-                    <th className="text-left p-3">Quote</th>
-                    <th className="text-left p-3">Category</th>
+                    <th className="text-left p-3">Case</th>
+                    <th className="text-left p-3">Description</th>
+                    <th className="text-left p-3">ICE Claim</th>
+                    <th className="text-left p-3">Counter Evidence</th>
                     <th className="text-left p-3">Actions</th>
                   </tr>
                 </thead>
@@ -524,13 +525,14 @@ function AdminDashboard() {
                           <span className="text-red-600">✗</span>
                         )}
                       </td>
-                      <td className="p-3">{item.incident_name}</td>
-                      <td className="p-3 max-w-xs truncate">{item.quote_text}</td>
-                      <td className="p-3">{item.category}</td>
+                      <td className="p-3">{item.case_name}</td>
+                      <td className="p-3 max-w-xs truncate">{item.description}</td>
+                      <td className="p-3 max-w-xs truncate">{item.ice_claim}</td>
+                      <td className="p-3 max-w-xs truncate">{item.counter_evidence}</td>
                       <td className="p-3">
                         <button
-                          onClick={() => handleVerify('quote', item.id, item.verified)}
-                          disabled={verifying === `quote-${item.id}`}
+                          onClick={() => handleVerify('discrepancy', item.id, item.verified)}
+                          disabled={verifying === `discrepancy-${item.id}`}
                           className="text-sm underline hover:no-underline disabled:opacity-50"
                         >
                           {item.verified ? 'Unverify' : 'Verify'}
