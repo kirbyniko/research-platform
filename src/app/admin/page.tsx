@@ -191,7 +191,7 @@ function AdminDashboard() {
       }
 
       const dashboardData = await res.json();
-      console.log('[Admin] Dashboard data loaded, incidents:', dashboardData.incidents?.length);
+      console.log('[Admin] Dashboard data loaded, cases:', dashboardData.cases?.length);
       setData(dashboardData);
       
       // Also fetch documents
@@ -390,7 +390,7 @@ function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.incidents.map((item) => (
+                  {data.cases.map((item) => (
                     <tr key={item.id} className="border-b hover:bg-gray-50">
                       <td className="p-3">
                         {item.verified ? (
@@ -515,7 +515,7 @@ function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.quotes?.map((item) => (
+                  {data.discrepancies?.map((item) => (
                     <tr key={item.id} className="border-b hover:bg-gray-50">
                       <td className="p-3">
                         {item.verified ? (
@@ -654,7 +654,7 @@ function AdminDashboard() {
                     className="w-full border border-gray-300 p-2 text-sm"
                   >
                     <option value="">-- Select a case --</option>
-                    {data.incidents.map((c) => (
+                    {data.cases.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name} ({c.date_of_death?.split('T')[0]})
                       </option>
