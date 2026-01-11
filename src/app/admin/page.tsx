@@ -354,7 +354,7 @@ function AdminDashboard() {
         {/* Tabs */}
         <div className="border-b border-gray-200 mb-4">
           <div className="flex gap-4">
-            {(['incidents', 'timeline', 'sources', 'quotes', 'documents', 'analyze'] as const).map((tab) => (
+            {(['cases', 'timeline', 'sources', 'discrepancies', 'documents', 'analyze'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -378,7 +378,7 @@ function AdminDashboard() {
         {/* Content */}
         {data && (
           <div className="bg-white border border-gray-200">
-            {activeTab === 'incidents' && (
+            {activeTab === 'cases' && (
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b">
                   <tr>
@@ -503,7 +503,7 @@ function AdminDashboard() {
               </table>
             )}
 
-            {activeTab === 'quotes' && (
+            {activeTab === 'discrepancies' && (
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b">
                   <tr>
