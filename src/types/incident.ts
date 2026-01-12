@@ -390,7 +390,7 @@ export interface Incident {
   
   // Metadata
   verified: boolean;
-  verification_status?: 'pending' | 'first_review' | 'verified';  // Analyst workflow status
+  verification_status?: 'pending' | 'first_review' | 'second_review' | 'first_validation' | 'verified' | 'rejected';  // Analyst workflow status
   verification_notes?: string;
   related_incident_ids?: string[];  // Link related incidents
   tags?: string[];

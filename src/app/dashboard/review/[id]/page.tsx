@@ -478,6 +478,17 @@ function QuoteAutoSuggest({
   );
 }
 
+// Validation Issue type
+interface ValidationIssue {
+  id: number;
+  field_type: string;
+  field_name: string;
+  issue_reason: string;
+  created_at: string;
+  created_by_name: string | null;
+  created_by_email: string | null;
+}
+
 export default function ReviewPage() {
   const params = useParams();
   const router = useRouter();
@@ -493,6 +504,7 @@ export default function ReviewPage() {
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [violations, setViolations] = useState<Violation[]>([]);
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
+  const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
   const [fieldQuoteMap, setFieldQuoteMap] = useState<Record<string, number>>({});
   const [editedIncident, setEditedIncident] = useState<Record<string, unknown>>({});
   const [incidentDetails, setIncidentDetails] = useState<IncidentDetails>({});
@@ -534,6 +546,7 @@ export default function ReviewPage() {
       setAgencies(data.agencies || []);
       setViolations(data.violations || []);
       setTimeline(data.timeline || []);
+      setValidationIssues(data.validation_issues || []);
       if (data.incident) setEditedIncident(data.incident);
       
       // Fetch type-specific details
@@ -894,6 +907,46 @@ export default function ReviewPage() {
   return (
     <div className="max-w-5xl mx-auto p-6">
       {saving && <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm z-50">Saving...</div>}
+
+      {/* Validation Issues Alert - Show if case was returned from validation */}
+      {validationIssues.length > 0 && (
+        <div className="mb-6 p-4 bg-orange-50 border-2 border-orange-300 rounded-lg">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">🔄</span>
+            <div className="flex-1">
+              <h3 className="font-bold text-orange-800 text-lg">Returned from Validation</h3>
+              <p className="text-orange-700 text-sm mb-3">
+                This case was returned with {validationIssues.length} issue{validationIssues.length !== 1 ? 's' : ''} to address:
+              </p>
+              <div className="space-y-2">
+                {validationIssues.map((issue) => (
+                  <div key={issue.id} className="p-3 bg-white rounded border border-orange-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                        issue.field_type === 'field' ? 'bg-blue-100 text-blue-700' :
+                        issue.field_type === 'quote' ? 'bg-purple-100 text-purple-700' :
+                        issue.field_type === 'timeline' ? 'bg-green-100 text-green-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {issue.field_type}
+                      </span>
+                      <span className="font-medium text-gray-800">
+                        {issue.field_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-700">{issue.issue_reason}</p>
+                    {issue.created_by_name && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Flagged by {issue.created_by_name} on {new Date(issue.created_at).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="mb-6 pb-4 border-b">
@@ -1788,9 +1841,9 @@ export default function ReviewPage() {
                 confirmMsg = 'Submit first review? This incident will await a second review before going public.';
               } else if (isSecondReview) {
                 if (isAdmin && didFirstReview) {
-                  confirmMsg = '⚠️ ADMIN OVERRIDE: You are bypassing the two-analyst requirement.\n\nSubmit second review and publish?';
+                  confirmMsg = '⚠️ ADMIN OVERRIDE: You are bypassing the two-analyst requirement.\n\nSubmit second review?';
                 } else {
-                  confirmMsg = 'Submit second review and publish? This will make the incident publicly visible.';
+                  confirmMsg = 'Submit second review? After this, the incident will go to validation.';
                 }
               } else {
                 confirmMsg = 'Update verification?';
@@ -1821,9 +1874,11 @@ export default function ReviewPage() {
                 
                 // Show appropriate success message
                 if (result.verification_status === 'first_review') {
-                  alert('✅ First review submitted! This incident will await a second review before going public.');
+                  alert('✅ First review submitted! This incident will await a second review.');
+                } else if (result.verification_status === 'second_review') {
+                  alert('✅ Second review complete! Incident is now in the validation queue.');
                 } else if (result.verification_status === 'verified') {
-                  alert('✅ Second review complete! Incident is now publicly visible.');
+                  alert('✅ Incident is now publicly visible.');
                 }
                 
                 router.push('/dashboard');
@@ -1839,7 +1894,7 @@ export default function ReviewPage() {
           >
             {saving ? 'Submitting...' : 
              incident.verification_status === 'pending' ? 'Submit First Review' :
-             incident.verification_status === 'first_review' ? 'Submit Second Review & Publish' :
+             incident.verification_status === 'first_review' ? 'Submit Second Review' :
              'Update Verification'}
           </button>
           

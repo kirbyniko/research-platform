@@ -96,6 +96,27 @@ export async function requireServerAuth(
         return { user };
       }
     }
+    
+    // 2b. Check X-API-Key header (used by browser extension)
+    const xApiKey = request.headers.get('X-API-Key');
+    if (xApiKey && xApiKey.startsWith('ice_')) {
+      const apiKeyUser = await getUserFromApiKey(xApiKey);
+      if (apiKeyUser) {
+        const user: AuthUser = {
+          id: apiKeyUser.id,
+          email: apiKeyUser.email,
+          name: apiKeyUser.name,
+          role: apiKeyUser.role as RoleLevel,
+        };
+
+        if (requiredRole && !hasRequiredRole(user.role, requiredRole)) {
+          return { error: 'Insufficient permissions', status: 403 };
+        }
+
+        return { user };
+      }
+      return { error: 'Invalid or expired API key', status: 401 };
+    }
 
     // 3. Check legacy auth_token cookie
     const cookieHeader = request.headers.get('cookie');

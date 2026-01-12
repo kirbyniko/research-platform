@@ -491,14 +491,13 @@ export async function submitIncidentReview(
         };
       }
       
-      // Second review by different analyst (or admin override) - publish
+      // Second review by different analyst (or admin override) - send to validation queue
       await client.query(`
         UPDATE incidents
         SET 
-          verification_status = 'verified',
+          verification_status = 'second_review',
           second_review_by = $1,
           second_review_at = CURRENT_TIMESTAMP,
-          verified = true,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
       `, [userId, incidentId]);
@@ -506,10 +505,10 @@ export async function submitIncidentReview(
       await client.query('COMMIT');
       return {
         success: true,
-        verification_status: 'verified',
+        verification_status: 'second_review',
         message: isAdmin && firstReviewBy === userId 
-          ? 'Admin override: Second review complete - incident is now public'
-          : 'Second review complete - incident is now public'
+          ? 'Admin override: Second review complete - incident sent to validation queue'
+          : 'Second review complete - incident sent to validation queue'
       };
       
     } else {
@@ -595,6 +594,14 @@ export async function getIncidentSources(incidentId: number): Promise<IncidentSo
 // ============================================
 
 export async function addIncidentQuote(incidentId: number, quote: Omit<IncidentQuote, 'id'>): Promise<number> {
+  // Validate: quotes must have text and source
+  if (!quote.text || quote.text.trim() === '') {
+    throw new Error('Quote text is required');
+  }
+  if (!quote.source_id) {
+    throw new Error('Quote must be linked to a source (source_id required)');
+  }
+  
   const client = await pool.connect();
   try {
     await client.query('BEGIN');

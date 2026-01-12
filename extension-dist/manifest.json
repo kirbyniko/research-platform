@@ -1,0 +1,76 @@
+{
+  "manifest_version": 3,
+  "name": "ICE Incident Tracker",
+  "version": "1.0",
+  "description": "Extract and validate case data from news articles and documents for the ICE Incident Tracker project",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "contextMenus",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "externally_connectable": {
+    "matches": [
+      "http://localhost:3000/*",
+      "http://localhost:3001/*",
+      "http://localhost:3002/*"
+    ]
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.svg",
+      "48": "icons/icon48.svg",
+      "128": "icons/icon128.svg"
+    },
+    "default_title": "ICE Deaths Research"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [{
+    "matches": ["<all_urls>"],
+    "js": ["pdf.min.js", "pdf-handler.js", "content.js"],
+    "css": ["content.css"]
+  }],
+  "web_accessible_resources": [{
+    "resources": ["pdf.worker.min.js"],
+    "matches": ["<all_urls>"]
+  }],
+  "icons": {
+    "16": "icons/icon16.svg",
+    "48": "icons/icon48.svg",
+    "128": "icons/icon128.svg"
+  },
+  "commands": {
+    "add-quote": {
+      "suggested_key": {
+        "default": "Alt+Q"
+      },
+      "description": "Add selected text as quote"
+    },
+    "extract-article": {
+      "suggested_key": {
+        "default": "Alt+E"
+      },
+      "description": "Extract article content"
+    },
+    "save-case": {
+      "suggested_key": {
+        "default": "Alt+S"
+      },
+      "description": "Save current case"
+    },
+    "toggle-overlay": {
+      "suggested_key": {
+        "default": "Alt+O"
+      },
+      "description": "Toggle overlay panel on page"
+    }
+  }
+}

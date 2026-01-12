@@ -13,11 +13,17 @@ interface Incident {
   state: string;
   facility_name: string;
   description: string;
-  verification_status: 'pending' | 'first_review' | 'verified';
+  verification_status: 'pending' | 'first_review' | 'second_review' | 'first_validation' | 'verified' | 'rejected';
   submitted_by_email: string | null;
   first_verified_by_email: string | null;
   second_verified_by_email: string | null;
+  first_validated_by_email: string | null;
+  second_validated_by_email: string | null;
+  rejected_by_email: string | null;
   first_verified_at: string | null;
+  rejection_reason: string | null;
+  rejected_at: string | null;
+  review_cycle: number;
   created_at: string;
 }
 
@@ -43,7 +49,12 @@ interface EditSuggestion {
 interface Stats {
   pending: number;
   first_review: number;
+  second_review: number;
+  first_validation: number;
   verified: number;
+  rejected: number;
+  returned_for_review: number;
+  revalidation: number;
   total: number;
 }
 
@@ -72,7 +83,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState<'needs_review' | 'pending' | 'first_review' | 'verified' | 'all'>('needs_review');
+  const [filter, setFilter] = useState<'needs_review' | 'pending' | 'first_review' | 'needs_validation' | 'returned_for_review' | 'revalidation' | 'verified' | 'rejected' | 'all'>('needs_review');
   const [verifyingId, setVerifyingId] = useState<number | null>(null);
   const [verifyNotes, setVerifyNotes] = useState('');
   const [showVerifyModal, setShowVerifyModal] = useState(false);
@@ -283,15 +294,33 @@ export default function DashboardPage() {
     });
   };
 
-  const statusBadge = (status: string) => {
+  const statusBadge = (status: string, reviewCycle?: number) => {
+    const isReturned = (reviewCycle || 1) >= 2;
+    
     switch (status) {
       case 'pending':
+        if (isReturned) {
+          return <span className="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded">🔄 Re-Review (Pending)</span>;
+        }
         return <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded">Pending Review</span>;
       case 'first_review':
+        if (isReturned) {
+          return <span className="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded">🔄 Re-Review (2nd)</span>;
+        }
         return <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">Needs 2nd Review</span>;
+      case 'second_review':
+        if (isReturned) {
+          return <span className="px-2 py-1 text-xs bg-cyan-100 text-cyan-800 rounded">🔁 Re-Validation</span>;
+        }
+        return <span className="px-2 py-1 text-xs bg-indigo-100 text-indigo-800 rounded">Awaiting Validation</span>;
+      case 'first_validation':
+        if (isReturned) {
+          return <span className="px-2 py-1 text-xs bg-cyan-100 text-cyan-800 rounded">🔁 Re-Validation (2nd)</span>;
+        }
+        return <span className="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded">Needs 2nd Validation</span>;
       case 'verified':
       case 'approved':
-        return <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">{status === 'verified' ? 'Verified' : 'Approved'}</span>;
+        return <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">{status === 'verified' ? 'Published' : 'Approved'}</span>;
       case 'rejected':
         return <span className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded">Rejected</span>;
       default:
@@ -312,6 +341,7 @@ export default function DashboardPage() {
   }
 
   const totalCaseReviews = stats ? Number(stats.pending) + Number(stats.first_review) : 0;
+  const totalValidations = stats ? Number(stats.second_review) + Number(stats.first_validation) : 0;
   const totalEditReviews = editStats ? Number(editStats.pending) + Number(editStats.first_review) : 0;
 
   return (
@@ -361,23 +391,93 @@ export default function DashboardPage() {
         <>
           {/* Stats Cards */}
           {stats && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-yellow-800">{stats.pending}</div>
-                <div className="text-sm text-yellow-700">Pending Review</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-6">
+              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg relative">
+                <div className="text-xl font-bold text-yellow-800">{Number(stats.pending) + Number(stats.first_review)}</div>
+                <div className="text-xs text-yellow-700">Needs Review</div>
+                {Number(stats.returned_for_review) > 0 && (
+                  <div className="absolute -top-2 -right-2 bg-orange-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-md">
+                    {stats.returned_for_review} 🔄
+                  </div>
+                )}
               </div>
-              <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-blue-800">{stats.first_review}</div>
-                <div className="text-sm text-blue-700">Needs 2nd Review</div>
+              <div className="bg-purple-50 border border-purple-200 p-3 rounded-lg relative">
+                <div className="text-xl font-bold text-purple-800">{Number(stats.second_review) + Number(stats.first_validation)}</div>
+                <div className="text-xs text-purple-700">Needs Validation</div>
+                {Number(stats.revalidation) > 0 && (
+                  <div className="absolute -top-2 -right-2 bg-cyan-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-md">
+                    {stats.revalidation} 🔁
+                  </div>
+                )}
               </div>
-              <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-green-800">{stats.verified}</div>
-                <div className="text-sm text-green-700">Verified</div>
+              <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+                <div className="text-xl font-bold text-green-800">{stats.verified}</div>
+                <div className="text-xs text-green-700">Published</div>
               </div>
-              <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-gray-800">{stats.total}</div>
-                <div className="text-sm text-gray-700">Total Cases</div>
+              <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
+                <div className="text-xl font-bold text-red-800">{stats.rejected}</div>
+                <div className="text-xs text-red-700">Rejected</div>
               </div>
+              <div className="bg-gray-50 border border-gray-200 p-3 rounded-lg">
+                <div className="text-xl font-bold text-gray-800">{stats.total}</div>
+                <div className="text-xs text-gray-700">Total Cases</div>
+              </div>
+            </div>
+          )}
+          
+          {/* Returned/Revalidation Alert Cards */}
+          {stats && (Number(stats.returned_for_review) > 0 || Number(stats.revalidation) > 0) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+              {Number(stats.returned_for_review) > 0 && (
+                <button
+                  onClick={() => setFilter('returned_for_review')}
+                  className={`p-4 rounded-lg text-left transition-all ${
+                    filter === 'returned_for_review' 
+                      ? 'bg-orange-600 text-white ring-2 ring-orange-600 ring-offset-2' 
+                      : 'bg-orange-50 border-2 border-orange-300 hover:bg-orange-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🔄</span>
+                    <div>
+                      <div className={`text-2xl font-bold ${filter === 'returned_for_review' ? 'text-white' : 'text-orange-800'}`}>
+                        {stats.returned_for_review}
+                      </div>
+                      <div className={`text-sm font-medium ${filter === 'returned_for_review' ? 'text-orange-100' : 'text-orange-700'}`}>
+                        Returned for Re-Review
+                      </div>
+                      <div className={`text-xs ${filter === 'returned_for_review' ? 'text-orange-200' : 'text-orange-600'}`}>
+                        Cases with validation feedback
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              )}
+              {Number(stats.revalidation) > 0 && (
+                <button
+                  onClick={() => setFilter('revalidation')}
+                  className={`p-4 rounded-lg text-left transition-all ${
+                    filter === 'revalidation' 
+                      ? 'bg-cyan-600 text-white ring-2 ring-cyan-600 ring-offset-2' 
+                      : 'bg-cyan-50 border-2 border-cyan-300 hover:bg-cyan-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🔁</span>
+                    <div>
+                      <div className={`text-2xl font-bold ${filter === 'revalidation' ? 'text-white' : 'text-cyan-800'}`}>
+                        {stats.revalidation}
+                      </div>
+                      <div className={`text-sm font-medium ${filter === 'revalidation' ? 'text-cyan-100' : 'text-cyan-700'}`}>
+                        Ready for Re-Validation
+                      </div>
+                      <div className={`text-xs ${filter === 'revalidation' ? 'text-cyan-200' : 'text-cyan-600'}`}>
+                        Re-reviewed, awaiting validation
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              )}
             </div>
           )}
 
@@ -385,33 +485,46 @@ export default function DashboardPage() {
       <div className="mb-6 flex flex-wrap gap-2">
         <button
           onClick={() => setFilter('needs_review')}
-          className={`px-4 py-2 rounded-lg text-sm ${filter === 'needs_review' ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+          className={`px-4 py-2 rounded-lg text-sm ${filter === 'needs_review' ? 'bg-yellow-600 text-white' : 'bg-yellow-50 text-yellow-800 hover:bg-yellow-100 border border-yellow-200'}`}
         >
-          Needs Review ({stats ? stats.pending + stats.first_review : 0})
+          Needs Review ({stats ? Number(stats.pending) + Number(stats.first_review) : 0})
         </button>
         <button
-          onClick={() => setFilter('pending')}
-          className={`px-4 py-2 rounded-lg text-sm ${filter === 'pending' ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+          onClick={() => setFilter('needs_validation')}
+          className={`px-4 py-2 rounded-lg text-sm ${filter === 'needs_validation' ? 'bg-purple-600 text-white' : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200'}`}
         >
-          Pending
+          Needs Validation ({stats ? Number(stats.second_review) + Number(stats.first_validation) : 0})
+        </button>
+        <button
+          onClick={() => setFilter('rejected')}
+          className={`px-4 py-2 rounded-lg text-sm ${filter === 'rejected' ? 'bg-red-600 text-white' : 'bg-red-50 text-red-800 hover:bg-red-100 border border-red-200'}`}
+        >
+          Rejected ({stats?.rejected || 0})
+        </button>
+        <span className="border-l border-gray-300 mx-2"></span>
+        <button
+          onClick={() => setFilter('pending')}
+          className={`px-3 py-2 rounded-lg text-xs ${filter === 'pending' ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+        >
+          Pending ({stats?.pending || 0})
         </button>
         <button
           onClick={() => setFilter('first_review')}
-          className={`px-4 py-2 rounded-lg text-sm ${filter === 'first_review' ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+          className={`px-3 py-2 rounded-lg text-xs ${filter === 'first_review' ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
         >
-          Awaiting 2nd Review
+          2nd Review ({stats?.first_review || 0})
         </button>
         <button
           onClick={() => setFilter('verified')}
-          className={`px-4 py-2 rounded-lg text-sm ${filter === 'verified' ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+          className={`px-3 py-2 rounded-lg text-xs ${filter === 'verified' ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
         >
-          Verified
+          Published ({stats?.verified || 0})
         </button>
         <button
           onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-lg text-sm ${filter === 'all' ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+          className={`px-3 py-2 rounded-lg text-xs ${filter === 'all' ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
         >
-          All
+          All ({stats?.total || 0})
         </button>
       </div>
 
@@ -427,16 +540,53 @@ export default function DashboardPage() {
         <div className="text-center py-12 text-gray-500">Loading cases...</div>
       ) : incidents.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
-          {filter === 'needs_review' ? 'No cases need review' : 'No cases found'}
+          {filter === 'needs_review' ? 'No cases need review' : 
+           filter === 'returned_for_review' ? 'No cases returned from validation' :
+           filter === 'revalidation' ? 'No cases ready for re-validation' :
+           filter === 'needs_validation' ? 'No cases need validation' :
+           'No cases found'}
         </div>
       ) : (
         <div className="space-y-4">
-          {incidents.map((incident) => (
-            <div key={incident.id} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
-              <div className="flex items-start justify-between gap-4">
+          {incidents.map((incident) => {
+            const isReturned = (incident.review_cycle || 1) >= 2;
+            const isHighPriority = isReturned && (incident.review_cycle || 1) >= 3;
+            
+            return (
+            <div key={incident.id} className={`border-2 rounded-lg p-4 transition-all relative overflow-visible ${
+              isHighPriority
+                ? 'border-red-400 bg-red-50/40 shadow-md hover:shadow-lg hover:border-red-500' 
+                : isReturned 
+                  ? 'border-orange-400 bg-orange-50/40 shadow-sm hover:shadow-md hover:border-orange-500' 
+                  : 'border-gray-200 hover:border-gray-300'
+            }`}>
+              {/* Priority Badge */}
+              {isReturned && (
+                <div className={`absolute top-2 right-2 px-3 py-1 rounded-full text-xs font-bold shadow-md z-10 ${
+                  isHighPriority 
+                    ? 'bg-red-600 text-white animate-pulse' 
+                    : 'bg-orange-600 text-white'
+                }`}>
+                  {isHighPriority ? '⚠️ HIGH PRIORITY' : '⚡ PRIORITY'}
+                </div>
+              )}
+              
+              <div className={`flex items-start justify-between gap-4 ${isReturned ? 'pr-32' : ''}`}>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2">
-                    {statusBadge(incident.verification_status)}
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    {statusBadge(incident.verification_status, incident.review_cycle)}
+                    
+                    {/* Cycle Badge - Large and Prominent for Returned Cases */}
+                    {isReturned && (
+                      <span className={`px-2.5 py-1 text-sm font-bold rounded ${
+                        isHighPriority
+                          ? 'bg-red-600 text-white ring-2 ring-red-300'
+                          : 'bg-orange-600 text-white ring-2 ring-orange-300'
+                      }`}>
+                        {isHighPriority ? '🔥 ' : '🔄 '}Review Cycle {incident.review_cycle}
+                      </span>
+                    )}
+                    
                     <span className="text-xs text-gray-500">
                       {incident.incident_type.replace('_', ' ')}
                     </span>
@@ -467,16 +617,49 @@ export default function DashboardPage() {
                     {incident.second_verified_by_email && (
                       <p>2nd Review: {incident.second_verified_by_email}</p>
                     )}
+                    {incident.first_validated_by_email && (
+                      <p>1st Validation: {incident.first_validated_by_email}</p>
+                    )}
+                    {incident.second_validated_by_email && (
+                      <p>2nd Validation: {incident.second_validated_by_email}</p>
+                    )}
                   </div>
+                  
+                  {/* Rejection Reason Display */}
+                  {incident.verification_status === 'rejected' && incident.rejection_reason && (
+                    <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <span className="text-red-500 text-lg">⛔</span>
+                        <div>
+                          <p className="text-sm font-medium text-red-800">Rejection Reason:</p>
+                          <p className="text-sm text-red-700 mt-1">{incident.rejection_reason}</p>
+                          {incident.rejected_by_email && incident.rejected_at && (
+                            <p className="text-xs text-red-500 mt-2">
+                              Rejected by {incident.rejected_by_email} on {formatDate(incident.rejected_at)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="flex flex-col gap-2">
-                  <Link
-                    href={`/dashboard/review/${incident.id}`}
-                    className="px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 text-center"
-                  >
-                    {incident.verification_status === 'first_review' && incident.first_verified_by_email === user?.email && user?.role !== 'admin' ? 'View (Locked)' : 'Review Fields'}
-                  </Link>
+                  {['second_review', 'first_validation'].includes(incident.verification_status) ? (
+                    <Link
+                      href={`/dashboard/validate/${incident.id}`}
+                      className="px-3 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 text-center"
+                    >
+                      Validate Case
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/dashboard/review/${incident.id}`}
+                      className="px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 text-center"
+                    >
+                      {incident.verification_status === 'first_review' && incident.first_verified_by_email === user?.email && user?.role !== 'admin' ? 'View (Locked)' : 'Review Fields'}
+                    </Link>
+                  )}
                   
                   <Link
                     href={`/incidents/${incident.id}`}
@@ -493,7 +676,8 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
       )}
 

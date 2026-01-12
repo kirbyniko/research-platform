@@ -277,6 +277,18 @@ export async function GET(
       ORDER BY t.sequence_order, t.event_date, t.event_time
     `, [incidentId]);
     
+    // Get unresolved validation issues (feedback from validation that was returned)
+    const validationIssuesResult = await pool.query(`
+      SELECT 
+        vi.*,
+        u.name as created_by_name,
+        u.email as created_by_email
+      FROM validation_issues vi
+      LEFT JOIN users u ON vi.created_by = u.id
+      WHERE vi.incident_id = $1 AND vi.resolved_at IS NULL
+      ORDER BY vi.created_at DESC
+    `, [incidentId]);
+    
     // Build details map from JSONB records
     const typeDetails: Record<string, unknown> = {};
     for (const row of detailsResult.rows) {
@@ -292,7 +304,8 @@ export async function GET(
       agencies: agenciesResult.rows,
       violations: violationsResult.rows,
       type_details: typeDetails,
-      timeline: timelineResult.rows
+      timeline: timelineResult.rows,
+      validation_issues: validationIssuesResult.rows  // Feedback from validation
     });
     
   } catch (error) {

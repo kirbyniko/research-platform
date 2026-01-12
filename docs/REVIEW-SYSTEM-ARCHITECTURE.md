@@ -1,181 +1,126 @@
-# Review System Architecture Updates
+# Review System Architecture
 
-## Summary
-Two major changes requested:
-1. **Timeline should link to QUOTES instead of SOURCES**
-2. **Two-analyst review workflow with tracking**
+## Current Workflow (January 2026)
 
-## Status
-
-### ✅ Database Migration Complete
-- Added review tracking columns to `incidents` table:
-  - `first_review_by` INTEGER (references users.id)
-  - `first_review_at` TIMESTAMP  
-  - `second_review_by` INTEGER (references users.id)
-  - `second_review_at` TIMESTAMP
-  - `verification_status` already exists: 'pending' | 'first_review' | 'verified'
-- Updated 3 verified incidents to have both review timestamps
-- Updated 35 pending incidents to 'pending' status
-- Timeline table already has BOTH `source_id` and `quote_id` columns (no migration needed)
-
-### 🔨 Frontend Changes Needed
-
-#### 1. Timeline: Switch from Sources to Quotes
-
-**Current State:**
-```tsx
-// Add timeline entry - uses source_id
-<select value={newTimeline.source_id} ...>
-  <option value="">Link source</option>
-  {sources.map(s => <option ...>{s.title}</option>)}
-</select>
+### Status Flow
+```
+pending ? first_review ? second_review ? first_validation ? verified
+                                    ?
+                              (if returned)
+                                    ?
+                         first_review (review_cycle increments)
 ```
 
-**Should Be:**
-```tsx
-// Add timeline entry - uses quote_id
-<select value={newTimeline.quote_id} ...>
-  <option value="">Link quote</option>
-  {quotes.map(q => <option ...>{q.quote_text.slice(0, 50)}...</option>)}
-</select>
-```
+### Review Phase (Edit Mode)
+1. **Pending** - Case needs first review
+2. **First Review** - One analyst reviewed, needs second
+3. **Second Review** - Two analysts reviewed, ready for validation
 
-**Files to Update:**
-- `src/app/dashboard/review/[id]/page.tsx`:
-  - Change `newTimeline` state from `source_id` to `quote_id`
-  - Change `editingTimeline` state from `source_id` to `quote_id`
-  - Update `addTimelineEntry()` to send `quote_id` instead of `source_id`
-  - Update `updateTimelineEntry()` to send `quote_id` instead of `source_id`
-  - Update timeline rendering to show quote text instead of source title
-  - Update dropdown in add/edit forms to show quotes instead of sources
+### Validation Phase (Read-Only)
+4. **First Validation** - One validator confirmed, needs second
+5. **Verified** - Published and public
 
-- `src/lib/incidents-db.ts`:
-  - Verify `addTimelineEntry()` accepts `quote_id` parameter
-  - Verify `updateTimelineEntry()` accepts `quote_id` parameter
-  - Update queries to JOIN quotes table instead of sources
-  - Return quote text and source info through the quote relationship
+### Special States
+- **Rejected** - Case is not publishable
+- **Returned for Re-Review** - Case has `review_cycle >= 2` (was returned from validation)
 
-#### 2. Two-Analyst Review Workflow
+## Database Columns
 
-**Current Button:**
-```tsx
-<button onClick={verifyIncident}>
-  Mark as Verified
-</button>
-```
+### incidents table
+- `verification_status`: pending | first_review | second_review | first_validation | verified | rejected
+- `review_cycle`: INTEGER (default 1, increments when returned from validation)
+- `first_verified_by`, `first_verified_at`: First reviewer
+- `second_verified_by`, `second_verified_at`: Second reviewer  
+- `first_validated_by`, `first_validated_at`: First validator
+- `second_validated_by`, `second_validated_at`: Second validator
+- `rejected_by`, `rejected_at`, `rejection_reason`: Rejection tracking
 
-**Should Be:**
-```tsx
-<button onClick={submitReview}>
-  {incident.verification_status === 'pending' ? 'Submit First Review' : 'Submit Second Review & Publish'}
-</button>
-```
+### validation_issues table
+Stores feedback when cases are returned from validation:
+- `incident_id`: Which case
+- `validation_session_id`: Groups issues from same return action
+- `field_type`: field | quote | timeline | source
+- `field_name`: Which specific item had the issue
+- `issue_reason`: Why it failed validation
+- `created_by`, `created_at`: Who returned it and when
+- `resolved_at`: When the issue was addressed (NULL if unresolved)
 
-**Workflow Logic:**
-```
-User submits review:
-  IF verification_status == 'pending':
-    - Set verification_status = 'first_review'
-    - Set first_review_by = current_user_id
-    - Set first_review_at = NOW()
-    - Keep verified = false
-    - Show message: "First review submitted. Awaiting second review."
-    - Return to dashboard
-  
-  ELSE IF verification_status == 'first_review':
-    - Check: current_user_id != first_review_by (can't review own review)
-    - Set verification_status = 'verified'
-    - Set second_review_by = current_user_id
-    - Set second_review_at = NOW()
-    - Set verified = true
-    - Show message: "Second review complete. Incident is now public."
-    - Return to dashboard
-```
+## Dashboard Features
 
-**Files to Update:**
-- `src/app/dashboard/review/[id]/page.tsx`:
-  - Change button text based on verification_status
-  - Update validation to differentiate warnings (proceed) vs blocking errors (stop)
-  - Add "Submit Review" function that calls new API endpoint
-  - Pass current user ID from session
-  - Show appropriate success message based on review stage
+### Stats Cards
+- Needs Review (pending + first_review)
+- Needs Validation (second_review + first_validation)  
+- Published
+- Rejected
+- Total
 
-- `src/app/api/incidents/[id]/route.ts`:
-  - Add new `POST /api/incidents/[id]/review` endpoint (separate from PUT)
-  - Check current verification_status
-  - Validate user isn't reviewing their own first review
-  - Set appropriate columns based on workflow stage
-  - Return updated incident with new verification_status
+### Special Alert Cards (appear when count > 0)
+- Returned for Re-Review: Cases with validation feedback
+- Ready for Re-Validation: Re-reviewed cases awaiting validation
 
-- `src/lib/incidents-db.ts`:
-  - Add `submitReview(incident_id, user_id)` function
-  - Check verification_status and apply workflow logic
-  - Update columns: first_review_by, first_review_at, second_review_by, second_review_at
-  - Return error if same user tries to do both reviews
+### Filter Buttons
+Primary (colored):
+- Needs Review (yellow)
+- Needs Validation (purple)
+- Rejected (red)
 
-#### 3. Dashboard Queue Updates
+Secondary (gray):
+- Pending, 2nd Review, Published, All
 
-The review queue should show:
-- Pending incidents (need first review)
-- First review complete incidents (need second review)
-- Show WHO did the first review (so you can see if you can do the second)
+### Case Cards
+- Orange border + background for returned cases (review_cycle >= 2)
+- Status badges show Re-Review or Re-Validation for returned cases
+- Cycle indicator shows which review round
 
-**Files to Update:**
-- `src/app/dashboard/page.tsx`:
-  - Show verification_status badge: 'Pending' | 'Awaiting 2nd Review' | 'Verified'
-  - Show first_review_by name if verification_status == 'first_review'
-  - Filter: Can't see incidents for second review where you did the first review
+## Key Principles
 
-## Implementation Order
+1. **Review = Editing** - Analysts can modify data during review
+2. **Validation = Certification** - Validators can only check/flag, not edit
+3. **Different People** - Cannot review/validate same case twice in same phase
+4. **Feedback Loop** - Returned cases show validation feedback to reviewers
+5. **Cycle Tracking** - review_cycle tracks how many times returned
 
-1. **Timeline → Quotes** (Simpler, independent)
-   - Update state variables
-   - Update API calls
-   - Update UI dropdowns
-   - Update database queries
-   - Test: Add timeline entry, edit timeline entry
+## Chrome Extension Features
 
-2. **Two-Analyst Review** (Complex, needs user session)
-   - Add review API endpoint
-   - Update review page button
-   - Add workflow validation
-   - Update dashboard queue
-   - Test: Complete full two-analyst workflow
+### Review Tab
+- Shows all cases awaiting review
+- Filter buttons: All, Returned, New
+- Priority badges for returned cases:
+  - Orange PRIORITY for cycle 2
+  - Red HIGH PRIORITY for cycle 3+
+- Cycle badges show Cycle X
+- Card styling:
+  - Orange left border + background for cycle 2
+  - Red left border + light red background for cycle 3+
+- Returned cases sorted to top of queue
 
-## Data Flow
+### Validate Tab
+- Shows all cases awaiting validation
+- Filter buttons: All, Re-validate, New
+- Priority alert for re-validation cases (clickable to filter)
+- Same priority badge system as Review tab
+- Case details show:
+  - Cycle badge in title
+  - Status badge changes to RE-VALIDATION REQUIRED for returned cases
+  - Orange/red banner with cycle info
+  - Previous validation issues displayed prominently
 
-### Timeline with Quotes
-```
-Timeline Entry
-  ↓
-  has quote_id
-  ↓
-Quote (has quote_text, source_id, verified)
-  ↓
-  has source_id
-  ↓
-Source (has url, title, publication, priority)
-```
+## API Endpoints
 
-This gives timeline entries the evidence (quote) AND the source of that evidence.
+### GET /api/verification-queue
+Query params:
+- status: Filter by verification status
+  - needs_review: pending + first_review
+  - needs_validation: second_review + first_validation
+  - returned_for_review: review statuses with cycle >= 2
+  - revalidation: validation statuses with cycle >= 2
 
-### Review Workflow
-```
-Incident created → verification_status: 'pending'
-  ↓
-Analyst A submits review → verification_status: 'first_review'
-                          first_review_by: user_A_id
-                          first_review_at: timestamp
-  ↓
-Analyst B submits review → verification_status: 'verified'
-                          second_review_by: user_B_id
-                          second_review_at: timestamp
-                          verified: true (makes public)
-```
+Response includes:
+- incidents[]: Array with review_cycle field
+- stats: Includes returned_for_review and revalidation counts
 
-## Next Steps
-
-Would you like me to:
-1. Implement the timeline→quotes change first? (Simpler)
-2. Implement the two-analyst review system? (More complex, needs user auth context)
-3. Both together? (Will take longer but ships as one cohesive update)
+### POST /api/incidents/[id]/validate
+Actions:
+- validate: Approve case (advances status)
+- return_to_review: Send back with feedback (increments review_cycle)
+- reject: Mark as rejected

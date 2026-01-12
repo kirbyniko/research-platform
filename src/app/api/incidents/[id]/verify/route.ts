@@ -61,10 +61,22 @@ export async function POST(
         );
       }
       verificationNumber = 2;
-      newStatus = 'verified';
+      // Changed: Now goes to second_review, NOT directly to verified
+      // Case must go through validation phase after review is complete
+      newStatus = 'second_review';
+    } else if (currentCase.verification_status === 'second_review') {
+      return NextResponse.json(
+        { error: 'Review is complete. Case is now in the validation queue.' },
+        { status: 400 }
+      );
+    } else if (['first_validation', 'verified'].includes(currentCase.verification_status)) {
+      return NextResponse.json(
+        { error: 'Case has already been validated or published.' },
+        { status: 400 }
+      );
     } else {
       return NextResponse.json(
-        { error: 'Case is already fully verified' },
+        { error: 'Case is in an invalid state for review.' },
         { status: 400 }
       );
     }
@@ -96,8 +108,9 @@ export async function POST(
       return NextResponse.json({
         success: true,
         message: verificationNumber === 1 
-          ? 'First verification complete. Case requires one more verification.'
-          : 'Second verification complete. Case is now verified!',
+          ? 'First review complete. Case requires one more review.'
+          : 'Second review complete. Case sent to validation queue.',
+        verification_status: newStatus,
         verificationNumber,
         newStatus
       });

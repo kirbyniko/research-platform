@@ -160,6 +160,13 @@ export async function PATCH(
     if (body.sources && Array.isArray(body.sources)) {
       results.source_ids = [];
       for (const source of body.sources) {
+        // Validate source has URL
+        if (!source.url) {
+          return NextResponse.json(
+            { error: 'Each source must have a URL' },
+            { status: 400 }
+          );
+        }
         const sourceId = await addIncidentSource(numericId, source);
         results.source_ids.push(sourceId);
       }
@@ -169,6 +176,20 @@ export async function PATCH(
     if (body.quotes && Array.isArray(body.quotes)) {
       results.quote_ids = [];
       for (const quote of body.quotes) {
+        // Validate quote has text
+        if (!quote.text || quote.text.trim() === '') {
+          return NextResponse.json(
+            { error: 'Each quote must have text' },
+            { status: 400 }
+          );
+        }
+        // Validate quote has source_id if sources were added
+        if (!quote.source_id && (!results.source_ids || results.source_ids.length === 0)) {
+          return NextResponse.json(
+            { error: 'Each quote must be linked to a source. Add sources first or include source_id.' },
+            { status: 400 }
+          );
+        }
         const quoteId = await addIncidentQuote(numericId, quote);
         results.quote_ids.push(quoteId);
       }
