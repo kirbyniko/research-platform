@@ -545,9 +545,14 @@ export default function ReviewPage() {
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { 
-    if (isNewIncident && fromGuest && guestDataParam) {
+    if (fromGuest && guestDataParam) {
+      // Always use guest data when coming from guest submission, even if incident was just created
       initializeFromGuestData();
-    } else if (!isNewIncident) {
+    } else if (isNewIncident) {
+      // New incident without guest data - show empty form
+      setLoading(false);
+    } else {
+      // Existing incident - fetch from database
       fetchData(); 
     }
   }, [incidentId, isNewIncident, fromGuest, guestDataParam]);
