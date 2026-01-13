@@ -85,6 +85,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || 'pending';
     const limit = parseInt(searchParams.get('limit') || '50');
+    const includeDeleted = searchParams.get('include_deleted') === 'true';
+    
+    // Build WHERE clause - exclude soft-deleted by default
+    let whereClause = '(gs.status = $1 OR $1 = \'all\')';
+    if (!includeDeleted) {
+      whereClause += ' AND gs.deleted_at IS NULL';
+    }
     
     const result = await pool.query(`
       SELECT 
@@ -92,7 +99,7 @@ export async function GET(request: NextRequest) {
         u.name as reviewer_name
       FROM guest_submissions gs
       LEFT JOIN users u ON gs.reviewed_by = u.id
-      WHERE gs.status = $1 OR $1 = 'all'
+      WHERE ${whereClause}
       ORDER BY gs.created_at DESC
       LIMIT $2
     `, [status, limit]);
@@ -115,7 +122,23 @@ export async function PATCH(request: NextRequest) {
     const user = authCheck.user;
     
     const body = await request.json();
-    const { id, status, notes } = body;
+    const { id, status, notes, deleted_at, deletion_reason } = body;
+    
+    // Handle soft delete
+    if (deleted_at !== undefined) {
+      const result = await pool.query(`
+        UPDATE guest_submissions
+        SET deleted_at = $1, deletion_reason = $2, reviewed_by = $3
+        WHERE id = $4
+        RETURNING id
+      `, [deleted_at, deletion_reason || null, user.id, id]);
+      
+      if (result.rows.length === 0) {
+        return NextResponse.json({ error: 'Submission not found' }, { status: 404 });
+      }
+      
+      return NextResponse.json({ success: true, message: 'Submission marked for deletion' });
+    }
     
     if (!id || !['reviewed', 'accepted', 'rejected'].includes(status)) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
@@ -141,5 +164,36 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('Error updating guest submission:', error);
     return NextResponse.json({ error: 'Failed to update submission' }, { status: 500 });
+  }
+}
+
+// DELETE - Permanently delete guest submission (admin only)
+export async function DELETE(request: NextRequest) {
+  try {
+    const authCheck = await requireServerAuth(request, 'admin');
+    if ('error' in authCheck) {
+      return NextResponse.json({ error: 'Admin access required' }, { status: authCheck.status });
+    }
+    
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    
+    if (!id) {
+      return NextResponse.json({ error: 'Submission ID required' }, { status: 400 });
+    }
+    
+    const result = await pool.query(`
+      DELETE FROM guest_submissions WHERE id = $1 RETURNING id
+    `, [id]);
+    
+    if (result.rows.length === 0) {
+      return NextResponse.json({ error: 'Submission not found' }, { status: 404 });
+    }
+    
+    return NextResponse.json({ success: true, message: 'Submission permanently deleted' });
+    
+  } catch (error) {
+    console.error('Error deleting guest submission:', error);
+    return NextResponse.json({ error: 'Failed to delete submission' }, { status: 500 });
   }
 }

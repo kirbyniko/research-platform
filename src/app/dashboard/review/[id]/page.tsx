@@ -540,6 +540,9 @@ export default function ReviewPage() {
   const [guestSubmissionId, setGuestSubmissionId] = useState<number | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteReason, setDeleteReason] = useState('');
+  const [showDeleteGuestModal, setShowDeleteGuestModal] = useState(false);
+  const [deleteGuestId, setDeleteGuestId] = useState<number | null>(null);
+  const [deleteGuestReason, setDeleteGuestReason] = useState('');
   const [relatedReports, setRelatedReports] = useState<any[]>([]);
   const [relatedReportsSummary, setRelatedReportsSummary] = useState<{ total: number; transferred: number; pending: number } | null>(null);
   const [showRelatedReports, setShowRelatedReports] = useState(false);
@@ -1080,6 +1083,43 @@ export default function ReviewPage() {
     setTimeline(prev => prev.filter(t => t.id !== id));
   }
 
+  async function handleDeleteGuestSubmission() {
+    if (!deleteGuestId || !deleteGuestReason.trim()) {
+      alert('Please provide a reason for deletion');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/guest-submissions`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: deleteGuestId,
+          deleted_at: new Date().toISOString(),
+          deletion_reason: deleteGuestReason
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to delete submission');
+
+      // Refresh related reports list
+      const name = incident?.victim_name || incident?.subject_name;
+      if (name) {
+        await fetchRelatedReports(name);
+      }
+
+      // Close modal and reset state
+      setShowDeleteGuestModal(false);
+      setDeleteGuestId(null);
+      setDeleteGuestReason('');
+      
+      alert('Guest submission marked for deletion');
+    } catch (err) {
+      console.error('Error deleting guest submission:', err);
+      alert('Failed to delete submission');
+    }
+  }
+
   const toggleSection = (s: keyof typeof sectionsOpen) => setSectionsOpen(prev => ({ ...prev, [s]: !prev[s] }));
 
   if (loading) return <div className="p-8">Loading...</div>;
@@ -1308,11 +1348,25 @@ export default function ReviewPage() {
                           )}
                         </div>
                         
-                        <div className="text-right text-xs text-gray-500 shrink-0">
-                          <p>Submitted {new Date(report.created_at).toLocaleDateString()}</p>
-                          {report.submitter_email && <p>by {report.submitter_email}</p>}
-                          {report.transferred_to_incident_id && (
-                            <p className="mt-1 text-green-600">→ Incident #{report.transferred_to_incident_id}</p>
+                        <div className="flex flex-col items-end gap-2">
+                          <div className="text-right text-xs text-gray-500 shrink-0">
+                            <p>Submitted {new Date(report.created_at).toLocaleDateString()}</p>
+                            {report.submitter_email && <p>by {report.submitter_email}</p>}
+                            {report.transferred_to_incident_id && (
+                              <p className="mt-1 text-green-600">→ Incident #{report.transferred_to_incident_id}</p>
+                            )}
+                          </div>
+                          {report.transfer_status !== 'transferred' && (
+                            <button
+                              onClick={() => {
+                                setDeleteGuestId(report.id);
+                                setShowDeleteGuestModal(true);
+                              }}
+                              className="text-xs px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded border border-red-200 transition-colors"
+                              title="Soft delete this submission"
+                            >
+                              🗑️ Delete
+                            </button>
                           )}
                         </div>
                       </div>
@@ -1322,6 +1376,40 @@ export default function ReviewPage() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Delete Guest Submission Modal */}
+      {showDeleteGuestModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => { setShowDeleteGuestModal(false); setDeleteGuestId(null); setDeleteGuestReason(''); }}>
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-4 text-red-600">Soft Delete Guest Submission</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              This will mark the guest submission for deletion (soft delete). Only administrators can permanently delete submissions.
+            </p>
+            <label className="block text-sm font-medium mb-2">Reason for deletion *</label>
+            <textarea
+              value={deleteGuestReason}
+              onChange={e => setDeleteGuestReason(e.target.value)}
+              className="w-full border rounded px-3 py-2 mb-4 text-sm"
+              rows={3}
+              placeholder="E.g., duplicate, spam, unrelated..."
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => { setShowDeleteGuestModal(false); setDeleteGuestId(null); setDeleteGuestReason(''); }}
+                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteGuestSubmission}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

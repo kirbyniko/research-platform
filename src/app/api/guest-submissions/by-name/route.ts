@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
     
     // Search for guest submissions with similar names
     // Using ILIKE for case-insensitive matching
+    // Exclude soft-deleted submissions
     const query = `
       SELECT 
         gs.id,
@@ -42,7 +43,8 @@ export async function GET(request: NextRequest) {
         gs.notes
       FROM guest_submissions gs
       WHERE 
-        (
+        gs.deleted_at IS NULL
+        AND (
           gs.submission_data->>'victimName' ILIKE $1
           OR gs.submission_data->>'victimName' ILIKE $2
         )
