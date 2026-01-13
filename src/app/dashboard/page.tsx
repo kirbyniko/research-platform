@@ -354,15 +354,19 @@ export default function DashboardPage() {
         body: JSON.stringify({
           incident_id: incidentIdValue,
           incident_type: data.incidentType || 'death_in_custody',
-          victim_name: victimNameValue,
-          incident_date: data.dateOfDeath || '',
-          city: data.city || cityFromLocation || '',
-          state: data.state || stateFromLocation || '',
-          facility: data.facility || '',
+          date: data.dateOfDeath || null,
+          location: {
+            city: data.city || cityFromLocation || '',
+            state: data.state || stateFromLocation || '',
+            facility: data.facility || ''
+          },
+          subject: {
+            name: victimNameValue,
+            age: data.age || null,
+            gender: data.gender || null,
+            nationality: data.nationality || null
+          },
           summary: data.description || '',
-          subject_age: data.age || null,
-          subject_gender: data.gender || null,
-          subject_nationality: data.nationality || null,
           from_guest_submission: true
         }),
       });
