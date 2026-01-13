@@ -61,6 +61,14 @@ interface TimelineEntry {
   quote_source_url?: string | null;
 }
 
+interface Media {
+  id: number;
+  url: string;
+  media_type: 'image' | 'video';
+  description: string | null;
+  verified?: boolean;
+}
+
 interface ValidationIssue {
   id: number;
   field_type: string;
@@ -113,6 +121,7 @@ export default function ValidatePage() {
   const [sources, setSources] = useState<Source[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
+  const [media, setMedia] = useState<Media[]>([]);
   const [quoteFieldLinks, setQuoteFieldLinks] = useState<QuoteFieldLink[]>([]);
   const [previousIssues, setPreviousIssues] = useState<ValidationIssue[]>([]);
 
@@ -137,6 +146,7 @@ export default function ValidatePage() {
         setSources(data.sources || []);
         setQuotes(data.quotes || []);
         setTimeline(data.timeline || []);
+        setMedia(data.media || []);
         setQuoteFieldLinks(data.quote_field_links || []);
         setPreviousIssues(data.previous_issues || []);
 
@@ -164,6 +174,11 @@ export default function ValidatePage() {
         // Sources
         for (const source of data.sources || []) {
           initialState[`source_${source.id}`] = { checked: false, reason: '' };
+        }
+        
+        // Media
+        for (const item of data.media || []) {
+          initialState[`media_${item.id}`] = { checked: false, reason: '' };
         }
 
         setValidationState(initialState);
@@ -663,6 +678,88 @@ export default function ValidatePage() {
                             {source.url}
                           </a>
                         </div>
+                        {!state.checked && (
+                          <input
+                            type="text"
+                            placeholder="Reason not validated..."
+                            value={state.reason}
+                            onChange={(e) => updateReason(key, e.target.value)}
+                            className="mt-2 w-full px-3 py-2 text-sm border border-red-200 rounded focus:ring-red-500 focus:border-red-500 bg-red-50"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Media Section */}
+        {media.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-4 pb-2 border-b">Media ({media.length})</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {media.map(item => {
+                const key = `media_${item.id}`;
+                const state = validationState[key] || { checked: false, reason: '' };
+                
+                return (
+                  <div
+                    key={item.id}
+                    className={`p-4 rounded-lg border ${
+                      state.checked ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-start gap-4">
+                      <label className="flex items-center mt-1">
+                        <input
+                          type="checkbox"
+                          checked={state.checked}
+                          onChange={() => toggleValidation(key)}
+                          className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                        />
+                      </label>
+                      <div className="flex-1">
+                        <div className="mb-2">
+                          {item.media_type === 'image' ? (
+                            <a href={item.url} target="_blank" rel="noopener noreferrer">
+                              <img
+                                src={item.url}
+                                alt={item.description || 'Media'}
+                                className="max-w-full h-40 object-cover rounded border cursor-pointer hover:opacity-90"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = '/placeholder-image.png';
+                                }}
+                              />
+                            </a>
+                          ) : (
+                            <video
+                              src={item.url}
+                              controls
+                              className="max-w-full h-40 rounded border"
+                            />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            item.media_type === 'image' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                          }`}>
+                            {item.media_type === 'image' ? '🖼️ Image' : '🎬 Video'}
+                          </span>
+                          <a 
+                            href={item.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline truncate text-xs"
+                          >
+                            View Original
+                          </a>
+                        </div>
+                        {item.description && (
+                          <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                        )}
                         {!state.checked && (
                           <input
                             type="text"

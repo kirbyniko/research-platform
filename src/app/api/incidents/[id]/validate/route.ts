@@ -110,6 +110,20 @@ export async function GET(
       console.error('[validate GET] Error fetching timeline:', e);
     }
     
+    // Get media
+    console.log('[validate GET] Fetching media...');
+    let mediaRows: any[] = [];
+    try {
+      const mediaResult = await pool.query(`
+        SELECT * FROM incident_media
+        WHERE incident_id = $1
+        ORDER BY created_at
+      `, [incidentId]);
+      mediaRows = mediaResult.rows;
+    } catch (e) {
+      console.error('[validate GET] Error fetching media:', e);
+    }
+    
     // Get quote-field links (may not exist in all setups)
     console.log('[validate GET] Fetching quote-field links...');
     let linksRows: any[] = [];
@@ -147,6 +161,7 @@ export async function GET(
       quotes: quotesRows,
       sources: sourcesRows,
       timeline: timelineRows,
+      media: mediaRows,
       quote_field_links: linksRows,
       previous_issues: issuesRows
     });
