@@ -538,6 +538,10 @@ export default function ReviewPage() {
   const [editQuoteData, setEditQuoteData] = useState<any>({});
   const [highlightUnverified, setHighlightUnverified] = useState(false);
   const [guestSubmissionId, setGuestSubmissionId] = useState<number | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [relatedGuestReports, setRelatedGuestReports] = useState<any[]>([]);
+  const [showRelatedReports, setShowRelatedReports] = useState(false);
   const [relatedReports, setRelatedReports] = useState<any[]>([]);
   const [relatedReportsSummary, setRelatedReportsSummary] = useState<{ total: number; transferred: number; pending: number } | null>(null);
   const [showRelatedReports, setShowRelatedReports] = useState(false);
@@ -654,6 +658,18 @@ export default function ReviewPage() {
     }
   }
 
+  async function fetchRelatedGuestReports(victimName: string) {
+    try {
+      const res = await fetch(`/api/guest-submissions/by-name?name=${encodeURIComponent(victimName)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setRelatedGuestReports(data.submissions || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch related guest reports:', err);
+    }
+  }
+
   async function fetchData() {
     try {
       setLoading(true);
@@ -668,7 +684,13 @@ export default function ReviewPage() {
       setViolations(data.violations || []);
       setTimeline(data.timeline || []);
       setValidationIssues(data.validation_issues || []);
-      if (data.incident) setEditedIncident(data.incident);
+      if (data.incident) {
+        setEditedIncident(data.incident);
+        // Fetch related guest reports if we have a victim name
+        if (data.incident.victim_name && data.incident.victim_name.toLowerCase() !== 'unknown') {
+          fetchRelatedGuestReports(data.incident.victim_name);
+        }
+      }
       
       // Fetch type-specific details
       const detailsRes = await fetch(`/api/incidents/${incidentId}/details`);

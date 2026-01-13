@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { requireServerAuth } from '@/lib/server-auth';
+import pool from '@/lib/db';
 import {
   getIncidentById,
   updateIncident,
@@ -172,6 +173,17 @@ export async function PATCH(
     }
 
     const body = await request.json();
+    
+    // Handle soft delete
+    if (body.deleted_at !== undefined) {
+      await pool.query(`
+        UPDATE incidents
+        SET deleted_at = $1, deletion_reason = $2
+        WHERE id = $3
+      `, [body.deleted_at, body.deletion_reason || null, numericId]);
+      return NextResponse.json({ success: true });
+    }
+    
     const results: Record<string, number[]> = {};
 
     // Add sources

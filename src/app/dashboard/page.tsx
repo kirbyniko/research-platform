@@ -418,6 +418,9 @@ export default function DashboardPage() {
         }),
       });
 
+      // Refresh guest submissions to remove the reviewed one from the queue
+      fetchGuestSubmissions();
+
       // Navigate to review page with guest data (transform to snake_case for review page)
       const guestDataForReview = {
         victim_name: data.victimName || '',
