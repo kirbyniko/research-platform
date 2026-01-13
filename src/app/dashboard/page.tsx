@@ -336,8 +336,17 @@ export default function DashboardPage() {
         ? JSON.parse(submission.submission_data) 
         : submission.submission_data;
 
+      console.log('[handleBeginReview] Guest submission ID:', submission.id);
+      console.log('[handleBeginReview] Full submission_data:', JSON.stringify(data, null, 2));
+      console.log('[handleBeginReview] Extracted victimName:', data.victimName);
+      console.log('[handleBeginReview] victimName type:', typeof data.victimName);
+      console.log('[handleBeginReview] victimName length:', data.victimName?.length);
+
       const [cityFromLocation, stateFromLocation] = (data.location || '').split(',').map((p: string) => p.trim());
       const incidentIdValue = `INC-${Date.now()}`;
+
+      const victimNameValue = data.victimName || null;
+      console.log('[handleBeginReview] Final victimName to send:', victimNameValue);
 
       const createRes = await fetch('/api/incidents', {
         method: 'POST',
@@ -345,7 +354,7 @@ export default function DashboardPage() {
         body: JSON.stringify({
           incident_id: incidentIdValue,
           incident_type: data.incidentType || 'death_in_custody',
-          victim_name: data.victimName || '',
+          victim_name: victimNameValue,
           incident_date: data.dateOfDeath || '',
           city: data.city || cityFromLocation || '',
           state: data.state || stateFromLocation || '',

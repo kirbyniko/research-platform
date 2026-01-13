@@ -1736,55 +1736,28 @@ export default function ReviewPage() {
 
       {/* Sources Section */}
       <Section title={`Sources (${sources.length})`} open={sectionsOpen.sources} onToggle={() => toggleSection('sources')}>
-        <div className="space-y-2 p-3 bg-gray-50 rounded mb-3">
+        <div className="flex gap-2 p-3 bg-gray-50 rounded mb-3">
           <input 
-            placeholder="URL *" 
-            className="w-full border rounded px-3 py-2 text-sm" 
+            placeholder="Source URL *" 
+            className="flex-1 border rounded px-3 py-2 text-sm" 
             value={newSource.url} 
             onChange={e => setNewSource({ ...newSource, url: e.target.value })} 
           />
-          <div className="flex gap-2">
-            <input 
-              placeholder="Title (optional)" 
-              className="flex-1 border rounded px-3 py-2 text-sm" 
-              value={newSource.title} 
-              onChange={e => setNewSource({ ...newSource, title: e.target.value })} 
-            />
-            <input 
-              placeholder="Publication (optional)" 
-              className="flex-1 border rounded px-3 py-2 text-sm" 
-              value={newSource.publication} 
-              onChange={e => setNewSource({ ...newSource, publication: e.target.value })} 
-            />
-          </div>
-          <div className="flex gap-2">
-            <select 
-              className="flex-1 border rounded px-3 py-2 text-sm" 
-              value={newSource.source_type} 
-              onChange={e => setNewSource({ ...newSource, source_type: e.target.value })}
-            >
-              <option value="news">News</option>
-              <option value="government">Government</option>
-              <option value="legal">Legal</option>
-              <option value="ngo">NGO</option>
-              <option value="social_media">Social Media</option>
-            </select>
-            <select 
-              className="flex-1 border rounded px-3 py-2 text-sm" 
-              value={newSource.source_priority || 'secondary'} 
-              onChange={e => setNewSource({ ...newSource, source_priority: e.target.value })}
-            >
-              <option value="primary">Primary</option>
-              <option value="secondary">Secondary</option>
-            </select>
-            <button 
-              onClick={addSource} 
-              disabled={!newSource.url || saving} 
-              className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:bg-gray-400"
-            >
-              Add
-            </button>
-          </div>
+          <select 
+            className="w-32 border rounded px-3 py-2 text-sm" 
+            value={newSource.source_priority || 'secondary'} 
+            onChange={e => setNewSource({ ...newSource, source_priority: e.target.value })}
+          >
+            <option value="primary">Primary</option>
+            <option value="secondary">Secondary</option>
+          </select>
+          <button 
+            onClick={addSource} 
+            disabled={!newSource.url || saving} 
+            className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:bg-gray-400"
+          >
+            Add
+          </button>
         </div>
         <div className="space-y-2">
           {sources.map(s => (
@@ -1798,31 +1771,6 @@ export default function ReviewPage() {
                     onChange={(e) => setEditSourceData({ ...editSourceData, url: e.target.value })}
                   />
                   <div className="flex gap-2">
-                    <input 
-                      className="flex-1 border rounded px-3 py-2 text-sm" 
-                      placeholder="Title"
-                      value={editSourceData.title !== undefined ? editSourceData.title : s.title || ''}
-                      onChange={(e) => setEditSourceData({ ...editSourceData, title: e.target.value })}
-                    />
-                    <input 
-                      className="w-40 border rounded px-3 py-2 text-sm" 
-                      placeholder="Publication"
-                      value={editSourceData.publication !== undefined ? editSourceData.publication : s.publication || ''}
-                      onChange={(e) => setEditSourceData({ ...editSourceData, publication: e.target.value })}
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <select 
-                      className="flex-1 border rounded px-3 py-2 text-sm" 
-                      value={editSourceData.source_type || s.source_type}
-                      onChange={(e) => setEditSourceData({ ...editSourceData, source_type: e.target.value })}
-                    >
-                      <option value="news">News</option>
-                      <option value="government">Government</option>
-                      <option value="legal">Legal</option>
-                      <option value="ngo">NGO</option>
-                      <option value="social_media">Social Media</option>
-                    </select>
                     <select 
                       className="flex-1 border rounded px-3 py-2 text-sm" 
                       value={editSourceData.source_priority || s.source_priority || 'secondary'}
