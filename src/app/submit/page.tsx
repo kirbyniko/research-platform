@@ -581,6 +581,9 @@ export default function GuestSubmitPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Source URLs
               </label>
+              <p className="text-xs text-gray-600 mb-3 bg-blue-50 border border-blue-200 rounded p-2">
+                <strong className="text-blue-700">Important:</strong> Please provide source links whenever possible. We can only include information that can be independently verified.
+              </p>
               
               <div className="space-y-3 mb-3">
                 {sourceItems.map((item, index) => (

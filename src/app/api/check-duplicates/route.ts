@@ -88,8 +88,8 @@ export async function POST(request: NextRequest) {
           SELECT COUNT(*) as count
           FROM guest_submissions
           WHERE 
-            submission_data->>'victimName' ILIKE $1
-            AND status IN ('pending', 'reviewed')
+            LOWER(subject_name) LIKE LOWER($1)
+            AND transfer_status IN ('pending', 'in_review')
         `;
         const countResult = await pool.query(submissionCountQuery, [`%${victimName.trim()}%`]);
         results.guestSubmissionCount = parseInt(countResult.rows[0]?.count || '0');
