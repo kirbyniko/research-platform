@@ -420,7 +420,7 @@ export default function DashboardPage() {
 
       // Navigate to review page with guest data so victim name displays
       const guestData = encodeURIComponent(JSON.stringify(data));
-      router.push(`/dashboard/review/${newIncidentId}?fromGuest=true&guestData=${guestData}`);
+      router.push(`/dashboard/review/${newIncidentId}?from_guest=true&guest_data=${guestData}`);
     } catch (err) {
       setError('Failed to begin review');
       console.error(err);
