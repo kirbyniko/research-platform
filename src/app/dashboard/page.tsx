@@ -1495,18 +1495,175 @@ export default function DashboardPage() {
                     {/* Expanded Details */}
                     {expandedGuestId === submission.id && (
                       <div className="mt-3 pt-3 border-t bg-gray-50 -mx-4 -mb-4 p-4 rounded-b-lg">
-                        <h4 className="font-semibold text-sm mb-2">Full Details</h4>
+                        <h4 className="font-semibold text-sm mb-3">Full Details</h4>
                         <div className="space-y-2 text-sm">
-                          {Object.entries(data).map(([key, value]) => {
-                            if (!value || key === 'submittedAt') return null;
-                            if (typeof value === 'object') return null;
-                            return (
-                              <div key={key} className="grid grid-cols-3 gap-2">
-                                <span className="font-medium text-gray-700">{key}:</span>
-                                <span className="col-span-2 text-gray-900">{String(value)}</span>
-                              </div>
-                            );
-                          })}
+                          {/* Basic Info */}
+                          <div className="grid grid-cols-3 gap-2">
+                            <span className="font-medium text-gray-700">Name:</span>
+                            <span className="col-span-2 text-gray-900">{data.victimName || 'Unknown'}</span>
+                          </div>
+                          {data.age && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Age:</span>
+                              <span className="col-span-2 text-gray-900">{data.age}</span>
+                            </div>
+                          )}
+                          {data.gender && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Gender:</span>
+                              <span className="col-span-2 text-gray-900">{data.gender}</span>
+                            </div>
+                          )}
+                          {data.nationality && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Nationality:</span>
+                              <span className="col-span-2 text-gray-900">{data.nationality}</span>
+                            </div>
+                          )}
+                          
+                          {/* Location */}
+                          {data.city && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">City:</span>
+                              <span className="col-span-2 text-gray-900">{data.city}</span>
+                            </div>
+                          )}
+                          {data.state && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">State:</span>
+                              <span className="col-span-2 text-gray-900">{data.state}</span>
+                            </div>
+                          )}
+                          {data.location && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Location:</span>
+                              <span className="col-span-2 text-gray-900">{data.location}</span>
+                            </div>
+                          )}
+                          {data.facility && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Facility:</span>
+                              <span className="col-span-2 text-gray-900">{data.facility}</span>
+                            </div>
+                          )}
+                          
+                          {/* Incident Details */}
+                          {data.incidentType && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Type:</span>
+                              <span className="col-span-2 text-gray-900">{data.incidentType.replace(/_/g, ' ')}</span>
+                            </div>
+                          )}
+                          {data.dateOfDeath && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Date:</span>
+                              <span className="col-span-2 text-gray-900">{data.dateOfDeath}</span>
+                            </div>
+                          )}
+                          {data.causeOfDeath && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Cause of Death:</span>
+                              <span className="col-span-2 text-gray-900">{data.causeOfDeath}</span>
+                            </div>
+                          )}
+                          {data.mannerOfDeath && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Manner of Death:</span>
+                              <span className="col-span-2 text-gray-900">{data.mannerOfDeath}</span>
+                            </div>
+                          )}
+                          {data.custodyDuration && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Custody Duration:</span>
+                              <span className="col-span-2 text-gray-900">{data.custodyDuration}</span>
+                            </div>
+                          )}
+                          {data.medicalDenied && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Medical Care:</span>
+                              <span className="col-span-2 text-red-600">Denied</span>
+                            </div>
+                          )}
+                          
+                          {/* Shooting specifics */}
+                          {data.shotsFired && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Shots Fired:</span>
+                              <span className="col-span-2 text-gray-900">{data.shotsFired}</span>
+                            </div>
+                          )}
+                          {data.weaponType && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Weapon:</span>
+                              <span className="col-span-2 text-gray-900">{data.weaponType}</span>
+                            </div>
+                          )}
+                          {data.bodycamAvailable && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Body Camera:</span>
+                              <span className="col-span-2 text-green-600">Available</span>
+                            </div>
+                          )}
+                          {data.victimArmed && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Victim Status:</span>
+                              <span className="col-span-2 text-gray-900">Armed</span>
+                            </div>
+                          )}
+                          {data.shootingContext && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Context:</span>
+                              <span className="col-span-2 text-gray-900">{data.shootingContext}</span>
+                            </div>
+                          )}
+                          
+                          {/* Force specifics */}
+                          {data.victimRestrained && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Restraints:</span>
+                              <span className="col-span-2 text-gray-900">Used</span>
+                            </div>
+                          )}
+                          {data.victimComplying !== undefined && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Compliance:</span>
+                              <span className="col-span-2 text-gray-900">{data.victimComplying ? 'Complying' : 'Not Complying'}</span>
+                            </div>
+                          )}
+                          
+                          {/* Agencies */}
+                          {data.agencies && Object.keys(data.agencies).length > 0 && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Agencies:</span>
+                              <span className="col-span-2 text-gray-900">
+                                {Object.entries(data.agencies)
+                                  .filter(([_, val]) => val)
+                                  .map(([key]) => key.replace(/_/g, ' '))
+                                  .join(', ')}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Force Types */}
+                          {data.forceTypes && Object.keys(data.forceTypes).length > 0 && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Force Types:</span>
+                              <span className="col-span-2 text-gray-900">
+                                {Object.entries(data.forceTypes)
+                                  .filter(([_, val]) => val)
+                                  .map(([key]) => key.replace(/_/g, ' '))
+                                  .join(', ')}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Description */}
+                          {data.description && (
+                            <div className="grid grid-cols-3 gap-2">
+                              <span className="font-medium text-gray-700">Description:</span>
+                              <span className="col-span-2 text-gray-900 whitespace-pre-wrap">{data.description}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
