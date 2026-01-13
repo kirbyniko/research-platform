@@ -418,8 +418,23 @@ export default function DashboardPage() {
         }),
       });
 
-      // Navigate to review page with guest data so victim name displays
-      const guestData = encodeURIComponent(JSON.stringify(data));
+      // Navigate to review page with guest data (transform to snake_case for review page)
+      const guestDataForReview = {
+        victim_name: data.victimName || '',
+        incident_type: data.incidentType || 'death_in_custody',
+        incident_date: data.dateOfDeath || '',
+        city: data.city || cityFromLocation || '',
+        state: data.state || stateFromLocation || '',
+        facility: data.facility || '',
+        summary: data.description || '',
+        subject_age: data.age || '',
+        subject_gender: data.gender || '',
+        subject_nationality: data.nationality || '',
+        media_urls: data.mediaUrls || [],
+        source_urls: data.sourceUrls || [],
+        guest_submission_id: submission.id
+      };
+      const guestData = encodeURIComponent(JSON.stringify(guestDataForReview));
       router.push(`/dashboard/review/${newIncidentId}?from_guest=true&guest_data=${guestData}`);
     } catch (err) {
       setError('Failed to begin review');
