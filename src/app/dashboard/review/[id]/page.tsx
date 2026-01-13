@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { LEGAL_REFERENCES, getCaseLawForViolation, VIOLATION_TO_LEGAL_KEY } from '@/lib/legal-references';
 import type { LegalCase } from '@/lib/legal-references';
+import DuplicateChecker from '@/components/DuplicateChecker';
 
 // Types
 interface Incident {
@@ -1424,6 +1425,16 @@ export default function ReviewPage() {
           </div>
         </div>
       )}
+
+      {/* Duplicate Checker Tool */}
+      <div className="mb-6">
+        <DuplicateChecker
+          initialQuery={editedIncident.victim_name || editedIncident.subject_name || ''}
+          excludeIncidentId={incident?.id}
+          showSources={true}
+          className="shadow-sm"
+        />
+      </div>
 
       {/* Details Section */}
       <Section title="Incident Details" open={sectionsOpen.details} onToggle={() => toggleSection('details')}>
