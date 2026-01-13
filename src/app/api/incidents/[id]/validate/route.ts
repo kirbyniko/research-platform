@@ -89,7 +89,7 @@ export async function GET(
       const sourcesResult = await pool.query(`
         SELECT * FROM incident_sources
         WHERE incident_id = $1
-        ORDER BY created_at
+        ORDER BY id
       `, [incidentId]);
       sourcesRows = sourcesResult.rows;
     } catch (e) {
@@ -103,7 +103,7 @@ export async function GET(
       const timelineResult = await pool.query(`
         SELECT * FROM incident_timeline
         WHERE incident_id = $1
-        ORDER BY event_date ASC NULLS LAST, created_at
+        ORDER BY COALESCE(sequence_order, 0), event_date ASC NULLS LAST, id
       `, [incidentId]);
       timelineRows = timelineResult.rows;
     } catch (e) {
@@ -117,7 +117,7 @@ export async function GET(
       const mediaResult = await pool.query(`
         SELECT * FROM incident_media
         WHERE incident_id = $1
-        ORDER BY created_at
+        ORDER BY is_primary DESC NULLS LAST, display_order ASC NULLS LAST, id
       `, [incidentId]);
       mediaRows = mediaResult.rows;
     } catch (e) {
