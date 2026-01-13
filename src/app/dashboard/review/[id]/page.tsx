@@ -677,6 +677,18 @@ export default function ReviewPage() {
       const res = await fetch(`/api/incidents/${incidentId}/verify-field`);
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
+      
+      // Check if this incident was created from a rejected guest submission
+      if (data.incident?.guest_submission_id) {
+        const guestRes = await fetch(`/api/guest-submissions/${data.incident.guest_submission_id}`);
+        if (guestRes.ok) {
+          const guestData = await guestRes.json();
+          if (guestData.submission?.status === 'rejected') {
+            throw new Error('This incident was created from a rejected guest submission and cannot be reviewed');
+          }
+        }
+      }
+      
       setIncident(data.incident);
       setMedia(data.media || []);
       setSources(data.sources || []);
