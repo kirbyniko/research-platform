@@ -25,6 +25,12 @@ interface Incident {
   rejected_at: string | null;
   review_cycle: number;
   created_at: string;
+  // Data completeness fields
+  source_count: number;
+  quote_count: number;
+  media_count: number;
+  timeline_count: number;
+  filled_fields: number;
 }
 
 interface EditSuggestion {
@@ -76,7 +82,7 @@ interface User {
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<'cases' | 'edits'>('cases');
+  const [activeTab, setActiveTab] = useState<'cases' | 'edits' | 'guests'>('cases');
   
   // Case verification state
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -109,19 +115,38 @@ export default function DashboardPage() {
   const [newSourceUrl, setNewSourceUrl] = useState('');
   const [newSourceTitle, setNewSourceTitle] = useState('');
 
+  // Guest submissions state
+  const [guestSubmissions, setGuestSubmissions] = useState<any[]>([]);
+  const [guestLoading, setGuestLoading] = useState(false);
+  const [guestFilter, setGuestFilter] = useState<'pending' | 'reviewed' | 'approved' | 'rejected' | 'all'>('pending');
+  const [reviewingGuestId, setReviewingGuestId] = useState<number | null>(null);
+  const [expandedGuestId, setExpandedGuestId] = useState<number | null>(null);
+
   useEffect(() => {
     checkAuth();
   }, []);
 
   useEffect(() => {
     if (user && (user.role === 'analyst' || user.role === 'admin' || user.role === 'editor')) {
+      // Fetch all data on load
+      fetchQueue();
+      fetchEditSuggestions();
+      fetchGuestSubmissions();
+    }
+  }, [user, filter, editFilter, guestFilter]);
+  
+  // Refetch when active tab changes
+  useEffect(() => {
+    if (user && (user.role === 'analyst' || user.role === 'admin' || user.role === 'editor')) {
       if (activeTab === 'cases') {
         fetchQueue();
-      } else {
+      } else if (activeTab === 'edits') {
         fetchEditSuggestions();
+      } else if (activeTab === 'guests') {
+        fetchGuestSubmissions();
       }
     }
-  }, [user, filter, editFilter, activeTab]);
+  }, [activeTab]);
 
   async function checkAuth() {
     try {
@@ -174,6 +199,28 @@ export default function DashboardPage() {
       setError('Failed to fetch edit suggestions');
     } finally {
       setEditLoading(false);
+    }
+  }
+
+  async function fetchGuestSubmissions() {
+    setGuestLoading(true);
+    try {
+      const res = await fetch(`/api/guest-submissions?status=${guestFilter}`, {
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setGuestSubmissions(data.submissions);
+      } else {
+        const errorText = await res.text();
+        console.error('Failed to fetch guest submissions:', res.status, errorText);
+        setError('Failed to fetch guest submissions');
+      }
+    } catch (err) {
+      console.error('Error fetching guest submissions:', err);
+      setError('Failed to fetch guest submissions');
+    } finally {
+      setGuestLoading(false);
     }
   }
 
@@ -254,6 +301,123 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleGuestReview(submission: any, status: 'rejected') {
+    setReviewingGuestId(submission.id);
+    setError('');
+    try {
+      const res = await fetch(`/api/guest-submissions`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: submission.id,
+          status,
+          notes: 'Denied by analyst'
+        }),
+      });
+
+      if (res.ok) {
+        fetchGuestSubmissions();
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Failed to deny submission');
+      }
+    } catch (err) {
+      setError('Failed to deny submission');
+      console.error(err);
+    } finally {
+      setReviewingGuestId(null);
+    }
+  }
+
+  async function handleBeginReview(submission: any) {
+    setReviewingGuestId(submission.id);
+    try {
+      const data = typeof submission.submission_data === 'string' 
+        ? JSON.parse(submission.submission_data) 
+        : submission.submission_data;
+
+      const [cityFromLocation, stateFromLocation] = (data.location || '').split(',').map((p: string) => p.trim());
+      const incidentIdValue = `INC-${Date.now()}`;
+
+      const createRes = await fetch('/api/incidents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          incident_id: incidentIdValue,
+          incident_type: data.incidentType || 'death_in_custody',
+          victim_name: data.victimName || '',
+          incident_date: data.dateOfDeath || '',
+          city: data.city || cityFromLocation || '',
+          state: data.state || stateFromLocation || '',
+          facility: data.facility || '',
+          summary: data.description || '',
+          subject_age: data.age || null,
+          subject_gender: data.gender || null,
+          subject_nationality: data.nationality || null,
+          from_guest_submission: true
+        }),
+      });
+
+      if (!createRes.ok) {
+        const errorData = await createRes.json();
+        throw new Error(errorData.error || 'Failed to create incident from guest submission');
+      }
+
+      const created = await createRes.json();
+      const newIncidentId = created.id;
+
+      // Seed sources from guest submission
+      const sourceUrls: string[] = data.sourceUrls || data.source_urls || [];
+      for (const url of sourceUrls) {
+        if (!url) continue;
+        await fetch(`/api/incidents/${newIncidentId}/sources`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url,
+            title: '',
+            publication: '',
+            source_type: 'news',
+            source_priority: 'secondary'
+          }),
+        });
+      }
+
+      // Seed media from guest submission
+      const mediaItems: any[] = data.mediaUrls || data.media_urls || [];
+      for (const media of mediaItems) {
+        if (!media?.url) continue;
+        await fetch(`/api/incidents/${newIncidentId}/media`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: media.url,
+            media_type: media.type || 'image',
+            description: media.description || ''
+          }),
+        });
+      }
+
+      // Mark guest submission as reviewed so it leaves the guest queue
+      await fetch(`/api/guest-submissions`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: submission.id,
+          status: 'reviewed',
+          notes: 'Converted to incident and queued for first review'
+        }),
+      });
+
+      router.push(`/dashboard/review/${newIncidentId}`);
+    } catch (err) {
+      setError('Failed to begin review');
+      console.error(err);
+    } finally {
+      setReviewingGuestId(null);
+    }
+  }
+
   async function openEditReviewModal(edit: EditSuggestion) {
     setSelectedEdit(edit);
     setEditReviewNotes('');
@@ -286,8 +450,12 @@ export default function DashboardPage() {
     setShowVerifyModal(true);
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'Unknown';
+    const date = new Date(dateString);
+    // Check if date is invalid or epoch
+    if (isNaN(date.getTime()) || date.getFullYear() < 1970) return 'Unknown';
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -377,10 +545,25 @@ export default function DashboardPage() {
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            Edit Suggestions
+            Suggestions
             {totalEditReviews > 0 && (
               <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-100 text-yellow-800 rounded-full">
                 {totalEditReviews}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('guests')}
+            className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'guests' 
+                ? 'border-blue-600 text-blue-600' 
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Guest Reports
+            {guestSubmissions.filter(g => g.status === 'pending').length > 0 && (
+              <span className="ml-2 px-2 py-0.5 text-xs bg-purple-100 text-purple-800 rounded-full">
+                {guestSubmissions.filter(g => g.status === 'pending').length}
               </span>
             )}
           </button>
@@ -588,7 +771,7 @@ export default function DashboardPage() {
                     )}
                     
                     <span className="text-xs text-gray-500">
-                      {incident.incident_type.replace('_', ' ')}
+                      {incident.incident_type ? incident.incident_type.replace(/_/g, ' ') : 'unknown'}
                     </span>
                   </div>
                   
@@ -606,6 +789,28 @@ export default function DashboardPage() {
                     </p>
                     {incident.description && (
                       <p className="line-clamp-2 text-gray-500">{incident.description}</p>
+                    )}
+                  </div>
+                  
+                  {/* Data Completeness Indicator */}
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                    <span className={`px-2 py-0.5 rounded ${incident.filled_fields >= 7 ? 'bg-green-100 text-green-700' : incident.filled_fields >= 4 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                      📋 {incident.filled_fields || 0}/9 fields
+                    </span>
+                    {incident.source_count > 0 && (
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded">📰 {incident.source_count} sources</span>
+                    )}
+                    {incident.quote_count > 0 && (
+                      <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded">💬 {incident.quote_count} quotes</span>
+                    )}
+                    {incident.media_count > 0 && (
+                      <span className="px-2 py-0.5 bg-pink-100 text-pink-700 rounded">🖼️ {incident.media_count} media</span>
+                    )}
+                    {incident.timeline_count > 0 && (
+                      <span className="px-2 py-0.5 bg-cyan-100 text-cyan-700 rounded">📅 {incident.timeline_count} events</span>
+                    )}
+                    {!incident.source_count && !incident.quote_count && (
+                      <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded">⚠️ No sources yet</span>
                     )}
                   </div>
                   
@@ -1114,6 +1319,173 @@ export default function DashboardPage() {
           )}
         </>
       )}
+
+      {/* Guest Submissions Tab */}
+      {activeTab === 'guests' && (
+        <>
+          {/* Filter Buttons */}
+          <div className="flex gap-2 mb-6 flex-wrap">
+            <button onClick={() => setGuestFilter('pending')} className={`px-3 py-1.5 rounded text-sm font-medium ${guestFilter === 'pending' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+              Pending ({guestSubmissions.filter(g => g.status === 'pending').length})
+            </button>
+            <button onClick={() => setGuestFilter('reviewed')} className={`px-3 py-1.5 rounded text-sm font-medium ${guestFilter === 'reviewed' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+              Reviewed ({guestSubmissions.filter(g => g.status === 'reviewed').length})
+            </button>
+            <button onClick={() => setGuestFilter('approved')} className={`px-3 py-1.5 rounded text-sm font-medium ${guestFilter === 'approved' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+              Approved ({guestSubmissions.filter(g => g.status === 'approved').length})
+            </button>
+            <button onClick={() => setGuestFilter('rejected')} className={`px-3 py-1.5 rounded text-sm font-medium ${guestFilter === 'rejected' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+              Rejected ({guestSubmissions.filter(g => g.status === 'rejected').length})
+            </button>
+            <button onClick={() => setGuestFilter('all')} className={`px-3 py-1.5 rounded text-sm font-medium ${guestFilter === 'all' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+              All ({guestSubmissions.length})
+            </button>
+          </div>
+
+          {/* Guest Submissions List */}
+          {guestLoading ? (
+            <div className="text-center py-8 text-gray-500">Loading guest submissions...</div>
+          ) : guestSubmissions.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">No guest submissions found</div>
+          ) : (
+            <div className="space-y-4">
+              {guestSubmissions.map((submission) => {
+                const data = typeof submission.submission_data === 'string' 
+                  ? JSON.parse(submission.submission_data) 
+                  : submission.submission_data;
+                
+                return (
+                  <div key={submission.id} className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-lg">
+                            {data.victimName || 'Unknown/Anonymous'}
+                          </h3>
+                          <span className={`px-2 py-0.5 text-xs rounded-full ${
+                            submission.status === 'pending' ? 'bg-purple-100 text-purple-800' :
+                            submission.status === 'reviewed' ? 'bg-blue-100 text-blue-800' :
+                            submission.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {submission.status}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-600 space-y-1">
+                          <div>📅 {data.dateOfDeath || 'Unknown'}</div>
+                          <div>📍 {data.location || 'Unknown'}</div>
+                          {data.facility && <div>🏢 {data.facility}</div>}
+                          {data.incidentType && <div>📋 {data.incidentType}</div>}
+                        </div>
+                      </div>
+                      <div className="text-right text-xs text-gray-500">
+                        <div>Submitted {new Date(submission.created_at).toLocaleDateString()}</div>
+                        <div>{submission.ip_address}</div>
+                        {submission.email && <div>✉️ {submission.email}</div>}
+                      </div>
+                    </div>
+
+                    <div className="mb-3">
+                      <p className="text-sm text-gray-800">{data.description}</p>
+                    </div>
+
+                    {data.sourceUrls && data.sourceUrls.length > 0 && (
+                      <div className="mb-2">
+                        <p className="text-xs font-medium text-gray-700 mb-1">Sources:</p>
+                        <div className="space-y-1">
+                          {data.sourceUrls.map((url: string, idx: number) => (
+                            <a
+                              key={idx}
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block text-xs text-blue-600 hover:underline truncate"
+                            >
+                              {url}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {data.mediaUrls && data.mediaUrls.length > 0 && (
+                      <div className="mb-2">
+                        <p className="text-xs font-medium text-gray-700 mb-1">Media:</p>
+                        <div className="space-y-1">
+                          {data.mediaUrls.map((media: any, idx: number) => (
+                            <a
+                              key={idx}
+                              href={media.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block text-xs text-blue-600 hover:underline truncate"
+                            >
+                              {media.type === 'image' ? '🖼️' : '🎥'} {media.url}
+                              {media.description && <span className="text-gray-600"> - {media.description}</span>}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2 mt-3 pt-3 border-t">
+                      <button
+                        className="px-3 py-1.5 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300"
+                        onClick={() => setExpandedGuestId(expandedGuestId === submission.id ? null : submission.id)}
+                      >
+                        {expandedGuestId === submission.id ? 'Hide Details' : 'View Details'}
+                      </button>
+                      {submission.status === 'pending' && (
+                        <>
+                          <button
+                            className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 font-medium"
+                            onClick={() => handleBeginReview(submission)}
+                            disabled={reviewingGuestId === submission.id}
+                          >
+                            {reviewingGuestId === submission.id ? 'Creating...' : 'Begin Review'}
+                          </button>
+                          <button
+                            className="px-3 py-1.5 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                            onClick={() => {
+                              if (confirm('Are you sure you want to deny/delete this submission?')) {
+                                handleGuestReview(submission, 'rejected');
+                              }
+                            }}
+                            disabled={reviewingGuestId !== null}
+                          >
+                            Deny
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    
+                    {/* Expanded Details */}
+                    {expandedGuestId === submission.id && (
+                      <div className="mt-3 pt-3 border-t bg-gray-50 -mx-4 -mb-4 p-4 rounded-b-lg">
+                        <h4 className="font-semibold text-sm mb-2">Full Details</h4>
+                        <div className="space-y-2 text-sm">
+                          {Object.entries(data).map(([key, value]) => {
+                            if (!value || key === 'submittedAt') return null;
+                            if (typeof value === 'object') return null;
+                            return (
+                              <div key={key} className="grid grid-cols-3 gap-2">
+                                <span className="font-medium text-gray-700">{key}:</span>
+                                <span className="col-span-2 text-gray-900">{String(value)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+
+
     </div>
   );
 }

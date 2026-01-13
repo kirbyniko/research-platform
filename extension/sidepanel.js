@@ -59,6 +59,7 @@ let currentCase = {
 let verifiedQuotes = [];
 let pendingQuotes = [];
 let sources = [];
+let media = [];  // Array of {url, media_type, title?, description?}
 let isConnected = false;
 let apiUrl = 'http://localhost:3000';
 let apiKey = '';
@@ -68,9 +69,14 @@ let currentPageIsPdf = false;
 let userRole = null;  // For analyst workflow
 let reviewQueue = [];  // Cases awaiting review
 let reviewQueueStats = {};  // Stats from API
+let guestSubmissionsQueue = [];  // Guest submissions awaiting review
+let guestSubmissionsCount = 0;  // Count of pending guest submissions
 let reviewMode = false;  // Are we reviewing an existing incident?
 let reviewIncidentId = null;  // ID of incident being reviewed
+let isNewIncidentFromGuest = false;  // Are we creating a new incident from guest submission?
+let currentGuestSubmissionId = null;  // ID of guest submission being reviewed
 let verifiedFields = {};  // Track which fields have been verified in review mode
+let verifiedMedia = {};  // Track which media items have been verified
 let reviewTimeline = []; // Timeline entries loaded during review
 
 // Validation state
@@ -434,10 +440,9 @@ function cacheElements() {
   elements.caseFacility = document.getElementById('caseFacility');
   elements.caseLocation = document.getElementById('caseLocation');
   elements.caseCause = document.getElementById('caseCause');
-  elements.caseImageUrl = document.getElementById('caseImageUrl');
-  elements.caseImagePreview = document.getElementById('caseImagePreview');
-  elements.imagePreviewContainer = document.getElementById('imagePreviewContainer');
-  elements.removeImageBtn = document.getElementById('removeImageBtn');
+  // Media elements
+  elements.addMediaBtn = document.getElementById('addMediaBtn');
+  elements.mediaList = document.getElementById('mediaList');
   // Sections that show/hide based on type
   elements.violationsSection = document.getElementById('violationsSection');
   elements.deathFields = document.getElementById('deathFields');
@@ -492,6 +497,7 @@ function cacheElements() {
   elements.newCaseBtn = document.getElementById('newCaseBtn');
   elements.clearCaseBtn = document.getElementById('clearCaseBtn');
   elements.addSourceBtn = document.getElementById('addSourceBtn');
+  elements.addManualSourceBtn = document.getElementById('addManualSourceBtn');
   elements.acceptAllBtn = document.getElementById('acceptAllBtn');
   elements.rejectAllBtn = document.getElementById('rejectAllBtn');
   elements.manualAddHeader = document.getElementById('manualAddHeader');
@@ -517,11 +523,7 @@ function cacheElements() {
   // Settings elements
   elements.apiKey = document.getElementById('apiKey');
   elements.testConnectionBtn = document.getElementById('testConnectionBtn');
-  elements.exportJsonBtn = document.getElementById('exportJsonBtn');
-  elements.exportMdBtn = document.getElementById('exportMdBtn');
-  elements.copyAllQuotesBtn = document.getElementById('copyAllQuotesBtn');
-  elements.caseSearchInput = document.getElementById('caseSearchInput');
-  elements.caseSearchResults = document.getElementById('caseSearchResults');
+
   elements.clearAllDataBtn = document.getElementById('clearAllDataBtn');
   // Review add controls
   if (elements.addReviewQuoteBtn) elements.addReviewQuoteBtn.addEventListener('click', addReviewQuote);
@@ -880,6 +882,27 @@ function setupEventListeners() {
   // Add source button
   elements.addSourceBtn.addEventListener('click', addCurrentPageAsSource);
   
+  // Add manual source button
+  if (elements.addManualSourceBtn) {
+    elements.addManualSourceBtn.addEventListener('click', () => {
+      sources.push({ 
+        url: '', 
+        title: '', 
+        priority: 'secondary',
+        addedAt: new Date().toISOString() 
+      });
+      renderSources();
+    });
+  }
+  
+  // Add media button
+  if (elements.addMediaBtn) {
+    elements.addMediaBtn.addEventListener('click', () => {
+      media.push({ url: '', media_type: 'image', description: '', addedAt: new Date().toISOString() });
+      renderMediaList();
+    });
+  }
+  
   // Bug report button
   const reportBugBtn = document.getElementById('reportBugBtn');
   if (reportBugBtn) {
@@ -1042,10 +1065,7 @@ function setupEventListeners() {
   }
   
   // Settings tab event listeners
-  elements.exportJsonBtn.addEventListener('click', exportAsJson);
-  elements.exportMdBtn.addEventListener('click', exportAsMarkdown);
-  elements.copyAllQuotesBtn.addEventListener('click', copyAllQuotes);
-  elements.caseSearchInput.addEventListener('input', debounce(searchCases, 300));
+
   elements.clearAllDataBtn.addEventListener('click', clearAllData);
   
   // Event delegation for quote actions (avoids inline handlers blocked by CSP)
@@ -1056,6 +1076,7 @@ function setupEventListeners() {
     const id = e.target.dataset.id;
     const isVerified = e.target.dataset.verified === 'true';
     const page = e.target.dataset.page;
+    const index = e.target.dataset.index;
     
     switch (action) {
       case 'accept':
@@ -1078,6 +1099,9 @@ function setupEventListeners() {
         break;
       case 'removeVerified':
         removeVerifiedQuote(id);
+        break;
+      case 'deleteMedia':
+        deleteMedia(parseInt(index));
         break;
     }
   });
@@ -4180,6 +4204,40 @@ function renderSources() {
   elements.sourceList.innerHTML = sources.map((source, index) => {
     const priorityColor = source.priority === 'primary' ? '#10b981' : source.priority === 'tertiary' ? '#9ca3af' : '#3b82f6';
     const checked = verifiedFields[`source_${source.id}`] ? 'checked' : '';
+    
+    // If URL is empty (manual entry mode), show input fields
+    if (!source.url || source.url === '') {
+      return `
+        <div class="source-item" style="display: flex; flex-direction: column; gap: 8px; padding: 8px; border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 4px; background: #f9fafb;">
+          <input 
+            type="url" 
+            data-source-index="${index}" 
+            data-field="url"
+            placeholder="https://example.com/article" 
+            value="${escapeHtml(source.url || '')}"
+            style="width: 100%; padding: 6px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px; font-family: monospace;"
+          />
+          <div style="display: flex; gap: 4px;">
+            <input 
+              type="text" 
+              data-source-index="${index}" 
+              data-field="title"
+              placeholder="Source title" 
+              value="${escapeHtml(source.title || '')}"
+              style="flex: 1; padding: 6px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px;"
+            />
+            <select onchange="updateSourcePriority(${index}, this.value)" style="padding: 2px 4px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px; background: ${priorityColor}; color: white;">
+              <option value="primary" ${source.priority === 'primary' ? 'selected' : ''}>Primary</option>
+              <option value="secondary" ${source.priority === 'secondary' || !source.priority ? 'selected' : ''}>Secondary</option>
+              <option value="tertiary" ${source.priority === 'tertiary' ? 'selected' : ''}>Tertiary</option>
+            </select>
+            <button class="btn btn-sm btn-danger" onclick="deleteSource(${index})" title="Delete source">✕</button>
+          </div>
+        </div>
+      `;
+    }
+    
+    // Normal display mode with link
     return `
     <div class="source-item" style="display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 4px;">
       ${reviewMode ? `<input type="checkbox" class="source-verify-checkbox" data-source-id="${source.id}" ${checked} title="Verify this source">` : ''}
@@ -4195,6 +4253,18 @@ function renderSources() {
     </div>
   `;
   }).join('');
+  
+  // Add event listeners for source input fields
+  elements.sourceList.querySelectorAll('input[data-source-index]').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const index = parseInt(e.target.dataset.sourceIndex);
+      const field = e.target.dataset.field;
+      if (sources[index]) {
+        sources[index][field] = e.target.value;
+      }
+    });
+  });
+  
   updateReviewQuoteSourceSelect();
 
   if (reviewMode) {
@@ -4237,6 +4307,145 @@ function deleteSource(index) {
   
   renderSources();
   syncQuotesToBackground();
+}
+
+// ============================================
+// MEDIA MANAGEMENT (Images/Videos)
+// ============================================
+
+// Render the media list
+function renderMediaList() {
+  const container = elements.mediaList;
+  if (!container) return;
+  
+  // Determine if we're in a mode that requires verification checkboxes
+  const showVerification = reviewMode || isNewIncidentFromGuest;
+  
+  if (media.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding: 12px; text-align: center; color: #64748b; font-size: 12px;">
+        No images or videos added
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = media.map((m, index) => {
+    const mediaKey = `media_${index}`;
+    const isVerified = verifiedMedia[mediaKey] || false;
+    
+    return `
+    <div class="media-item" data-media-index="${index}">
+      ${showVerification ? `
+        <div class="media-verification-row" style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; padding: 4px 8px; background: ${isVerified ? '#dcfce7' : '#fef9c3'}; border-radius: 4px;">
+          <input 
+            type="checkbox" 
+            class="media-verify-checkbox"
+            data-media-index="${index}"
+            ${isVerified ? 'checked' : ''}
+          >
+          <span style="font-size: 11px; color: ${isVerified ? '#166534' : '#854d0e'};">
+            ${isVerified ? '✓ Verified' : 'Verify this media'}
+          </span>
+        </div>
+      ` : ''}
+      <div class="media-item-row">
+        <input 
+          type="url" 
+          class="media-item-url" 
+          value="${escapeHtml(m.url || '')}" 
+          placeholder="https://example.com/photo.jpg"
+          data-media-index="${index}"
+          data-media-field="url"
+        >
+        <select 
+          class="media-item-type-select"
+          data-media-index="${index}"
+          data-media-field="type"
+        >
+          <option value="image" ${m.media_type === 'image' ? 'selected' : ''}>Image</option>
+          <option value="video" ${m.media_type === 'video' ? 'selected' : ''}>Video</option>
+        </select>
+        <button class="media-item-delete" data-action="deleteMedia" data-index="${index}">✕</button>
+      </div>
+      <input 
+        type="text" 
+        class="media-item-description" 
+        value="${escapeHtml(m.description || '')}" 
+        placeholder="Description / Alt text (what does this show?)"
+        data-media-index="${index}"
+        data-media-field="description"
+      >
+      ${m.url ? `
+        <div style="margin-top: 4px;">
+          <a href="${escapeHtml(m.url)}" target="_blank" style="font-size: 10px; color: #3b82f6; text-decoration: none;">
+            🔗 Preview link
+          </a>
+        </div>
+      ` : ''}
+    </div>
+  `}).join('');
+  
+  // Add event listeners for media inputs
+  container.querySelectorAll('[data-media-index][data-media-field]').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const index = parseInt(e.target.dataset.mediaIndex);
+      const field = e.target.dataset.mediaField;
+      if (media[index]) {
+        if (field === 'url') media[index].url = e.target.value;
+        else if (field === 'type') media[index].media_type = e.target.value;
+        else if (field === 'description') media[index].description = e.target.value;
+      }
+    });
+  });
+  
+  // Add event listeners for verification checkboxes
+  container.querySelectorAll('.media-verify-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', (e) => {
+      const index = parseInt(e.target.dataset.mediaIndex);
+      const mediaKey = `media_${index}`;
+      verifiedMedia[mediaKey] = e.target.checked;
+      
+      // Re-render to update styling
+      renderMediaList();
+      
+      // Update submit button state
+      updateSubmitButtonState();
+    });
+  });
+}
+
+// Update submit button state based on verifications
+function updateSubmitButtonState() {
+  if (!reviewMode && !isNewIncidentFromGuest) return;
+  
+  const submitBtn = elements.submitBtn;
+  if (!submitBtn) return;
+  
+  // Count verified items
+  const verifiedFieldCount = Object.values(verifiedFields).filter(v => v).length;
+  const verifiedMediaCount = Object.values(verifiedMedia).filter(v => v).length;
+  const totalMedia = media.filter(m => m.url).length;
+  
+  // Require at least some verification
+  const hasMinVerification = verifiedFieldCount >= 2 || verifiedMediaCount >= 1;
+  
+  submitBtn.disabled = !hasMinVerification;
+  
+  // Update button text with counts
+  if (isNewIncidentFromGuest) {
+    submitBtn.textContent = `Create Incident & Submit First Review (${verifiedFieldCount} fields, ${verifiedMediaCount}/${totalMedia} media verified)`;
+  } else if (reviewMode) {
+    submitBtn.textContent = `Submit First Review (${verifiedFieldCount} fields, ${verifiedMediaCount}/${totalMedia} media verified)`;
+  }
+}
+
+// Delete media by index
+function deleteMedia(index) {
+  if (index >= 0 && index < media.length) {
+    media.splice(index, 1);
+    renderMediaList();
+  }
 }
 
 // Truncate text
@@ -4411,6 +4620,11 @@ async function saveCase() {
     return submitVerification();
   }
   
+  // If creating new incident from guest submission
+  if (isNewIncidentFromGuest && currentGuestSubmissionId) {
+    return submitNewIncidentFromGuest();
+  }
+  
   if (!isConnected) {
     alert('Not connected to API. Please ensure the server is running.');
     return;
@@ -4485,6 +4699,182 @@ function showGuestSubmissionModal() {
   });
 }
 
+// Submit new incident created from guest submission
+async function submitNewIncidentFromGuest() {
+  const saveBtn = document.getElementById('saveCaseBtn');
+  if (!saveBtn) return;
+  
+  // Check for minimum verification
+  const verifiedFieldCount = Object.values(verifiedFields).filter(v => v).length;
+  const verifiedMediaCount = Object.values(verifiedMedia).filter(v => v).length;
+  
+  if (verifiedFieldCount < 2 && verifiedMediaCount < 1) {
+    alert('Please verify at least 2 fields or 1 media item before submitting.');
+    return;
+  }
+  
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = '<div class="spinner white"></div> Creating incident...';
+  
+  try {
+    // 1. Create the new incident
+    const incident = buildIncidentObject();
+    
+    const createResponse = await fetch(`${apiUrl}/api/incidents`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'X-API-Key': apiKey
+      },
+      body: JSON.stringify(incident)
+    });
+    
+    if (!createResponse.ok) {
+      const error = await createResponse.json();
+      throw new Error(error.error || 'Failed to create incident');
+    }
+    
+    const createResult = await createResponse.json();
+    const incidentDbId = createResult.id;
+    
+    console.log('Created incident from guest submission:', incidentDbId);
+    
+    // 2. Add sources if any
+    if (sources.length > 0) {
+      const sourcesData = sources.map(s => ({
+        url: s.url,
+        title: s.title || s.url,
+        publication: s.publication || undefined,
+        source_type: 'news_article',
+        source_priority: s.priority || 'secondary'
+      }));
+      
+      await fetch(`${apiUrl}/api/incidents/${incidentDbId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'X-API-Key': apiKey
+        },
+        body: JSON.stringify({ sources: sourcesData })
+      });
+    }
+    
+    // 3. Add media if any
+    if (media.length > 0) {
+      for (const m of media) {
+        if (!m.url) continue;
+        
+        const mediaIndex = media.indexOf(m);
+        const isVerified = verifiedMedia[`media_${mediaIndex}`] || false;
+        
+        await fetch(`${apiUrl}/api/incidents/${incidentDbId}/media`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+            'X-API-Key': apiKey
+          },
+          body: JSON.stringify({
+            url: m.url,
+            media_type: m.media_type || 'image',
+            description: m.description || '',
+            verified: isVerified
+          })
+        });
+      }
+    }
+    
+    // 4. Add quotes if any
+    if (verifiedQuotes.length > 0) {
+      for (const q of verifiedQuotes) {
+        await fetch(`${apiUrl}/api/incidents/${incidentDbId}/quotes`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+            'X-API-Key': apiKey
+          },
+          body: JSON.stringify({
+            text: q.text,
+            category: q.category || 'general',
+            source_id: q.source_id || null,
+            page_number: q.pageNumber || null,
+            confidence: q.confidence || null
+          })
+        });
+      }
+    }
+    
+    // 5. Submit first verification
+    const verifyResponse = await fetch(`${apiUrl}/api/incidents/${incidentDbId}/verify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'X-API-Key': apiKey
+      },
+      body: JSON.stringify({
+        notes: 'Created and verified from guest submission via extension'
+      })
+    });
+    
+    if (!verifyResponse.ok) {
+      console.warn('Verification step failed, but incident was created');
+    }
+    
+    // 6. Update guest submission status to 'accepted'
+    await fetch(`${apiUrl}/api/guest-submissions`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'X-API-Key': apiKey
+      },
+      body: JSON.stringify({
+        id: currentGuestSubmissionId,
+        status: 'accepted',
+        notes: `Accepted and created as incident ${incidentDbId}`
+      })
+    });
+    
+    alert(`Incident created and first review submitted!\n\nIncident ID: ${incident.incident_id}\n\nAnother analyst can now provide second review.`);
+    
+    // Reset state
+    isNewIncidentFromGuest = false;
+    currentGuestSubmissionId = null;
+    verifiedFields = {};
+    verifiedMedia = {};
+    
+    // Remove the banner
+    const banner = document.getElementById('guestReviewBanner');
+    if (banner) banner.remove();
+    
+    // Reset form
+    clearCase();
+    
+    // Refresh guest submissions count
+    fetchGuestSubmissionsCount();
+    
+    // Switch to Cases tab
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('[data-tab="review"]')?.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-review')?.classList.add('active');
+    
+    // Reload review queue
+    loadReviewQueue();
+    
+  } catch (error) {
+    console.error('Error creating incident from guest submission:', error);
+    alert('Failed to create incident: ' + error.message);
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Create Incident & Submit First Review';
+  }
+}
+
 // Perform the actual save (called after confirmation)
 async function performSave(isGuest) {
   elements.saveCaseBtn.disabled = true;
@@ -4516,8 +4906,8 @@ async function performSave(isGuest) {
     const result = await response.json();
     const incidentDbId = result.id;
     
-    // Then add sources and quotes if we have an ID
-    if (incidentDbId && (sources.length > 0 || verifiedQuotes.length > 0)) {
+    // Then add sources, quotes, and media if we have an ID
+    if (incidentDbId && (sources.length > 0 || verifiedQuotes.length > 0 || media.length > 0)) {
       // Validate: quotes must have sources
       if (verifiedQuotes.length > 0 && sources.length === 0) {
         throw new Error('Cannot save quotes without sources. Add at least one source first.');
@@ -4567,6 +4957,16 @@ async function performSave(isGuest) {
             linked_fields: quoteFieldMap[q.id] || []
           };
         });
+      }
+      
+      // Add media (images/videos) - these don't need sources
+      if (media.length > 0) {
+        patchData.media = media.map(m => ({
+          url: m.url,
+          media_type: m.media_type,
+          title: m.title || undefined,
+          description: m.description || undefined
+        }));
       }
       
       // Only PATCH if we have an API key (guests can't update)
@@ -4619,7 +5019,7 @@ function updateSubmitButtonForReview() {
   const saveBtn = document.getElementById('saveCaseBtn');
   if (saveBtn) {
     if (reviewMode) {
-      saveBtn.textContent = 'Submit Verification';
+      saveBtn.textContent = 'Submit Review';
       saveBtn.style.background = '#10b981'; // Green for verification
       updateReviewModeUI();
     } else {
@@ -4777,16 +5177,8 @@ function updateVerificationCounter() {
   const verifiedCount = allFields.filter(f => verifiedFields[f]).length;
   const totalCount = allFields.length;
   
-  // Get or create counter element
+  // Get counter element (already in footer)
   let counter = document.getElementById('verificationCounter');
-  if (!counter) {
-    const saveBtn = document.getElementById('saveCaseBtn');
-    if (saveBtn && saveBtn.parentNode) {
-      counter = document.createElement('span');
-      counter.id = 'verificationCounter';
-      saveBtn.parentNode.insertBefore(counter, saveBtn.nextSibling);
-    }
-  }
   
   if (counter) {
     counter.textContent = `${verifiedCount}/${totalCount} fields verified`;
@@ -5088,6 +5480,7 @@ function clearCase() {
   verifiedQuotes = [];
   pendingQuotes = [];
   sources = [];
+  media = [];  // Clear media
   fieldQuoteAssociations = {};
   chrome.storage.local.set({ fieldQuoteAssociations: {} });
   
@@ -5105,6 +5498,7 @@ function clearCase() {
   renderQuotes();
   renderPendingQuotes();
   renderSources();
+  renderMediaList();  // Render empty media list
   updateQuoteAssociationDropdowns();
   updateAgencyQuoteLinks();
   
@@ -5616,7 +6010,363 @@ async function loadReviewQueue(status = 'all') {
   }
 }
 
+// Load guest submissions from API
+async function loadGuestSubmissions() {
+  const statusEl = document.getElementById('reviewQueueStatus');
+  const listEl = document.getElementById('guestSubmissionsList');
+  const queueListEl = document.getElementById('reviewQueueList');
+  
+  if (!statusEl || !listEl) return;
+  
+  // Hide the regular queue list, show guest submissions list
+  if (queueListEl) queueListEl.style.display = 'none';
+  statusEl.style.display = 'block';
+  statusEl.textContent = 'Loading guest submissions...';
+  listEl.style.display = 'none';
+  
+  try {
+    const response = await fetch(`${apiUrl}/api/guest-submissions?status=pending&limit=50`, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'X-API-Key': apiKey
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch guest submissions');
+    }
+    
+    const data = await response.json();
+    
+    console.log('Guest submissions response:', data);
+    
+    guestSubmissionsQueue = data.submissions || [];
+    guestSubmissionsCount = guestSubmissionsQueue.length;
+    
+    // Update the count in filter button
+    const countEl = document.getElementById('reviewFilterGuestCount');
+    if (countEl) countEl.textContent = guestSubmissionsCount;
+    
+    if (guestSubmissionsQueue.length === 0) {
+      statusEl.textContent = 'No pending guest submissions';
+      statusEl.style.color = '#22c55e';
+      return;
+    }
+    
+    statusEl.style.display = 'none';
+    listEl.style.display = 'block';
+    renderGuestSubmissions();
+    
+  } catch (error) {
+    console.error('Error loading guest submissions:', error);
+    statusEl.textContent = 'Failed to load submissions: ' + error.message;
+    statusEl.style.color = '#ef4444';
+  }
+}
+
+// Render guest submissions list
+function renderGuestSubmissions() {
+  const listEl = document.getElementById('guestSubmissionsList');
+  if (!listEl) return;
+  
+  if (guestSubmissionsQueue.length === 0) {
+    listEl.innerHTML = '<div class="empty-state">No pending guest submissions</div>';
+    return;
+  }
+  
+  listEl.innerHTML = guestSubmissionsQueue.map(submission => {
+    const data = submission.submission_data || {};
+    const createdAt = new Date(submission.created_at);
+    
+    return `
+    <div class="review-case-card queue-item guest-submission-card" data-submission-id="${submission.id}" style="border-left: 3px solid #6366f1;">
+      <div class="queue-item-header">
+        <div>
+          <div style="font-weight: 600; font-size: 13px;">
+            ${escapeHtml(data.victimName || 'Unknown Victim')}
+          </div>
+          <div style="font-size: 11px; color: #666;">
+            ${escapeHtml(data.incidentType?.replace(/_/g, ' ') || 'Incident')}
+          </div>
+        </div>
+        <span class="badge" style="background: #e0e7ff; color: #4f46e5; padding: 2px 8px; border-radius: 4px; font-size: 10px;">
+          📝 Guest Submission
+        </span>
+      </div>
+      
+      <div class="queue-item-meta" style="font-size: 11px; color: #666; margin: 8px 0;">
+        ${escapeHtml(data.location || '')}
+        ${data.dateOfDeath ? ' • ' + new Date(data.dateOfDeath).toLocaleDateString() : ''}
+      </div>
+      
+      ${data.description ? `
+        <div style="font-size: 11px; color: #374151; margin: 8px 0; padding: 8px; background: #f9fafb; border-radius: 4px; max-height: 60px; overflow: hidden;">
+          ${escapeHtml(data.description.substring(0, 150))}${data.description.length > 150 ? '...' : ''}
+        </div>
+      ` : ''}
+      
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; font-size: 10px; color: #6b7280;">
+        ${data.sourceUrls?.length ? `<span>📎 ${data.sourceUrls.length} source${data.sourceUrls.length !== 1 ? 's' : ''}</span>` : ''}
+        ${data.mediaUrls?.length ? `<span>🖼️ ${data.mediaUrls.length} media</span>` : ''}
+        ${submission.email ? '<span>✉️ Has contact</span>' : ''}
+      </div>
+      
+      <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">
+        Submitted ${createdAt.toLocaleDateString()} at ${createdAt.toLocaleTimeString()}
+      </div>
+      
+      <div style="margin-top: 12px; display: flex; gap: 8px;">
+        <button class="btn btn-sm btn-primary begin-guest-review-btn" data-submission-id="${submission.id}" style="flex: 1;">
+          Begin Review
+        </button>
+        <button class="btn btn-sm btn-secondary reject-guest-btn" data-submission-id="${submission.id}" style="background: #fee2e2; color: #dc2626; border-color: #fecaca;">
+          Reject
+        </button>
+      </div>
+    </div>
+  `}).join('');
+  
+  // Add click handlers for Begin Review buttons
+  listEl.querySelectorAll('.begin-guest-review-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const submissionId = parseInt(btn.dataset.submissionId);
+      handleBeginGuestReview(submissionId);
+    });
+  });
+  
+  // Add click handlers for Reject buttons
+  listEl.querySelectorAll('.reject-guest-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const submissionId = parseInt(btn.dataset.submissionId);
+      await handleRejectGuestSubmission(submissionId);
+    });
+  });
+}
+
+// Handle rejecting a guest submission
+async function handleRejectGuestSubmission(submissionId) {
+  const reason = prompt('Please provide a reason for rejecting this submission (optional):');
+  
+  try {
+    const response = await fetch(`${apiUrl}/api/guest-submissions`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'X-API-Key': apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        id: submissionId,
+        status: 'rejected',
+        notes: reason || 'Rejected by analyst'
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to reject submission');
+    }
+    
+    alert('Submission rejected');
+    loadGuestSubmissions();
+    
+  } catch (error) {
+    console.error('Error rejecting submission:', error);
+    alert('Failed to reject submission: ' + error.message);
+  }
+}
+
+// Handle beginning review of a guest submission
+async function handleBeginGuestReview(submissionId) {
+  const submission = guestSubmissionsQueue.find(s => s.id === submissionId);
+  if (!submission) {
+    alert('Submission not found');
+    return;
+  }
+  
+  const data = submission.submission_data || {};
+  
+  console.log('Beginning review for guest submission:', submission);
+  
+  // Set state for new incident from guest
+  isNewIncidentFromGuest = true;
+  currentGuestSubmissionId = submissionId;
+  reviewMode = false;  // Not reviewing existing incident
+  reviewIncidentId = null;
+  
+  // Reset verification state
+  verifiedFields = {};
+  verifiedMedia = {};
+  
+  // Reset form
+  clearCase();
+  
+  // Populate currentCase from guest data
+  currentCase = {
+    incidentType: data.incidentType || 'death_in_custody',
+    name: data.victimName || '',
+    dateOfDeath: data.dateOfDeath || '',
+    age: '',
+    country: '',
+    occupation: '',
+    facility: data.facility || '',
+    location: data.location || '',
+    causeOfDeath: '',
+    agencies: [],
+    violations: [],
+    deathCause: '',
+    deathManner: '',
+    deathCustodyDuration: '',
+    deathMedicalDenied: false,
+    summary: data.description || ''
+  };
+  
+  // Populate sources from guest's source URLs
+  sources = [];
+  if (data.sourceUrls && Array.isArray(data.sourceUrls)) {
+    data.sourceUrls.forEach(urlItem => {
+      let url = '';
+      let title = '';
+      
+      // Handle both string URLs and objects
+      if (typeof urlItem === 'string') {
+        url = urlItem;
+        title = urlItem;
+      } else if (typeof urlItem === 'object' && urlItem !== null) {
+        url = urlItem.url || '';
+        title = urlItem.title || urlItem.url || '';
+      }
+      
+      if (url) {
+        sources.push({
+          url: url,
+          title: title,
+          priority: 'secondary',
+          addedAt: new Date().toISOString()
+        });
+      }
+    });
+  }
+  
+  // Populate media from guest's media URLs
+  media = [];
+  if (data.mediaUrls && Array.isArray(data.mediaUrls)) {
+    data.mediaUrls.forEach((mediaItem, index) => {
+      let url = '';
+      let mediaType = 'image';
+      let description = '';
+      
+      // Handle both string URLs and objects
+      if (typeof mediaItem === 'string') {
+        url = mediaItem;
+        // Try to detect type from URL
+        if (url.includes('youtube') || url.includes('vimeo') || url.includes('.mp4') || url.includes('.webm')) {
+          mediaType = 'video';
+        }
+      } else if (typeof mediaItem === 'object' && mediaItem !== null) {
+        url = mediaItem.url || '';
+        mediaType = mediaItem.media_type || mediaItem.type || 'image';
+        description = mediaItem.description || '';
+      }
+      
+      if (url) {
+        media.push({
+          url: url,
+          media_type: mediaType,
+          description: description,
+          addedAt: new Date().toISOString()
+        });
+      }
+    });
+  }
+  
+  // Clear pending and verified quotes
+  pendingQuotes = [];
+  verifiedQuotes = [];
+  reviewTimeline = [];
+  
+  // Populate the form
+  populateCaseForm();
+  renderSources();
+  renderMediaList();
+  renderQuotes();
+  renderTimeline();
+  renderPendingQuotes();
+  
+  // Update UI to show we're creating a new incident
+  const submitBtn = elements.submitBtn;
+  if (submitBtn) {
+    submitBtn.textContent = 'Create Incident & Submit First Review';
+    submitBtn.disabled = false;
+  }
+  
+  // Show field verification checkboxes
+  document.querySelectorAll('.verification-checkbox-wrapper').forEach(wrapper => {
+    wrapper.style.display = 'inline-flex';
+  });
+  
+  // Switch to incident tab
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('[data-tab="case"]')?.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-case')?.classList.add('active');
+  
+  // Show info banner about guest submission
+  showGuestReviewBanner(data.victimName || 'Unknown', submission.email);
+}
+
+// Show banner indicating we're reviewing a guest submission
+function showGuestReviewBanner(victimName, contactEmail) {
+  // Remove any existing banner
+  const existingBanner = document.getElementById('guestReviewBanner');
+  if (existingBanner) existingBanner.remove();
+  
+  // Create banner
+  const banner = document.createElement('div');
+  banner.id = 'guestReviewBanner';
+  banner.style.cssText = 'background: #e0e7ff; border: 1px solid #a5b4fc; border-radius: 8px; padding: 12px; margin-bottom: 16px;';
+  banner.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: start;">
+      <div>
+        <div style="font-weight: 600; color: #4338ca; font-size: 13px;">📝 Creating from Guest Submission</div>
+        <div style="font-size: 11px; color: #6366f1; margin-top: 4px;">
+          Review the pre-filled information, verify sources, add quotes, then submit.
+        </div>
+        ${contactEmail ? `<div style="font-size: 10px; color: #818cf8; margin-top: 4px;">Contact: ${escapeHtml(contactEmail)}</div>` : ''}
+      </div>
+      <button onclick="cancelGuestReview()" style="background: none; border: none; color: #6366f1; cursor: pointer; font-size: 18px; padding: 0;">&times;</button>
+    </div>
+  `;
+  
+  // Insert at top of incident tab
+  const tabContent = document.getElementById('tab-case');
+  if (tabContent) {
+    tabContent.insertBefore(banner, tabContent.firstChild);
+  }
+}
+
+// Cancel guest review and go back to Cases tab
+function cancelGuestReview() {
+  isNewIncidentFromGuest = false;
+  currentGuestSubmissionId = null;
+  
+  // Remove banner
+  const banner = document.getElementById('guestReviewBanner');
+  if (banner) banner.remove();
+  
+  // Reset form
+  clearCase();
+  
+  // Switch back to Cases tab
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('[data-tab="review"]')?.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-review')?.classList.add('active');
+}
+
 // Update review filter button counts
+
 function updateReviewFilterCounts() {
   const stats = reviewQueueStats || {};
   
@@ -5650,6 +6400,41 @@ function updateReviewFilterCounts() {
   if (activeCountEl) {
     activeCountEl.textContent = reviewQueue.length;
   }
+  
+  // Also fetch guest submissions count in background
+  fetchGuestSubmissionsCount();
+}
+
+// Fetch guest submissions count for the filter button
+async function fetchGuestSubmissionsCount() {
+  try {
+    const response = await fetch(`${apiUrl}/api/guest-submissions?status=pending&limit=1`, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'X-API-Key': apiKey
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      guestSubmissionsCount = data.submissions?.length || 0;
+      // Actually we need the full count, let's get it properly
+      const fullResponse = await fetch(`${apiUrl}/api/guest-submissions?status=pending&limit=100`, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'X-API-Key': apiKey
+        }
+      });
+      if (fullResponse.ok) {
+        const fullData = await fullResponse.json();
+        guestSubmissionsCount = fullData.submissions?.length || 0;
+        const countEl = document.getElementById('reviewFilterGuestCount');
+        if (countEl) countEl.textContent = guestSubmissionsCount;
+      }
+    }
+  } catch (error) {
+    console.log('Failed to fetch guest submissions count:', error);
+  }
 }
 
 // Set review queue filter
@@ -5672,8 +6457,16 @@ function setReviewFilter(filter) {
   const dropdown = document.getElementById('reviewFilterDropdown');
   if (dropdown) dropdown.style.display = 'none';
   
-  // Refetch data with new filter
-  loadReviewQueue(filter);
+  // Handle guest submissions separately
+  if (filter === 'guest_submissions') {
+    loadGuestSubmissions();
+  } else {
+    // Hide guest submissions list and show regular queue
+    const guestList = document.getElementById('guestSubmissionsList');
+    if (guestList) guestList.style.display = 'none';
+    // Refetch data with new filter
+    loadReviewQueue(filter);
+  }
 }
 
 // Render review queue list
@@ -5725,7 +6518,7 @@ function renderReviewQueue() {
         statusClass = 'badge-cyan';
       } else {
         statusBadge = 'Awaiting Validation';
-        statusClass = 'badge-indigo';
+        statusClass = 'badge-purple';
       }
     } else if (status === 'first_validation') {
       if (isReturned) {
@@ -5747,7 +6540,7 @@ function renderReviewQueue() {
     const cardClass = isHighPriority ? 'returned-cycle-3plus' : (isReturned ? 'returned-cycle-2' : '');
     
     return `
-    <div class="review-case-card queue-item ${cardClass}" data-incident-id="${incident.id}" data-review-cycle="${reviewCycle}">
+    <div class="review-case-card queue-item ${cardClass}" data-incident-id="${incident.id}" data-review-cycle="${reviewCycle}" data-status="${status}">
       ${isReturned ? `
         <div class="priority-badge ${isHighPriority ? 'priority-red' : 'priority-orange'}" style="position: absolute; top: 8px; right: 8px; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: ${isHighPriority ? '#fecaca' : '#fed7aa'}; color: ${isHighPriority ? '#b91c1c' : '#c2410c'}; font-weight: 600;">
           ${isHighPriority ? '⚠️ HIGH PRIORITY' : 'PRIORITY'}
@@ -5797,8 +6590,36 @@ function renderReviewQueue() {
   listEl.querySelectorAll('.review-case-card').forEach(card => {
     card.addEventListener('click', () => {
       const incidentId = card.dataset.incidentId;
-      console.log('Card clicked, incident ID:', incidentId);
-      loadReviewCaseDetails(parseInt(incidentId));
+      const status = card.dataset.status;
+      console.log('Card clicked, incident ID:', incidentId, 'status:', status);
+      
+      // Handle different statuses appropriately
+      if (['verified', 'rejected'].includes(status)) {
+        // Published/rejected cases - can only view on website
+        const action = status === 'verified' ? 'view this published case' : 'view this rejected case';
+        alert(`This case is ${status}. You can ${action} on the website:\n\n${apiUrl}/incidents/${incidentId}`);
+        return;
+      }
+      
+      if (['second_review', 'first_validation'].includes(status)) {
+        // Validation cases - switch to Validate tab and load the case
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelector('[data-tab="validate"]')?.classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
+        document.getElementById('tab-validate')?.classList.add('active');
+        loadValidationCase(parseInt(incidentId));
+      } else if (['pending', 'first_review'].includes(status)) {
+        // Review cases - switch to Incident tab and load for review
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelector('[data-tab="case"]')?.classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
+        document.getElementById('tab-case')?.classList.add('active');
+        loadReviewCaseDetails(parseInt(incidentId));
+      } else {
+        // Unknown status - just try to load it
+        console.warn('Unknown status:', status);
+        loadReviewCaseDetails(parseInt(incidentId));
+      }
     });
     
     card.addEventListener('mouseenter', () => {
@@ -5942,6 +6763,27 @@ async function loadReviewCaseDetails(incidentId) {
       });
     }
     
+    // Populate media
+    const incidentMedia = data.media || [];
+    media = incidentMedia.map(m => ({
+      id: m.id,
+      url: m.url,
+      media_type: m.media_type,
+      description: m.description || '',
+      verified: m.verified || false
+    }));
+    
+    // Reset media verification state
+    verifiedMedia = {};
+    
+    // Initialize media verification flags (check any that are already verified in DB)
+    if (reviewMode) {
+      media.forEach((m, index) => {
+        const key = `media_${index}`;
+        verifiedMedia[key] = m.verified || false;
+      });
+    }
+    
     // Clear pending quotes in review mode
     pendingQuotes = [];
     
@@ -5951,6 +6793,7 @@ async function loadReviewCaseDetails(incidentId) {
     renderTimeline();
     renderPendingQuotes();
     renderSources();
+    renderMediaList(); // Render media with verification checkboxes
     
     // Update submit button text and initialize verification UI
     updateSubmitButtonForReview();
@@ -6396,7 +7239,7 @@ function renderValidationQueue() {
       <div class="queue-item-header" style="${isReturned ? 'padding-right: 100px;' : ''}">
         <strong>${escapeHtml(incident.subject_name || incident.victim_name || 'Unknown')}</strong>
         <div style="display: flex; gap: 4px; flex-wrap: wrap;">
-          <span class="badge ${incident.verification_status === 'second_review' ? 'badge-blue' : 'badge-purple'}">
+          <span class="badge badge-purple">
             ${incident.verification_status === 'second_review' ? '1st Validation' : '2nd Validation'}
           </span>
           ${reviewCycle > 1 ? `
@@ -6451,6 +7294,7 @@ async function loadValidationCase(incidentId) {
     
     const response = await fetch(`${apiUrl}/api/incidents/${incidentId}/validate`, {
       headers: {
+        'Authorization': `Bearer ${apiKey}`,
         'X-API-Key': apiKey || '',
         'Content-Type': 'application/json'
       }
@@ -6549,14 +7393,11 @@ function renderValidationCase(data) {
     : 'Awaiting Second Validation';
   
   if (isReturned) {
-    statusText = `⚡ RE-VALIDATION REQUIRED - ${statusText}`;
     statusBadge.style.background = isHighPriority ? '#fee2e2' : '#ffedd5';
     statusBadge.style.color = isHighPriority ? '#dc2626' : '#c2410c';
   } else {
-    statusBadge.style.background = incident.verification_status === 'second_review' 
-      ? '#dbeafe' : '#e9d5ff';
-    statusBadge.style.color = incident.verification_status === 'second_review' 
-      ? '#1e40af' : '#7c3aed';
+    statusBadge.style.background = '#e9d5ff';
+    statusBadge.style.color = '#7c3aed';
   }
   statusBadge.textContent = statusText;
   

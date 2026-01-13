@@ -91,6 +91,14 @@ export async function GET(request: NextRequest) {
     if (sortOrder) filters.sort_order = sortOrder as IncidentFilters['sort_order'];
 
     const incidents = await getIncidents(filters);
+    
+    // SECURITY: Defense-in-depth - filter out any unverified incidents that might have slipped through
+    // This should never be necessary if database filtering works correctly, but protects against data corruption
+    if (!includeUnverified) {
+      const verifiedIncidents = incidents.filter(inc => inc.verification_status === 'verified');
+      return NextResponse.json(verifiedIncidents);
+    }
+    
     return NextResponse.json(incidents);
   } catch (error) {
     console.error('Error fetching incidents:', error);
@@ -122,7 +130,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const incident: Omit<Incident, 'id' | 'created_at' | 'updated_at'> = body;
+    const { from_guest_submission, ...incidentData } = body as any;
+    const incident: Omit<Incident, 'id' | 'created_at' | 'updated_at'> = incidentData;
+    const fromGuestSubmission = Boolean(from_guest_submission);
 
     // Validate required fields
     if (!incident.incident_id) {
@@ -140,7 +150,7 @@ export async function POST(request: NextRequest) {
 
     const id = await createIncident(incident);
     
-    if (isAnalyst) {
+    if (isAnalyst && !fromGuestSubmission) {
       // Analyst submission - auto first-verify
       try {
         await pool.query(`
@@ -185,6 +195,26 @@ export async function POST(request: NextRequest) {
         auto_verified: true,
         submission_type: 'analyst',
         message: 'Incident created and auto-verified as first review (analyst submission)'
+      });
+    } else if (isAnalyst && fromGuestSubmission) {
+      // Analyst converting guest submission: do NOT auto-verify; queue for first review
+      await pool.query(`
+        UPDATE incidents SET 
+          submitted_by = NULL,
+          submitted_at = NOW(),
+          submitter_role = 'guest',
+          verification_status = 'pending',
+          victim_name = COALESCE(victim_name, subject_name)
+        WHERE id = $1
+      `, [id]);
+
+      return NextResponse.json({ 
+        success: true, 
+        id, 
+        incident_id: incident.incident_id,
+        auto_verified: false,
+        submission_type: 'guest_conversion',
+        message: 'Incident created from guest submission and queued for first review'
       });
     } else if (user) {
       // Authenticated non-analyst submission

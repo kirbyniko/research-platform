@@ -26,7 +26,22 @@ export async function GET(request: NextRequest) {
         u3.email as second_verified_by_email,
         u4.email as first_validated_by_email,
         u5.email as second_validated_by_email,
-        u6.email as rejected_by_email
+        u6.email as rejected_by_email,
+        (SELECT COUNT(*) FROM incident_sources WHERE incident_id = i.id) as source_count,
+        (SELECT COUNT(*) FROM incident_quotes WHERE incident_id = i.id) as quote_count,
+        (SELECT COUNT(*) FROM incident_media WHERE incident_id = i.id) as media_count,
+        (SELECT COUNT(*) FROM incident_timeline WHERE incident_id = i.id) as timeline_count,
+        -- Count filled fields (non-null key fields)
+        (CASE WHEN i.victim_name IS NOT NULL AND i.victim_name != '' THEN 1 ELSE 0 END +
+         CASE WHEN i.incident_date IS NOT NULL THEN 1 ELSE 0 END +
+         CASE WHEN i.city IS NOT NULL AND i.city != '' THEN 1 ELSE 0 END +
+         CASE WHEN i.state IS NOT NULL AND i.state != '' THEN 1 ELSE 0 END +
+         CASE WHEN i.facility IS NOT NULL AND i.facility != '' THEN 1 ELSE 0 END +
+         CASE WHEN i.summary IS NOT NULL AND LENGTH(i.summary) > 10 THEN 1 ELSE 0 END +
+         CASE WHEN i.subject_age IS NOT NULL THEN 1 ELSE 0 END +
+         CASE WHEN i.subject_gender IS NOT NULL AND i.subject_gender != '' THEN 1 ELSE 0 END +
+         CASE WHEN i.subject_nationality IS NOT NULL AND i.subject_nationality != '' THEN 1 ELSE 0 END
+        ) as filled_fields
       FROM incidents i
       LEFT JOIN users u1 ON i.submitted_by = u1.id
       LEFT JOIN users u2 ON i.first_verified_by = u2.id

@@ -18,12 +18,21 @@ export default function LegalHelpPage() {
     }
     const user = session.user as { role?: string };
     if (user.role !== 'analyst' && user.role !== 'admin' && user.role !== 'editor') {
-      router.push('/dashboard');
+      router.push('/');
     }
   }, [session, status, router]);
 
-  if (status === 'loading' || !session) {
+  if (status === 'loading') {
     return <div className="max-w-4xl mx-auto px-4 py-12">Loading...</div>;
+  }
+
+  if (!session) {
+    return null;
+  }
+
+  const user = session.user as { role?: string };
+  if (user.role !== 'analyst' && user.role !== 'admin' && user.role !== 'editor') {
+    return null;
   }
 
   return (

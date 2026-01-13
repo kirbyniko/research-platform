@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { LEGAL_REFERENCES, getCaseLawForViolation, VIOLATION_TO_LEGAL_KEY } from '@/lib/legal-references';
@@ -18,6 +18,7 @@ interface Incident {
   first_verified_by?: number | null;
   second_verified_by?: number | null;
 }
+interface Media { id: number; url: string; media_type: 'image' | 'video'; description: string | null; verified?: boolean; }
 interface Source { id: number; url: string; title: string | null; publication: string | null; source_type: string; source_priority?: string | null; }
 interface Quote { id: number; quote_text: string; category: string | null; source_id: number | null; linked_fields: string[] | null; source_title?: string | null; source_url?: string | null; verified?: boolean; }
 interface Agency { id: number; agency: string; role: string | null; }
@@ -491,14 +492,24 @@ interface ValidationIssue {
 
 export default function ReviewPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { data: session } = useSession();
   const incidentId = params.id as string;
+  const isNewIncident = incidentId === 'new';
+  const fromGuest = searchParams.get('from_guest') === 'true';
+  const guestDataParam = searchParams.get('guest_data');
+
+  console.log('[ReviewPage] incidentId:', incidentId);
+  console.log('[ReviewPage] isNewIncident:', isNewIncident);
+  console.log('[ReviewPage] fromGuest:', fromGuest);
+  console.log('[ReviewPage] guestDataParam:', guestDataParam ? 'present' : 'missing');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [incident, setIncident] = useState<Incident | null>(null);
+  const [media, setMedia] = useState<Media[]>([]);
   const [sources, setSources] = useState<Source[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [agencies, setAgencies] = useState<Agency[]>([]);
@@ -508,14 +519,16 @@ export default function ReviewPage() {
   const [fieldQuoteMap, setFieldQuoteMap] = useState<Record<string, number>>({});
   const [editedIncident, setEditedIncident] = useState<Record<string, unknown>>({});
   const [incidentDetails, setIncidentDetails] = useState<IncidentDetails>({});
+  const [newMedia, setNewMedia] = useState({ url: '', media_type: 'image' as 'image' | 'video', description: '' });
   const [newSource, setNewSource] = useState({ url: '', title: '', publication: '', source_type: 'news', source_priority: 'secondary' });
-  const [newQuote, setNewQuote] = useState({ text: '', category: 'testimony', source_id: '' });
+  const [newQuote, setNewQuote] = useState({ text: '', source_id: '' });
   const [newTimeline, setNewTimeline] = useState({ event_date: '', description: '', quote_id: '' });
   const [editingTimeline, setEditingTimeline] = useState<{ id: number; event_date: string; description: string; quote_id: string } | null>(null);
   const [draggedTimelineId, setDraggedTimelineId] = useState<number | null>(null);
-  const [sectionsOpen, setSectionsOpen] = useState({ details: true, typeDetails: true, agencies: true, violations: true, sources: true, quotes: true, timeline: true });
+  const [sectionsOpen, setSectionsOpen] = useState({ details: true, typeDetails: true, media: true, agencies: true, violations: true, sources: true, quotes: true, timeline: true });
   const [activeTypingField, setActiveTypingField] = useState<string | null>(null);
   const [verifiedFields, setVerifiedFields] = useState<Record<string, boolean>>({});
+  const [verifiedMedia, setVerifiedMedia] = useState<Record<number, boolean>>({});
   const [verifiedSources, setVerifiedSources] = useState<Record<number, boolean>>({});
   const [verifiedQuotes, setVerifiedQuotes] = useState<Record<number, boolean>>({});
   const [verifiedTimeline, setVerifiedTimeline] = useState<Record<number, boolean>>({});
@@ -524,15 +537,96 @@ export default function ReviewPage() {
   const [editSourceData, setEditSourceData] = useState<any>({});
   const [editQuoteData, setEditQuoteData] = useState<any>({});
   const [highlightUnverified, setHighlightUnverified] = useState(false);
+  const [guestSubmissionId, setGuestSubmissionId] = useState<number | null>(null);
+  const [relatedReports, setRelatedReports] = useState<any[]>([]);
+  const [relatedReportsSummary, setRelatedReportsSummary] = useState<{ total: number; transferred: number; pending: number } | null>(null);
+  const [showRelatedReports, setShowRelatedReports] = useState(false);
+  const [loadingRelated, setLoadingRelated] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { fetchData(); }, [incidentId]);
+  useEffect(() => { 
+    if (isNewIncident && fromGuest && guestDataParam) {
+      initializeFromGuestData();
+    } else if (!isNewIncident) {
+      fetchData(); 
+    }
+  }, [incidentId, isNewIncident, fromGuest, guestDataParam]);
 
   useEffect(() => {
     const map: Record<string, number> = {};
     quotes.forEach(q => { if (q.linked_fields) q.linked_fields.forEach(f => { map[f] = q.id; }); });
     setFieldQuoteMap(map);
   }, [quotes]);
+
+  useEffect(() => {
+    // Keep the reviewer checkboxes in sync with current quote list; default unchecked for new items
+    setVerifiedQuotes(prev => {
+      const next: Record<number, boolean> = {};
+      quotes.forEach(q => {
+        next[q.id] = prev[q.id] ?? false;
+      });
+      return next;
+    });
+  }, [quotes]);
+
+  function initializeFromGuestData() {
+    console.log('[initializeFromGuestData] Starting...');
+    try {
+      const guestData = JSON.parse(guestDataParam!);
+      console.log('[initializeFromGuestData] Parsed guest data:', guestData);
+      setGuestSubmissionId(guestData.guest_submission_id);
+      
+      // Set edited incident data
+      setEditedIncident({
+        incident_type: guestData.incident_type,
+        victim_name: guestData.victim_name || '',
+        incident_date: guestData.incident_date || '',
+        city: guestData.city || '',
+        state: guestData.state || '',
+        facility: guestData.facility || '',
+        summary: guestData.summary || '',
+        subject_age: guestData.subject_age || '',
+        subject_gender: guestData.subject_gender || '',
+        subject_nationality: guestData.subject_nationality || '',
+      });
+
+      // Initialize media from guest submission
+      if (guestData.media_urls && Array.isArray(guestData.media_urls)) {
+        setMedia(guestData.media_urls.map((m: any, idx: number) => ({
+          id: -(idx + 1), // Temporary negative IDs for new items
+          url: m.url,
+          media_type: m.type || 'image',
+          description: m.description || '',
+          verified: false
+        })));
+      }
+
+      // Initialize sources from guest submission
+      if (guestData.source_urls && Array.isArray(guestData.source_urls)) {
+        setSources(guestData.source_urls.map((s: any, idx: number) => {
+          // Handle both string URLs and object format {url, title}
+          const sourceUrl = typeof s === 'string' ? s : s.url;
+          const sourceTitle = typeof s === 'object' ? (s.title || '') : '';
+          
+          return {
+            id: -(idx + 1), // Temporary negative IDs
+            url: sourceUrl,
+            title: sourceTitle,
+            publication: '',
+            source_type: 'news',
+            source_priority: 'secondary'
+          };
+        }));
+      }
+
+      setLoading(false);
+      console.log('[initializeFromGuestData] Success');
+    } catch (err) {
+      console.error('[initializeFromGuestData] Failed to parse guest data:', err);
+      setError('Failed to load guest submission data');
+      setLoading(false);
+    }
+  }
 
   async function fetchData() {
     try {
@@ -541,6 +635,7 @@ export default function ReviewPage() {
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
       setIncident(data.incident);
+      setMedia(data.media || []);
       setSources(data.sources || []);
       setQuotes(data.quotes || []);
       setAgencies(data.agencies || []);
@@ -555,8 +650,30 @@ export default function ReviewPage() {
         const detailsData = await detailsRes.json();
         setIncidentDetails(detailsData.details || {});
       }
+      
+      // Fetch related guest reports if we have a victim name
+      if (data.incident?.victim_name || data.incident?.subject_name) {
+        fetchRelatedReports(data.incident.victim_name || data.incident.subject_name);
+      }
     } catch (e) { setError(e instanceof Error ? e.message : 'Failed to load'); }
     finally { setLoading(false); }
+  }
+
+  async function fetchRelatedReports(name: string) {
+    if (!name) return;
+    setLoadingRelated(true);
+    try {
+      const res = await fetch(`/api/guest-submissions/by-name?name=${encodeURIComponent(name)}&excludeIncidentId=${incidentId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setRelatedReports(data.submissions || []);
+        setRelatedReportsSummary(data.summary || null);
+      }
+    } catch (e) {
+      console.error('Failed to fetch related reports:', e);
+    } finally {
+      setLoadingRelated(false);
+    }
   }
 
   async function apiCall(endpoint: string, method: string, body?: unknown) {
@@ -654,13 +771,50 @@ export default function ReviewPage() {
     setEditingSourceId(null);
   }
 
+  async function addMedia() {
+    if (!newMedia.url) return;
+    if (isNewIncident) {
+      // For new incidents, just add to local state
+      setMedia(prev => [...prev, { 
+        id: -(prev.length + 1), 
+        url: newMedia.url,
+        media_type: newMedia.media_type,
+        description: newMedia.description || null,
+        verified: false
+      }]);
+    } else {
+      const result = await apiCall('media', 'POST', newMedia);
+      setMedia(prev => [...prev, { ...newMedia, id: result.id, description: newMedia.description || null }]);
+    }
+    setNewMedia({ url: '', media_type: 'image', description: '' });
+  }
+
+  async function deleteMedia(id: number) {
+    if (!confirm('Delete this media?')) return;
+    if (isNewIncident) {
+      setMedia(prev => prev.filter(m => m.id !== id));
+    } else {
+      await apiCall('media', 'DELETE', { media_id: id });
+      setMedia(prev => prev.filter(m => m.id !== id));
+    }
+  }
+
+  async function updateMedia(id: number, updates: Partial<Media>) {
+    if (isNewIncident) {
+      setMedia(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m));
+    } else {
+      await apiCall('media', 'PUT', { media_id: id, ...updates });
+      setMedia(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m));
+    }
+  }
+
   async function addQuote() {
     if (!newQuote.text) return;
-    const payload = { text: newQuote.text, category: newQuote.category || null, source_id: newQuote.source_id ? Number(newQuote.source_id) : null };
+    const payload = { text: newQuote.text, source_id: newQuote.source_id ? Number(newQuote.source_id) : null };
     const result = await apiCall('quotes', 'POST', payload);
     const sourceInfo = newQuote.source_id ? sources.find(s => s.id === Number(newQuote.source_id)) : null;
-    setQuotes(prev => [...prev, { id: result.id, quote_text: newQuote.text, category: newQuote.category || null, source_id: payload.source_id, linked_fields: null, source_title: sourceInfo?.title || null }]);
-    setNewQuote({ text: '', category: 'testimony', source_id: '' });
+    setQuotes(prev => [...prev, { id: result.id, quote_text: newQuote.text, category: null, source_id: payload.source_id, linked_fields: null, source_title: sourceInfo?.title || null, verified: false }]);
+    setNewQuote({ text: '', source_id: '' });
   }
 
   async function deleteQuote(id: number) {
@@ -671,8 +825,11 @@ export default function ReviewPage() {
   }
 
   async function updateQuote(id: number, updates: any) {
-    await apiCall('quotes', 'PUT', { quote_id: id, ...updates });
-    setQuotes(prev => prev.map(q => q.id === id ? { ...q, ...updates } : q));
+    const payload: any = { quote_id: id };
+    if (updates.quote_text !== undefined) payload.quote_text = updates.quote_text;
+    if (updates.source_id !== undefined) payload.source_id = updates.source_id;
+    await apiCall('quotes', 'PUT', payload);
+    setQuotes(prev => prev.map(q => q.id === id ? { ...q, quote_text: payload.quote_text ?? q.quote_text, source_id: payload.source_id ?? q.source_id } : q));
     setEditingQuoteId(null);
   }
 
@@ -714,11 +871,13 @@ export default function ReviewPage() {
   }
 
   function findUnverifiedQuotes() {
-    const firstUnverified = quotes.find(q => !verifiedQuotes[q.id]);
-    if (firstUnverified) {
+    const firstUnchecked = quotes.find(q => !verifiedQuotes[q.id]);
+    const firstUnverified = quotes.find(q => !q.verified);
+    const target = firstUnchecked || firstUnverified;
+    if (target) {
       setSectionsOpen(prev => ({ ...prev, quotes: true }));
       setTimeout(() => {
-        const element = document.querySelector(`[data-quote-id="${firstUnverified.id}"]`);
+        const element = document.querySelector(`[data-quote-id="${target.id}"]`);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
           element.classList.add('ring-2', 'ring-yellow-400');
@@ -879,7 +1038,7 @@ export default function ReviewPage() {
 
   if (loading) return <div className="p-8">Loading...</div>;
   if (error) return <div className="p-8 text-red-600">{error}</div>;
-  if (!incident) return <div className="p-8">Not found</div>;
+  if (!incident && !isNewIncident) return <div className="p-8">Not found</div>;
 
   // Helper to check if a field has real data (not placeholder)
   const hasRealData = (key: string, val: any) => {
@@ -890,26 +1049,33 @@ export default function ReviewPage() {
   };
 
   const fieldsWithData = INCIDENT_FIELDS.filter(f => {
+    if (f.key === 'incident_type') return false; // Exclude incident_type from regular fields
     const val = editedIncident[f.key];
     return hasRealData(f.key, val);
   });
   
-  // Include incident_type in the count if it has a value
-  const totalFieldsCount = fieldsWithData.length + (editedIncident.incident_type ? 1 : 0);
-  const incidentTypeVerified = editedIncident.incident_type ? (verifiedFields['incident_type'] || false) : true;
-  const verifiedCount = fieldsWithData.filter(f => verifiedFields[f.key]).length + (editedIncident.incident_type && incidentTypeVerified ? 1 : 0);
+  // Handle incident_type separately since it's always present
+  const hasIncidentType = !!editedIncident.incident_type;
+  const totalFieldsCount = fieldsWithData.length + (hasIncidentType ? 1 : 0);
+  const incidentTypeVerified = hasIncidentType ? (verifiedFields['incident_type'] || false) : true;
+  const verifiedCount = fieldsWithData.filter(f => verifiedFields[f.key]).length + (hasIncidentType && incidentTypeVerified ? 1 : 0);
   const allFieldsVerified = totalFieldsCount === 0 || verifiedCount === totalFieldsCount;
   
   const verifiedSourcesCount = Object.values(verifiedSources).filter(Boolean).length;
-  const verifiedQuotesCount = Object.values(verifiedQuotes).filter(Boolean).length;
+  const verifiedQuotesCount = quotes.filter(q => q.verified).length;
   const verifiedTimelineCount = Object.values(verifiedTimeline).filter(Boolean).length;
 
   return (
     <div className="max-w-5xl mx-auto p-6">
       {saving && <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm z-50">Saving...</div>}
-
-      {/* Validation Issues Alert - Show if case was returned from validation */}
-      {validationIssues.length > 0 && (
+      
+      {loading && <div className="text-center py-8">Loading...</div>}
+      {error && <div className="bg-red-50 border border-red-300 text-red-700 p-4 rounded mb-4">{error}</div>}
+      
+      {!loading && !error && (
+        <>
+          {/* Validation Issues Alert - Show if case was returned from validation */}
+          {validationIssues.length > 0 && (
         <div className="mb-6 p-4 bg-orange-50 border-2 border-orange-300 rounded-lg">
           <div className="flex items-start gap-3">
             <span className="text-2xl">🔄</span>
@@ -951,12 +1117,17 @@ export default function ReviewPage() {
       {/* Header */}
       <div className="mb-6 pb-4 border-b">
         <Link href="/dashboard" className="text-blue-600 hover:underline text-sm">← Back to Queue</Link>
-        <h1 className="text-2xl font-bold mt-2">{incident.victim_name || incident.subject_name || 'Unknown'}</h1>
-        <p className="text-gray-500 text-sm">{incident.incident_id} • {incident.incident_type}</p>
-        <div className="flex flex-wrap gap-2 mt-2">
-          <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${incident.verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-            {incident.verification_status || (incident.verified ? 'verified' : 'unverified')}
-          </span>
+        <h1 className="text-2xl font-bold mt-2">
+          {isNewIncident ? 'New Incident Review' : (incident?.victim_name || incident?.subject_name || 'Unknown')}
+        </h1>
+        <p className="text-gray-500 text-sm">
+          {isNewIncident ? 'Creating from guest submission' : `${incident?.incident_id} • ${incident?.incident_type}`}
+        </p>
+        {!isNewIncident && incident && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${incident.verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+              {incident.verification_status || (incident.verified ? 'verified' : 'unverified')}
+            </span>
           <div className="inline-flex items-center gap-1">
             <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${allFieldsVerified ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
               Fields: {verifiedCount}/{totalFieldsCount}
@@ -995,8 +1166,118 @@ export default function ReviewPage() {
               <button onClick={findUnverifiedTimeline} className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-medium" title="Find unverified timeline events">Find</button>
             )}
           </div>
-        </div>
+          </div>
+        )}
+        {isNewIncident && (
+          <div className="bg-blue-50 border border-blue-300 text-blue-800 p-3 rounded-lg mt-2">
+            <p className="text-sm"><strong>📝 New Incident:</strong> Fill in the details below, then click "Create & Continue Review" to save and continue the review process.</p>
+          </div>
+        )}
       </div>
+
+      {/* Related Guest Reports Section */}
+      {!isNewIncident && relatedReportsSummary && relatedReportsSummary.total > 0 && (
+        <div className="mb-6">
+          <button
+            onClick={() => setShowRelatedReports(!showRelatedReports)}
+            className="w-full flex items-center justify-between p-3 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg">📋</span>
+              <span className="font-medium text-indigo-800">
+                {relatedReportsSummary.total} Related Guest Report{relatedReportsSummary.total !== 1 ? 's' : ''} Found
+              </span>
+              {relatedReportsSummary.pending > 0 && (
+                <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded">
+                  {relatedReportsSummary.pending} pending
+                </span>
+              )}
+              {relatedReportsSummary.transferred > 0 && (
+                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">
+                  {relatedReportsSummary.transferred} transferred
+                </span>
+              )}
+            </div>
+            <span className={`transform transition-transform ${showRelatedReports ? 'rotate-180' : ''}`}>▼</span>
+          </button>
+          
+          {showRelatedReports && (
+            <div className="mt-2 border border-indigo-200 rounded-lg max-h-96 overflow-y-auto">
+              {loadingRelated ? (
+                <div className="p-4 text-center text-gray-500">Loading related reports...</div>
+              ) : (
+                <div className="divide-y divide-indigo-100">
+                  {relatedReports.map((report, idx) => (
+                    <div key={report.id} className={`p-4 ${report.transfer_status === 'transferred' ? 'bg-gray-50' : 'bg-white'}`}>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-gray-800">#{idx + 1}: {report.subject_name}</span>
+                            <span className={`px-2 py-0.5 text-xs rounded ${
+                              report.transfer_status === 'transferred' ? 'bg-green-100 text-green-700' :
+                              report.transfer_status === 'rejected' ? 'bg-red-100 text-red-700' :
+                              'bg-yellow-100 text-yellow-700'
+                            }`}>
+                              {report.transfer_status}
+                            </span>
+                            {report.incident_type && (
+                              <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
+                                {report.incident_type.replace(/_/g, ' ')}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {report.date_of_incident && (
+                            <p className="text-sm text-gray-600">📅 {new Date(report.date_of_incident).toLocaleDateString()}</p>
+                          )}
+                          {report.facility_location && (
+                            <p className="text-sm text-gray-600">📍 {report.facility_location}</p>
+                          )}
+                          
+                          {report.description && (
+                            <p className="text-sm text-gray-700 mt-2 line-clamp-2">{report.description}</p>
+                          )}
+                          
+                          {report.source_urls && report.source_urls.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {report.source_urls.slice(0, 3).map((s: any, i: number) => {
+                                const url = typeof s === 'string' ? s : s.url;
+                                return (
+                                  <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 hover:underline bg-blue-50 px-2 py-1 rounded">
+                                    Source {i + 1} →
+                                  </a>
+                                );
+                              })}
+                              {report.source_urls.length > 3 && (
+                                <span className="text-xs text-gray-500 px-2 py-1">+{report.source_urls.length - 3} more</span>
+                              )}
+                            </div>
+                          )}
+                          
+                          {report.notes && (
+                            <div className="mt-2 p-2 bg-yellow-50 rounded text-sm text-yellow-800">
+                              <strong>Notes:</strong> {report.notes}
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="text-right text-xs text-gray-500 shrink-0">
+                          <p>Submitted {new Date(report.created_at).toLocaleDateString()}</p>
+                          {report.submitter_email && <p>by {report.submitter_email}</p>}
+                          {report.transferred_to_incident_id && (
+                            <p className="mt-1 text-green-600">→ Incident #{report.transferred_to_incident_id}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Details Section */}
       <Section title="Incident Details" open={sectionsOpen.details} onToggle={() => toggleSection('details')}>
@@ -1383,6 +1664,76 @@ export default function ReviewPage() {
         </div>
       </Section>
 
+      {/* Media Section (Images/Videos) */}
+      <Section title={`Media (${media.length})`} open={sectionsOpen.media} onToggle={() => toggleSection('media')}>
+        <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded mb-3">
+          <input 
+            placeholder="Media URL *" 
+            className="flex-1 min-w-[300px] border rounded px-3 py-2 text-sm" 
+            value={newMedia.url} 
+            onChange={e => setNewMedia({ ...newMedia, url: e.target.value })} 
+          />
+          <select 
+            className="border rounded px-3 py-2 text-sm" 
+            value={newMedia.media_type} 
+            onChange={e => setNewMedia({ ...newMedia, media_type: e.target.value as 'image' | 'video' })}
+          >
+            <option value="image">Image</option>
+            <option value="video">Video</option>
+          </select>
+          <input 
+            placeholder="Description" 
+            className="flex-1 min-w-[200px] border rounded px-3 py-2 text-sm" 
+            value={newMedia.description} 
+            onChange={e => setNewMedia({ ...newMedia, description: e.target.value })} 
+          />
+          <button 
+            onClick={addMedia} 
+            disabled={!newMedia.url || saving} 
+            className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:bg-gray-400"
+          >
+            Add
+          </button>
+        </div>
+        <div className="space-y-2">
+          {media.map(m => (
+            <div key={m.id} className="p-3 bg-gray-50 rounded flex justify-between items-center" data-media-id={m.id}>
+              <div className="flex items-center gap-3 flex-1">
+                <input 
+                  type="checkbox" 
+                  checked={verifiedMedia[m.id] || false}
+                  onChange={(e) => setVerifiedMedia(prev => ({ ...prev, [m.id]: e.target.checked }))}
+                  className="w-4 h-4"
+                  title="Check to verify this media"
+                />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <a href={m.url} target="_blank" rel="noopener" className="text-blue-600 hover:underline">
+                      {m.media_type === 'video' ? '🎥' : '📷'} {m.url.substring(0, 60)}...
+                    </a>
+                    <span className={`text-xs px-2 py-0.5 rounded ${m.media_type === 'video' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {m.media_type}
+                    </span>
+                  </div>
+                  {m.description && (
+                    <p className="text-sm text-gray-600 mt-1">{m.description}</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => deleteMedia(m.id)} 
+                  className="text-red-600 text-sm hover:underline"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+          {media.length === 0 && <p className="text-gray-500 text-sm text-center py-4">No media yet</p>}
+        </div>
+      </Section>
+
       {/* Sources Section */}
       <Section title={`Sources (${sources.length})`} open={sectionsOpen.sources} onToggle={() => toggleSection('sources')}>
         <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded mb-3">
@@ -1495,15 +1846,6 @@ export default function ReviewPage() {
             <option value="">Select source</option>
             {sources.map(s => <option key={s.id} value={s.id}>{s.title || s.url}</option>)}
           </select>
-          <select className="border rounded px-3 py-2 text-sm" value={newQuote.category || 'testimony'} onChange={e => setNewQuote({ ...newQuote, category: e.target.value })}>
-            <option value="testimony">Testimony</option>
-            <option value="official_statement">Official Statement</option>
-            <option value="eyewitness">Eyewitness</option>
-            <option value="expert">Expert Opinion</option>
-            <option value="court_document">Court Document</option>
-            <option value="news_quote">News Quote</option>
-            <option value="other">Other</option>
-          </select>
           <button onClick={addQuote} disabled={!newQuote.text || saving} className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:bg-gray-400">Add</button>
         </div>
         <div className="space-y-2">
@@ -1527,19 +1869,6 @@ export default function ReviewPage() {
                       <option value="">Select source</option>
                       {sources.map(s => <option key={s.id} value={s.id}>{s.title || s.url}</option>)}
                     </select>
-                    <select 
-                      className="flex-1 border rounded px-3 py-2 text-sm"
-                      value={editQuoteData.category || q.category || 'testimony'}
-                      onChange={(e) => setEditQuoteData({ ...editQuoteData, category: e.target.value })}
-                    >
-                      <option value="testimony">Testimony</option>
-                      <option value="official_statement">Official Statement</option>
-                      <option value="eyewitness">Eyewitness</option>
-                      <option value="expert">Expert Opinion</option>
-                      <option value="court_document">Court Document</option>
-                      <option value="news_quote">News Quote</option>
-                      <option value="other">Other</option>
-                    </select>
                   </div>
                   <div className="flex gap-2">
                     <button 
@@ -1559,22 +1888,25 @@ export default function ReviewPage() {
                 </div>
               ) : (
                 <div className="flex items-start gap-3">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     checked={verifiedQuotes[q.id] || false}
                     onChange={(e) => setVerifiedQuotes(prev => ({ ...prev, [q.id]: e.target.checked }))}
                     className="w-4 h-4 mt-1"
-                    title="Check to verify this quote"
+                    title="Check after reviewing this quote"
                   />
                   <div className="flex-1">
                     <p className="text-sm italic">&ldquo;{q.quote_text}&rdquo;</p>
                     <div className="flex justify-between items-center mt-2">
                       <div className="flex gap-2 text-xs text-gray-500">
-                        {q.category && <span className="bg-gray-200 px-2 py-0.5 rounded">{q.category}</span>}
                         {q.source_title && <span>Source: {q.source_title}</span>}
                         {q.linked_fields?.length ? <span className="text-blue-600">Linked: {q.linked_fields.join(', ')}</span> : null}
+                        {q.verified ? <span className="text-green-700 bg-green-100 px-2 py-0.5 rounded">Verified</span> : <span className="text-orange-700 bg-orange-100 px-2 py-0.5 rounded">Unverified</span>}
                       </div>
                       <div className="flex gap-2">
+                        {!q.verified && (
+                          <button onClick={() => verifyQuote(q.id)} className="text-green-700 text-sm hover:underline font-semibold">Mark verified</button>
+                        )}
                         <button onClick={() => { setEditingQuoteId(q.id); setEditQuoteData({}); }} className="text-blue-600 text-sm hover:underline">Edit</button>
                         <button onClick={() => deleteQuote(q.id)} className="text-red-600 text-sm hover:underline">Delete</button>
                       </div>
@@ -1678,7 +2010,7 @@ export default function ReviewPage() {
         <div className="mb-4 p-3 bg-white border border-gray-300 rounded">
           <p className="text-sm font-medium text-gray-700 mb-2">Quick Find Tools:</p>
           <div className="flex flex-wrap gap-2">
-            {(() => {
+            {!isNewIncident && (() => {
               const keyFields = ['victim_name', 'incident_date', 'city', 'state', 'summary'];
               const unlinkedFields = keyFields.filter(field => {
                 const value = (editedIncident as any)[field] || (incident as any)?.[field];
@@ -1699,6 +2031,14 @@ export default function ReviewPage() {
                 className="px-3 py-1 bg-red-100 text-red-700 border border-red-300 rounded text-sm hover:bg-red-200"
               >
                 🔍 Find Quotes Without Sources ({quotes.filter(q => !q.source_id).length})
+              </button>
+            )}
+            {quotes.filter(q => !verifiedQuotes[q.id]).length > 0 && (
+              <button
+                onClick={findUnverifiedQuotes}
+                className="px-3 py-1 bg-yellow-100 text-yellow-700 border border-yellow-300 rounded text-sm hover:bg-yellow-200"
+              >
+                🔍 Find Unchecked Quote Boxes ({quotes.filter(q => !verifiedQuotes[q.id]).length})
               </button>
             )}
             {quotes.filter(q => !q.verified).length > 0 && (
@@ -1725,6 +2065,92 @@ export default function ReviewPage() {
           </div>
           <button
             onClick={async () => {
+              // If this is a new incident, create it first
+              if (isNewIncident) {
+                if (!editedIncident.incident_type) {
+                  alert('Please select an incident type');
+                  return;
+                }
+                
+                try {
+                  setSaving(true);
+                  
+                  // Generate incident_id
+                  const incidentIdValue = `INC-${Date.now()}`;
+                  
+                  // Create incident
+                  const createRes = await fetch('/api/incidents', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      incident_id: incidentIdValue,
+                      ...editedIncident,
+                      from_guest_submission: fromGuest,
+                      guest_submission_id: guestSubmissionId
+                    }),
+                  });
+                  
+                  if (!createRes.ok) {
+                    const errorData = await createRes.json();
+                    throw new Error(errorData.error || 'Failed to create incident');
+                  }
+                  
+                  const createdIncident = await createRes.json();
+                  const newIncidentId = createdIncident.id;
+                  
+                  // Create media records
+                  for (const m of media) {
+                    await fetch(`/api/incidents/${newIncidentId}/media`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        url: m.url,
+                        media_type: m.media_type,
+                        description: m.description
+                      }),
+                    });
+                  }
+                  
+                  // Create sources
+                  for (const s of sources.filter(s => s.id < 0)) { // Only create new ones (negative IDs)
+                    await fetch(`/api/incidents/${newIncidentId}/sources`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        url: s.url,
+                        title: s.title,
+                        publication: s.publication,
+                        source_type: s.source_type,
+                        source_priority: s.source_priority
+                      }),
+                    });
+                  }
+                  
+                  // Mark guest submission as reviewed if applicable
+                  if (guestSubmissionId) {
+                    await fetch(`/api/guest-submissions`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        id: guestSubmissionId,
+                        status: 'reviewed',
+                        notes: 'Reviewed and created incident'
+                      }),
+                    });
+                  }
+                  
+                  alert('✅ Incident created! Redirecting to continue review...');
+                  router.push(`/dashboard/review/${newIncidentId}`);
+                  return;
+                } catch (err) {
+                  alert('Failed to create incident: ' + (err instanceof Error ? err.message : 'Unknown error'));
+                  console.error(err);
+                  setSaving(false);
+                  return;
+                }
+              }
+              
+              // Otherwise proceed with normal verification flow for existing incidents
               // Validation
               const unverifiedQuotes = quotes.filter(q => !q.verified);
               const quotesWithoutSources = quotes.filter(q => !q.source_id);
@@ -1751,10 +2177,11 @@ export default function ReviewPage() {
               
               const unverifiedFieldsList = allFieldsToCheck.filter(f => !verifiedFields[f.key]);
 
-              // Check sources, quotes, timeline verification
+              // Check sources, quotes, timeline, and media verification (checkboxes)
               const unverifiedSourcesList = sources.filter(s => !verifiedSources[s.id]);
               const unverifiedQuotesList = quotes.filter(q => !verifiedQuotes[q.id]);
               const unverifiedTimelineList = timeline.filter(t => !verifiedTimeline[t.id]);
+              const unverifiedMediaList = media.filter(m => !verifiedMedia[m.id]);
 
               // DEBUG: Log all validation checks
               console.log('=== VERIFICATION DEBUG ===');
@@ -1767,6 +2194,7 @@ export default function ReviewPage() {
               console.log('Unverified sources:', unverifiedSourcesList);
               console.log('Unverified quotes (checkboxes):', unverifiedQuotesList);
               console.log('Unverified timeline:', unverifiedTimelineList);
+              console.log('Unverified media:', unverifiedMediaList);
               console.log('=== END DEBUG ===');
 
               let blockingErrors: string[] = [];
@@ -1795,6 +2223,9 @@ export default function ReviewPage() {
               if (unverifiedTimelineList.length > 0) {
                 blockingErrors.push(`${unverifiedTimelineList.length} timeline event(s) not checked`);
               }
+              if (unverifiedMediaList.length > 0) {
+                blockingErrors.push(`${unverifiedMediaList.length} media item(s) not checked`);
+              }
 
               // Block if critical errors exist
               if (blockingErrors.length > 0) {
@@ -1818,6 +2249,12 @@ export default function ReviewPage() {
                 
                 alert(errorMsg);
                 return; // Block submission
+              }
+
+              // Guard against null incident
+              if (!incident) {
+                alert('Error: Incident data not loaded');
+                return;
               }
 
               // Determine confirmation message based on verification status
@@ -1893,13 +2330,14 @@ export default function ReviewPage() {
             className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             {saving ? 'Submitting...' : 
-             incident.verification_status === 'pending' ? 'Submit First Review' :
-             incident.verification_status === 'first_review' ? 'Submit Second Review' :
+             isNewIncident ? 'Create & Continue Review' :
+             incident?.verification_status === 'pending' ? 'Submit First Review' :
+             incident?.verification_status === 'first_review' ? 'Submit Second Review' :
              'Update Verification'}
           </button>
           
           {/* Show lock notice if user did first review */}
-          {incident.verification_status === 'first_review' && 
+          {!isNewIncident && incident && incident.verification_status === 'first_review' && 
            incident.first_verified_by === (session?.user?.id ? parseInt(session.user.id) : null) &&
            (session?.user as any)?.role !== 'admin' && (
             <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -1910,7 +2348,7 @@ export default function ReviewPage() {
           )}
           
           {/* Show admin override notice */}
-          {incident.verification_status === 'first_review' && 
+          {!isNewIncident && incident && incident.verification_status === 'first_review' && 
            incident.first_verified_by === (session?.user?.id ? parseInt(session.user.id) : null) &&
            (session?.user as any)?.role === 'admin' && (
             <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -1921,6 +2359,8 @@ export default function ReviewPage() {
           )}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

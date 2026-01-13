@@ -445,11 +445,20 @@ export async function submitIncidentReview(
   try {
     await client.query('BEGIN');
     
-    // Get current incident status
+    // Get current incident status and check if it's from a guest submission
     const incidentResult = await client.query(`
-      SELECT verification_status, first_review_by, verified
-      FROM incidents
-      WHERE id = $1
+      SELECT 
+        i.verification_status, 
+        i.first_review_by, 
+        i.verified,
+        gs.id as guest_submission_id
+      FROM incidents i
+      LEFT JOIN guest_submissions gs ON gs.submission_data::jsonb->>'victimName' = i.victim_name 
+        AND gs.status = 'reviewed'
+        AND gs.created_at > (i.created_at - INTERVAL '1 day')
+        AND gs.created_at < (i.created_at + INTERVAL '1 hour')
+      WHERE i.id = $1
+      LIMIT 1
     `, [incidentId]);
     
     if (incidentResult.rows.length === 0) {
@@ -459,6 +468,7 @@ export async function submitIncidentReview(
     const incident = incidentResult.rows[0];
     const currentStatus = incident.verification_status;
     const firstReviewBy = incident.first_review_by;
+    const guestSubmissionId = incident.guest_submission_id;
     const isAdmin = userRole === 'admin';
     
     // Handle workflow based on current status
@@ -473,6 +483,15 @@ export async function submitIncidentReview(
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
       `, [userId, incidentId]);
+      
+      // If this came from a guest submission, mark it as accepted
+      if (guestSubmissionId) {
+        await client.query(`
+          UPDATE guest_submissions
+          SET status = 'accepted', notes = 'First review completed'
+          WHERE id = $1
+        `, [guestSubmissionId]);
+      }
       
       await client.query('COMMIT');
       return {
@@ -584,6 +603,119 @@ export async function getIncidentSources(incidentId: number): Promise<IncidentSo
       SELECT * FROM incident_sources WHERE incident_id = $1 ORDER BY published_date DESC
     `, [incidentId]);
     return result.rows.map(formatSource);
+  } finally {
+    client.release();
+  }
+}
+
+// ============================================
+// MEDIA (Images/Videos)
+// ============================================
+
+export interface IncidentMedia {
+  id?: number;
+  incident_id?: number;
+  url: string;
+  media_type: 'image' | 'video';
+  title?: string;
+  description?: string;
+  credit?: string;
+  license?: string;
+  source_url?: string;
+  source_publication?: string;
+  media_date?: string;
+  verified?: boolean;
+  verified_by?: number;
+  is_primary?: boolean;
+  display_order?: number;
+}
+
+export async function addIncidentMedia(incidentId: number, media: Omit<IncidentMedia, 'id' | 'incident_id'>): Promise<number> {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(`
+      INSERT INTO incident_media (
+        incident_id, url, media_type, title, description, credit, license,
+        source_url, source_publication, media_date, is_primary, display_order
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      RETURNING id
+    `, [
+      incidentId,
+      media.url,
+      media.media_type,
+      media.title || null,
+      media.description || null,
+      media.credit || null,
+      media.license || null,
+      media.source_url || null,
+      media.source_publication || null,
+      media.media_date || null,
+      media.is_primary ?? false,
+      media.display_order ?? 0,
+    ]);
+    return result.rows[0].id;
+  } finally {
+    client.release();
+  }
+}
+
+export async function getIncidentMedia(incidentId: number): Promise<IncidentMedia[]> {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(`
+      SELECT * FROM incident_media WHERE incident_id = $1 ORDER BY is_primary DESC, display_order ASC
+    `, [incidentId]);
+    return result.rows;
+  } finally {
+    client.release();
+  }
+}
+
+export async function updateIncidentMedia(mediaId: number, updates: Partial<IncidentMedia>): Promise<void> {
+  const client = await pool.connect();
+  try {
+    const setClauses: string[] = [];
+    const params: unknown[] = [];
+    let paramIndex = 1;
+
+    const fieldMap: Record<string, unknown> = {
+      url: updates.url,
+      media_type: updates.media_type,
+      title: updates.title,
+      description: updates.description,
+      credit: updates.credit,
+      license: updates.license,
+      source_url: updates.source_url,
+      source_publication: updates.source_publication,
+      media_date: updates.media_date,
+      is_primary: updates.is_primary,
+      display_order: updates.display_order,
+    };
+
+    for (const [column, value] of Object.entries(fieldMap)) {
+      if (value !== undefined) {
+        setClauses.push(`${column} = $${paramIndex++}`);
+        params.push(value);
+      }
+    }
+
+    if (setClauses.length > 0) {
+      setClauses.push('updated_at = CURRENT_TIMESTAMP');
+      params.push(mediaId);
+      await client.query(`
+        UPDATE incident_media SET ${setClauses.join(', ')} WHERE id = $${paramIndex}
+      `, params);
+    }
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteIncidentMedia(mediaId: number): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query('DELETE FROM incident_media WHERE id = $1', [mediaId]);
   } finally {
     client.release();
   }

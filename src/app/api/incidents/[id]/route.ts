@@ -8,6 +8,7 @@ import {
   addIncidentSource,
   addIncidentQuote,
   addTimelineEntry,
+  addIncidentMedia,
 } from '@/lib/incidents-db';
 
 // GET /api/incidents/[id] - Get single incident
@@ -22,6 +23,8 @@ export async function GET(
     // Check if user is requesting unverified incidents (requires analyst role)
     const includeUnverified = searchParams.get('include_unverified') === 'true';
     
+    // SECURITY: Check user auth status to determine access level
+    let isAnalyst = false;
     if (includeUnverified) {
       // SECURITY: Only analysts can see unverified incidents
       const authResult = await requireServerAuth(request, 'analyst');
@@ -31,13 +34,28 @@ export async function GET(
           { status: 403 }
         );
       }
+      isAnalyst = true;
+    } else {
+      // Check if user is analyst even without include_unverified flag
+      const authResult = await requireServerAuth(request, 'analyst');
+      isAnalyst = !('error' in authResult);
     }
     
     // Try parsing as number first, then use as string (incident_id)
     const numericId = parseInt(id);
-    const incident = await getIncidentById(isNaN(numericId) ? id : numericId, includeUnverified);
+    // SECURITY: Always pass false for non-analysts, even if they try to manipulate the request
+    const incident = await getIncidentById(isNaN(numericId) ? id : numericId, isAnalyst && includeUnverified);
     
     if (!incident) {
+      return NextResponse.json(
+        { error: 'Incident not found' },
+        { status: 404 }
+      );
+    }
+
+    // SECURITY: Double-check that non-analysts never get unverified incidents
+    // This is defense-in-depth in case database filtering fails
+    if (!isAnalyst && incident.verification_status !== 'verified') {
       return NextResponse.json(
         { error: 'Incident not found' },
         { status: 404 }
@@ -201,6 +219,28 @@ export async function PATCH(
       for (const entry of body.timeline) {
         const entryId = await addTimelineEntry(numericId, entry);
         results.timeline_ids.push(entryId);
+      }
+    }
+
+    // Add media (images/videos)
+    if (body.media && Array.isArray(body.media)) {
+      results.media_ids = [];
+      for (const media of body.media) {
+        // Validate media has URL and type
+        if (!media.url) {
+          return NextResponse.json(
+            { error: 'Each media item must have a URL' },
+            { status: 400 }
+          );
+        }
+        if (!media.media_type || !['image', 'video'].includes(media.media_type)) {
+          return NextResponse.json(
+            { error: 'Each media item must have a media_type of "image" or "video"' },
+            { status: 400 }
+          );
+        }
+        const mediaId = await addIncidentMedia(numericId, media);
+        results.media_ids.push(mediaId);
       }
     }
 

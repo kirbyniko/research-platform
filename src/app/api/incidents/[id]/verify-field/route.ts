@@ -248,6 +248,14 @@ export async function GET(
       ORDER BY agency
     `, [incidentId]);
     
+    // Get media
+    const mediaResult = await pool.query(`
+      SELECT id, url, media_type, description, title, is_primary, display_order
+      FROM incident_media
+      WHERE incident_id = $1
+      ORDER BY display_order, id
+    `, [incidentId]);
+    
     // Get violations
     const violationsResult = await pool.query(`
       SELECT id, violation_type, description, constitutional_basis
@@ -303,6 +311,7 @@ export async function GET(
       field_quotes: fieldQuotes,  // Map of field_name -> supporting quotes
       agencies: agenciesResult.rows,
       violations: violationsResult.rows,
+      media: mediaResult.rows,
       type_details: typeDetails,
       timeline: timelineResult.rows,
       validation_issues: validationIssuesResult.rows  // Feedback from validation

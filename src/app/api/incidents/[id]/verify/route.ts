@@ -193,6 +193,13 @@ export async function GET(
       ORDER BY event_date, id
     `, [incidentId]);
 
+    // Get media
+    const mediaResult = await pool.query(`
+      SELECT * FROM incident_media
+      WHERE incident_id = $1
+      ORDER BY id
+    `, [incidentId]);
+
     // Get field verifications
     const fieldVerificationsResult = await pool.query(`
       SELECT 
@@ -216,6 +223,7 @@ export async function GET(
       sources: sourcesResult.rows,
       quotes: quotesResult.rows,
       timeline: timelineResult.rows,
+      media: mediaResult.rows,
       field_verifications: fieldVerificationsResult.rows,
       quote_field_links: quoteFieldLinksResult.rows
     });

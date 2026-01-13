@@ -1,13 +1,16 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 
 interface DuplicateResults {
   existingCases: Array<{ id: number; victim_name: string; incident_date: string; facility_name: string; city?: string; state?: string; verification_status: string }>;
   existingSources: Array<{ url: string; incident_id: number; victim_name: string; verification_status?: string }>;
+  guestSubmissionCount: number;
   hasPotentialDuplicates: boolean;
   hasVerifiedMatch: boolean;
+  allowSubmission: boolean;
+  reason?: string;
 }
 
 // Collapsible section component
@@ -24,6 +27,17 @@ function CollapsibleSection({ title, children, defaultOpen = false }: { title: s
   );
 }
 
+interface MediaItem {
+  url: string;
+  type: 'image' | 'video';
+  description: string;
+}
+
+interface SourceItem {
+  url: string;
+  title: string;
+}
+
 export default function GuestSubmitPage() {
   const [formData, setFormData] = useState({
     victimName: '',
@@ -31,7 +45,6 @@ export default function GuestSubmitPage() {
     location: '',
     facility: '',
     description: '',
-    sourceUrls: '',
     contactEmail: '',
     incidentType: 'death_in_custody',
     // Extended fields
@@ -56,6 +69,8 @@ export default function GuestSubmitPage() {
     victimRestrained: false,
     victimComplying: false,
   });
+  const [sourceItems, setSourceItems] = useState<SourceItem[]>([]);
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
@@ -66,15 +81,39 @@ export default function GuestSubmitPage() {
   const [duplicatesChecked, setDuplicatesChecked] = useState(false);
   const [confirmSubmit, setConfirmSubmit] = useState(false);
 
+  // Reset duplicate check when source items change
+  useEffect(() => {
+    setDuplicatesChecked(false);
+    setDuplicateResults(null);
+    setConfirmSubmit(false);
+  }, [sourceItems]);
+
+  // Auto-submit after duplicate check if no duplicates found
+  const [shouldAutoSubmit, setShouldAutoSubmit] = useState(false);
+  
+  useEffect(() => {
+    if (shouldAutoSubmit && duplicatesChecked && confirmSubmit && !checkingDuplicates) {
+      setShouldAutoSubmit(false);
+      // Trigger form submission
+      document.querySelector('form')?.requestSubmit();
+    }
+  }, [shouldAutoSubmit, duplicatesChecked, confirmSubmit, checkingDuplicates]);
+
   const checkForDuplicates = useCallback(async () => {
     setCheckingDuplicates(true);
     setDuplicateResults(null);
+    setError('');
     
     try {
-      const sourceUrls = formData.sourceUrls
-        .split('\n')
-        .map(url => url.trim())
-        .filter(url => url.length > 0);
+      const sourceUrls = sourceItems.map(s => s.url).filter(url => url.trim());
+
+      // If no identifying info provided, skip duplicate check
+      if (!formData.victimName?.trim() && !formData.dateOfDeath && sourceUrls.length === 0) {
+        setDuplicatesChecked(true);
+        setConfirmSubmit(true);
+        setCheckingDuplicates(false);
+        return;
+      }
 
       const res = await fetch('/api/check-duplicates', {
         method: 'POST',
@@ -92,32 +131,101 @@ export default function GuestSubmitPage() {
         setDuplicateResults(data);
         setDuplicatesChecked(true);
         
-        // If no duplicates found, allow direct submission
-        if (!data.hasPotentialDuplicates) {
-          setConfirmSubmit(true);
+        // If submission is blocked (10+ guest submissions), don't allow
+        if (!data.allowSubmission) {
+          setConfirmSubmit(false);
+          setError(data.reason || 'Too many submissions for this person. Please wait for review.');
         }
+        // If no duplicates found, set confirmSubmit and trigger auto-submit
+        else if (!data.hasPotentialDuplicates) {
+          setConfirmSubmit(true);
+          setShouldAutoSubmit(true);
+        } else {
+          setConfirmSubmit(false);
+        }
+      } else {
+        const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Error checking duplicates:', errorData);
+        setError(`Duplicate check failed: ${errorData.error || 'Please try again'}`);
+        // On error, still allow submission
+        setConfirmSubmit(true);
+        setDuplicatesChecked(true);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error checking duplicates:', err);
+      setError(`Network error during duplicate check: ${err.message || 'Please try again'}`);
       // On error, allow submission anyway
       setConfirmSubmit(true);
+      setDuplicatesChecked(true);
     } finally {
       setCheckingDuplicates(false);
     }
-  }, [formData]);
+  }, [formData, sourceItems]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     
+    // Basic validation: require description
+    if (!formData.description || formData.description.length < 20) {
+      setError('Please provide a description of at least 20 characters');
+      // Scroll to description field
+      const descField = document.querySelector('textarea[placeholder*="Provide details"]') as HTMLElement;
+      if (descField) {
+        descField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        descField.focus();
+        descField.classList.add('ring-2', 'ring-red-500');
+        setTimeout(() => descField.classList.remove('ring-2', 'ring-red-500'), 3000);
+      }
+      return;
+    }
+
+    // Require at least ONE of: name, date, location, facility, sources, or media
+    const hasIdentifyingInfo = 
+      formData.victimName?.trim() ||
+      formData.dateOfDeath ||
+      formData.location?.trim() ||
+      formData.facility?.trim() ||
+      sourceItems.some(s => s.url.trim()) ||
+      mediaItems.some(m => m.url.trim());
+
+    if (!hasIdentifyingInfo) {
+      setError('Please provide at least one identifying detail: name, date, location, facility, source URL, or media link');
+      // Scroll to top of form
+      const firstField = document.querySelector('input[type="text"]') as HTMLElement;
+      if (firstField) {
+        firstField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+    
     // If duplicates haven't been checked yet, check first
     if (!duplicatesChecked) {
       await checkForDuplicates();
+      // After check, need user to click again if duplicates found
+      // But if no duplicates, will proceed automatically via useEffect
+      return;
+    }
+    
+    // If submission is blocked (10+ guest submissions), prevent submit
+    if (duplicateResults && !duplicateResults.allowSubmission) {
+      setError(duplicateResults.reason || 'This submission cannot be processed at this time. Too many submissions for this person are already pending review.');
+      // Scroll to duplicate results
+      const duplicateSection = document.querySelector('.bg-red-50') as HTMLElement;
+      if (duplicateSection) {
+        duplicateSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
     
     // If duplicates found and not confirmed, don't submit
     if (duplicateResults?.hasPotentialDuplicates && !confirmSubmit) {
+      setError('Please review the similar cases above and confirm whether you want to submit this as a new report');
+      // Scroll to duplicate results
+      const duplicateSection = document.querySelector('.bg-amber-50') as HTMLElement;
+      if (duplicateSection) {
+        duplicateSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
     
@@ -129,7 +237,8 @@ export default function GuestSubmitPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          sourceUrls: formData.sourceUrls.split('\n').filter(url => url.trim())
+          sourceUrls: sourceItems.map(s => s.url).filter(url => url.trim()),
+          mediaUrls: mediaItems
         })
       });
 
@@ -159,16 +268,16 @@ export default function GuestSubmitPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8">
         <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-lg shadow p-8 text-center">
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6 md:p-8 text-center">
             <div className="text-5xl mb-4">✓</div>
             <h1 className="text-2xl font-bold mb-4 text-green-600">Submission Received</h1>
             <p className="text-gray-600 mb-6">
               Thank you for your report. Our team will review it and, if verified, 
               it may be added to our database. We may contact you if you provided an email.
             </p>
-            <div className="space-x-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
               <button
                 onClick={() => {
                   setFormData({
@@ -177,7 +286,6 @@ export default function GuestSubmitPage() {
                     location: '',
                     facility: '',
                     description: '',
-                    sourceUrls: '',
                     contactEmail: '',
                     incidentType: 'death_in_custody',
                     age: '', gender: '', nationality: '', city: '', state: '',
@@ -185,15 +293,17 @@ export default function GuestSubmitPage() {
                     shotsFired: '', weaponType: '', bodycamAvailable: false, victimArmed: false, shootingContext: '',
                     forceTypes: {}, victimRestrained: false, victimComplying: false,
                   });
+                  setMediaItems([]);
+                  setSourceItems([]);
                   setSubmitted(false);
                   setDuplicatesChecked(false);
                   setDuplicateResults(null);
                 }}
-                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-center"
               >
                 Submit Another Report
               </button>
-              <Link href="/" className="px-6 py-2 text-blue-600 hover:underline">
+              <Link href="/" className="px-6 py-2 text-blue-600 hover:underline text-center inline-block">
                 Return to Home
               </Link>
             </div>
@@ -204,18 +314,25 @@ export default function GuestSubmitPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
           <Link href="/" className="text-blue-600 hover:underline">← Back to Home</Link>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-8">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6 md:p-8">
           <h1 className="text-2xl font-bold mb-2">Submit a Report</h1>
           <p className="text-gray-600 mb-6">
             Use this form to report information about deaths or incidents connected to ICE.
             All submissions are reviewed before being added to the database.
           </p>
+
+          <div className="bg-blue-50 border border-blue-200 p-4 rounded mb-4">
+            <p className="text-sm text-blue-800">
+              <strong>Anonymous/Unknown Cases:</strong> If the victim&apos;s name is not known, you can leave the name field blank or enter &quot;Unknown&quot;. 
+              Please provide other identifying information such as date, location, facility, or source documents.
+            </p>
+          </div>
 
           <div className="bg-yellow-50 border border-yellow-200 p-4 rounded mb-6">
             <p className="text-sm text-yellow-800">
@@ -225,8 +342,13 @@ export default function GuestSubmitPage() {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded mb-4">
-              {error}
+            <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded mb-4">
+              <div className="flex items-start gap-2">
+                <svg className="w-5 h-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <div>{error}</div>
+              </div>
             </div>
           )}
 
@@ -270,7 +392,7 @@ export default function GuestSubmitPage() {
                 type="text"
                 value={formData.victimName}
                 onChange={(e) => handleFormChange('victimName', e.target.value)}
-                placeholder="Full name or 'Unknown'"
+                placeholder="Full name"
                 className="w-full px-3 py-2 border rounded"
               />
             </div>
@@ -456,17 +578,126 @@ export default function GuestSubmitPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Source URLs (one per line)
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Source URLs
               </label>
-              <textarea
-                value={formData.sourceUrls}
-                onChange={(e) => handleFormChange('sourceUrls', e.target.value)}
-                placeholder="https://example.com/news-article&#10;https://example.com/another-source"
-                rows={3}
-                className="w-full px-3 py-2 border rounded font-mono text-sm"
-              />
-              <p className="text-xs text-gray-500 mt-1">News articles, official reports, etc.</p>
+              
+              <div className="space-y-3 mb-3">
+                {sourceItems.map((item, index) => (
+                  <div key={index} className="border rounded-lg p-3 bg-gray-50">
+                    <div className="flex gap-2 mb-2">
+                      <input
+                        type="url"
+                        value={item.url}
+                        onChange={(e) => {
+                          const newItems = [...sourceItems];
+                          newItems[index].url = e.target.value;
+                          setSourceItems(newItems);
+                        }}
+                        placeholder="https://example.com/news-article"
+                        className="flex-1 px-3 py-2 border rounded text-sm font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSourceItems(sourceItems.filter((_, i) => i !== index));
+                        }}
+                        className="px-3 py-2 text-red-600 hover:bg-red-50 rounded text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={item.title}
+                      onChange={(e) => {
+                        const newItems = [...sourceItems];
+                        newItems[index].title = e.target.value;
+                        setSourceItems(newItems);
+                      }}
+                      placeholder="Source title (e.g., 'NY Times Article', 'ICE Press Release')"
+                      className="w-full px-3 py-2 border rounded text-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+              
+              <button
+                type="button"
+                onClick={() => setSourceItems([...sourceItems, { url: '', title: '' }])}
+                className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-700 text-sm"
+              >
+                + Add Source
+              </button>
+              <p className="text-xs text-gray-500 mt-2">News articles, official reports, etc.</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Images &amp; Videos
+              </label>
+              
+              <div className="space-y-3 mb-3">
+                {mediaItems.map((item, index) => (
+                  <div key={index} className="border rounded-lg p-3 bg-gray-50">
+                    <div className="flex gap-2 mb-2">
+                      <input
+                        type="url"
+                        value={item.url}
+                        onChange={(e) => {
+                          const newItems = [...mediaItems];
+                          newItems[index].url = e.target.value;
+                          setMediaItems(newItems);
+                        }}
+                        placeholder="https://example.com/photo.jpg"
+                        className="flex-1 px-3 py-2 border rounded text-sm font-mono"
+                      />
+                      <select
+                        value={item.type}
+                        onChange={(e) => {
+                          const newItems = [...mediaItems];
+                          newItems[index].type = e.target.value as 'image' | 'video';
+                          setMediaItems(newItems);
+                        }}
+                        className="px-3 py-2 border rounded text-sm"
+                      >
+                        <option value="image">Image</option>
+                        <option value="video">Video</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setMediaItems(mediaItems.filter((_, i) => i !== index))}
+                        className="px-3 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={item.description}
+                      onChange={(e) => {
+                        const newItems = [...mediaItems];
+                        newItems[index].description = e.target.value;
+                        setMediaItems(newItems);
+                      }}
+                      placeholder="Description / Alt text (what does this show?)"
+                      className="w-full px-3 py-2 border rounded text-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+              
+              <button
+                type="button"
+                onClick={() => setMediaItems([...mediaItems, { url: '', type: 'image', description: '' }])}
+                className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:bg-gray-50 text-sm"
+              >
+                + Add Image/Video
+              </button>
+              
+              <p className="text-xs text-gray-500 mt-2">
+                Images/videos serve as evidence and don&apos;t require quote verification. Add descriptions to explain what each shows.
+              </p>
             </div>
 
             <div>
@@ -488,11 +719,23 @@ export default function GuestSubmitPage() {
             {/* Duplicate Check Results */}
             {duplicatesChecked && duplicateResults && (
               <div className={`p-4 rounded border ${
-                duplicateResults.hasPotentialDuplicates 
-                  ? 'bg-amber-50 border-amber-200' 
-                  : 'bg-green-50 border-green-200'
+                !duplicateResults.allowSubmission
+                  ? 'bg-red-50 border-red-200'
+                  : duplicateResults.hasPotentialDuplicates 
+                    ? 'bg-amber-50 border-amber-200' 
+                    : 'bg-green-50 border-green-200'
               }`}>
-                {!duplicateResults.hasPotentialDuplicates ? (
+                {!duplicateResults.allowSubmission ? (
+                  <div>
+                    <div className="flex items-center gap-2 text-red-700 mb-2">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      <span className="font-medium">Submission Blocked</span>
+                    </div>
+                    <p className="text-sm text-red-800">{duplicateResults.reason}</p>
+                  </div>
+                ) : !duplicateResults.hasPotentialDuplicates ? (
                   <div className="flex items-center gap-2 text-green-700">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -593,13 +836,15 @@ export default function GuestSubmitPage() {
                     </div>
                   </div>
                 ) : (
-                  // Unverified matches - show warning but allow submission
+                  // Unverified matches or guest submissions - show warning but allow submission
                   <div>
                     <div className="flex items-center gap-2 text-amber-700 mb-3">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
-                      <span className="font-medium">We may already have this information (pending review):</span>
+                      <span className="font-medium">
+                        {duplicateResults.reason || 'We may already have this information (pending review):'}
+                      </span>
                     </div>
 
                     {duplicateResults.existingCases.length > 0 && (
@@ -637,7 +882,7 @@ export default function GuestSubmitPage() {
                             <li key={i} className="text-sm bg-white/50 p-2 rounded">
                               <a 
                                 href={s.url} 
-                                className="text-blue-600 hover:underline break-all"
+                                className="text-blue-600 hover:underline break-words"
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >
@@ -675,31 +920,21 @@ export default function GuestSubmitPage() {
             )}
 
             <div className="pt-4">
-              {!duplicatesChecked ? (
-                <button
-                  type="submit"
-                  disabled={checkingDuplicates || formData.description.length < 20}
-                  className="w-full py-3 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {checkingDuplicates ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      Checking for existing records...
-                    </span>
-                  ) : 'Check & Submit Report'}
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  disabled={submitting || formData.description.length < 20 || (duplicateResults?.hasPotentialDuplicates && !confirmSubmit)}
-                  className="w-full py-3 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {submitting ? 'Submitting...' : 'Submit Report'}
-                </button>
-              )}
+              <button
+                type="submit"
+                disabled={checkingDuplicates || submitting}
+                className="w-full py-3 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {checkingDuplicates ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Checking for existing records...
+                  </span>
+                ) : submitting ? 'Submitting...' : 'Submit Report'}
+              </button>
             </div>
           </form>
         </div>

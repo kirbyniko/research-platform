@@ -18,6 +18,13 @@ export default function RootLayout({
       <body>
         <AuthProvider>
         <Navigation />
+        <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2">
+          <div className="max-w-6xl mx-auto text-center">
+            <p className="text-sm text-yellow-800">
+              <strong>⚠️ Beta Site:</strong> This site is under active construction. Data is currently unverified and should not be cited as authoritative.
+            </p>
+          </div>
+        </div>
         <main className="max-w-6xl mx-auto px-4 py-8">
           {children}
         </main>

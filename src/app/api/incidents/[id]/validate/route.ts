@@ -14,6 +14,8 @@ export async function GET(
     const { id } = await params;
     const incidentId = parseInt(id);
     
+    console.log('[validate GET] Starting for incident:', incidentId);
+    
     if (isNaN(incidentId)) {
       return NextResponse.json({ error: 'Invalid incident ID' }, { status: 400 });
     }
@@ -21,31 +23,40 @@ export async function GET(
     // Require analyst or admin role
     const authCheck = await requireServerAuth(request, 'analyst');
     if ('error' in authCheck) {
+      console.log('[validate GET] Auth failed:', authCheck.error);
       return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
     }
     
-    // Get incident details
-    const incidentResult = await pool.query(`
-      SELECT i.*,
-        u1.email as submitted_by_email,
-        u2.email as first_verified_by_email,
-        u3.email as second_verified_by_email,
-        u4.email as first_validated_by_email,
-        u5.email as second_validated_by_email
-      FROM incidents i
-      LEFT JOIN users u1 ON i.submitted_by = u1.id
-      LEFT JOIN users u2 ON i.first_verified_by = u2.id
-      LEFT JOIN users u3 ON i.second_verified_by = u3.id
-      LEFT JOIN users u4 ON i.first_validated_by = u4.id
-      LEFT JOIN users u5 ON i.second_validated_by = u5.id
-      WHERE i.id = $1
-    `, [incidentId]);
+    console.log('[validate GET] Auth passed, fetching incident...');
     
-    if (incidentResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Case not found' }, { status: 404 });
+    // Get incident details - use simpler query first
+    let incident;
+    try {
+      const incidentResult = await pool.query(`
+        SELECT i.*,
+          u1.email as submitted_by_email,
+          u2.email as first_verified_by_email,
+          u3.email as second_verified_by_email
+        FROM incidents i
+        LEFT JOIN users u1 ON i.submitted_by = u1.id
+        LEFT JOIN users u2 ON i.first_verified_by = u2.id
+        LEFT JOIN users u3 ON i.second_verified_by = u3.id
+        WHERE i.id = $1
+      `, [incidentId]);
+      
+      console.log('[validate GET] Incident result rows:', incidentResult.rows.length);
+      
+      if (incidentResult.rows.length === 0) {
+        return NextResponse.json({ error: 'Case not found' }, { status: 404 });
+      }
+      
+      incident = incidentResult.rows[0];
+    } catch (e) {
+      console.error('[validate GET] Error fetching incident:', e);
+      throw e;
     }
     
-    const incident = incidentResult.rows[0];
+    console.log('[validate GET] Incident status:', incident.verification_status);
     
     // Check if case is in validation-ready status
     if (!['second_review', 'first_validation'].includes(incident.verification_status)) {
@@ -56,56 +67,95 @@ export async function GET(
     }
     
     // Get quotes
-    const quotesResult = await pool.query(`
-      SELECT q.*, s.url as source_url, s.title as source_title, s.publication as source_publication
-      FROM incident_quotes q
-      LEFT JOIN incident_sources s ON q.source_id = s.id
-      WHERE q.incident_id = $1
-      ORDER BY q.created_at
-    `, [incidentId]);
+    console.log('[validate GET] Fetching quotes...');
+    let quotesRows: any[] = [];
+    try {
+      const quotesResult = await pool.query(`
+        SELECT q.*, s.url as source_url, s.title as source_title, s.publication as source_publication
+        FROM incident_quotes q
+        LEFT JOIN incident_sources s ON q.source_id = s.id
+        WHERE q.incident_id = $1
+        ORDER BY q.created_at
+      `, [incidentId]);
+      quotesRows = quotesResult.rows;
+    } catch (e) {
+      console.error('[validate GET] Error fetching quotes:', e);
+    }
     
     // Get sources
-    const sourcesResult = await pool.query(`
-      SELECT * FROM incident_sources
-      WHERE incident_id = $1
-      ORDER BY priority ASC NULLS LAST, created_at
-    `, [incidentId]);
+    console.log('[validate GET] Fetching sources...');
+    let sourcesRows: any[] = [];
+    try {
+      const sourcesResult = await pool.query(`
+        SELECT * FROM incident_sources
+        WHERE incident_id = $1
+        ORDER BY created_at
+      `, [incidentId]);
+      sourcesRows = sourcesResult.rows;
+    } catch (e) {
+      console.error('[validate GET] Error fetching sources:', e);
+    }
     
     // Get timeline
-    const timelineResult = await pool.query(`
-      SELECT * FROM incident_timeline
-      WHERE incident_id = $1
-      ORDER BY event_date ASC NULLS LAST, created_at
-    `, [incidentId]);
+    console.log('[validate GET] Fetching timeline...');
+    let timelineRows: any[] = [];
+    try {
+      const timelineResult = await pool.query(`
+        SELECT * FROM incident_timeline
+        WHERE incident_id = $1
+        ORDER BY event_date ASC NULLS LAST, created_at
+      `, [incidentId]);
+      timelineRows = timelineResult.rows;
+    } catch (e) {
+      console.error('[validate GET] Error fetching timeline:', e);
+    }
     
-    // Get quote-field links
-    const linksResult = await pool.query(`
-      SELECT * FROM quote_field_links
-      WHERE incident_id = $1
-    `, [incidentId]);
+    // Get quote-field links (may not exist in all setups)
+    console.log('[validate GET] Fetching quote-field links...');
+    let linksRows: any[] = [];
+    try {
+      const linksResult = await pool.query(`
+        SELECT * FROM quote_field_links
+        WHERE incident_id = $1
+      `, [incidentId]);
+      linksRows = linksResult.rows;
+    } catch (e) {
+      // Table may not exist
+      console.log('[validate GET] quote_field_links table not available');
+    }
     
-    // Get previous validation issues (unresolved)
-    const issuesResult = await pool.query(`
-      SELECT vi.*, u.email as created_by_email
-      FROM validation_issues vi
-      LEFT JOIN users u ON vi.created_by = u.id
-      WHERE vi.incident_id = $1 AND vi.resolved_at IS NULL
-      ORDER BY vi.created_at DESC
-    `, [incidentId]);
+    // Get previous validation issues (unresolved) - table may not exist
+    console.log('[validate GET] Fetching validation issues...');
+    let issuesRows: any[] = [];
+    try {
+      const issuesResult = await pool.query(`
+        SELECT vi.*, u.email as created_by_email
+        FROM validation_issues vi
+        LEFT JOIN users u ON vi.created_by = u.id
+        WHERE vi.incident_id = $1 AND vi.resolved_at IS NULL
+        ORDER BY vi.created_at DESC
+      `, [incidentId]);
+      issuesRows = issuesResult.rows;
+    } catch (e) {
+      // Table may not exist
+      console.log('[validate GET] validation_issues table not available');
+    }
     
+    console.log('[validate GET] Returning response...');
     return NextResponse.json({
       incident,
-      quotes: quotesResult.rows,
-      sources: sourcesResult.rows,
-      timeline: timelineResult.rows,
-      quote_field_links: linksResult.rows,
-      previous_issues: issuesResult.rows
+      quotes: quotesRows,
+      sources: sourcesRows,
+      timeline: timelineRows,
+      quote_field_links: linksRows,
+      previous_issues: issuesRows
     });
     
   } catch (error) {
     console.error('Error fetching validation data:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to fetch validation data' },
+      { error: 'Failed to fetch validation data', details: errorMessage },
       { status: 500 }
     );
   }
@@ -351,155 +401,5 @@ export async function POST(
   } catch (error) {
     console.error('Error validating case:', error);
     return NextResponse.json({ error: 'Failed to validate case' }, { status: 500 });
-  }
-}
-
-/**
- * GET /api/incidents/[id]/validate
- * Get case data for validation (read-only view)
- */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const incidentId = parseInt(id);
-    
-    if (isNaN(incidentId)) {
-      return NextResponse.json({ error: 'Invalid incident ID' }, { status: 400 });
-    }
-    
-    const authCheck = await requireServerAuth(request, 'analyst');
-    if ('error' in authCheck) {
-      return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
-    }
-    
-    // Get incident with all validation-related data
-    const incidentResult = await pool.query(`
-      SELECT 
-        i.*,
-        u1.name as submitter_name,
-        u1.email as submitter_email,
-        u2.name as first_reviewer_name,
-        u2.email as first_reviewer_email,
-        u3.name as second_reviewer_name,
-        u3.email as second_reviewer_email,
-        u4.name as first_validator_name,
-        u4.email as first_validator_email,
-        u5.name as rejector_name,
-        u5.email as rejector_email
-      FROM incidents i
-      LEFT JOIN users u1 ON i.submitted_by = u1.id
-      LEFT JOIN users u2 ON i.first_verified_by = u2.id
-      LEFT JOIN users u3 ON i.second_verified_by = u3.id
-      LEFT JOIN users u4 ON i.first_validated_by = u4.id
-      LEFT JOIN users u5 ON i.rejected_by = u5.id
-      WHERE i.id = $1
-    `, [incidentId]);
-    
-    if (incidentResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Incident not found' }, { status: 404 });
-    }
-    
-    const incident = incidentResult.rows[0];
-    
-    // Get sources
-    const sourcesResult = await pool.query(`
-      SELECT * FROM incident_sources
-      WHERE incident_id = $1
-      ORDER BY id
-    `, [incidentId]);
-    
-    // Get quotes with source info
-    const quotesResult = await pool.query(`
-      SELECT 
-        q.*,
-        s.title as source_title,
-        s.publication as source_publication,
-        s.url as source_url,
-        COALESCE(
-          (SELECT array_agg(qfl.field_name) FROM quote_field_links qfl WHERE qfl.quote_id = q.id),
-          ARRAY[]::text[]
-        ) as linked_fields
-      FROM incident_quotes q
-      LEFT JOIN incident_sources s ON q.source_id = s.id
-      WHERE q.incident_id = $1
-      ORDER BY q.id
-    `, [incidentId]);
-    
-    // Get timeline with quote info
-    const timelineResult = await pool.query(`
-      SELECT 
-        t.*,
-        q.quote_text,
-        q.source_id as quote_source_id,
-        s.title as quote_source_title,
-        s.url as quote_source_url
-      FROM incident_timeline t
-      LEFT JOIN incident_quotes q ON t.quote_id = q.id
-      LEFT JOIN incident_sources s ON q.source_id = s.id
-      WHERE t.incident_id = $1
-      ORDER BY t.event_date, t.id
-    `, [incidentId]);
-    
-    // Get type-specific details
-    const detailsResult = await pool.query(`
-      SELECT detail_type, details 
-      FROM incident_details 
-      WHERE incident_id = $1
-    `, [incidentId]);
-    
-    // Get agencies
-    const agenciesResult = await pool.query(`
-      SELECT * FROM incident_agencies
-      WHERE incident_id = $1
-    `, [incidentId]);
-    
-    // Get violations
-    const violationsResult = await pool.query(`
-      SELECT * FROM incident_violations
-      WHERE incident_id = $1
-    `, [incidentId]);
-    
-    // Get unresolved validation issues (from previous return-to-review)
-    const issuesResult = await pool.query(`
-      SELECT 
-        vi.*,
-        u.name as created_by_name,
-        u.email as created_by_email
-      FROM validation_issues vi
-      LEFT JOIN users u ON vi.created_by = u.id
-      WHERE vi.incident_id = $1 AND vi.resolved_at IS NULL
-      ORDER BY vi.created_at DESC
-    `, [incidentId]);
-    
-    // Get quote-field links for field validation
-    const quoteLinksResult = await pool.query(`
-      SELECT qfl.*, q.quote_text, s.title as source_title, s.url as source_url
-      FROM quote_field_links qfl
-      LEFT JOIN incident_quotes q ON qfl.quote_id = q.id
-      LEFT JOIN incident_sources s ON q.source_id = s.id
-      WHERE qfl.incident_id = $1
-    `, [incidentId]);
-    
-    return NextResponse.json({
-      incident,
-      sources: sourcesResult.rows,
-      quotes: quotesResult.rows,
-      timeline: timelineResult.rows,
-      details: detailsResult.rows.reduce((acc, row) => {
-        acc[row.detail_type] = row.details;
-        return acc;
-      }, {} as Record<string, unknown>),
-      agencies: agenciesResult.rows,
-      violations: violationsResult.rows,
-      previous_issues: issuesResult.rows,
-      quote_field_links: quoteLinksResult.rows
-    });
-    
-  } catch (error) {
-    console.error('Error fetching case for validation:', error);
-    return NextResponse.json({ error: 'Failed to fetch case' }, { status: 500 });
   }
 }

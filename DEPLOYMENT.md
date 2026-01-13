@@ -1,5 +1,22 @@
 # Deployment Guide - ICE Deaths Documentation
 
+## ⚠️ Beta Site Notice
+
+**This application now includes a site-wide beta disclaimer banner.**
+- All pages show: "Beta Site: This site is under active construction. Data is currently unverified."
+- Legal Help section is restricted to analyst+ roles only
+- Guest submissions require analyst review before publication
+
+## Security Checklist Before Deployment
+
+- [ ] All environment variables configured (see below)
+- [ ] Database migrations applied
+- [ ] Admin email configured (`ADMIN_EMAIL`)
+- [ ] `NEXTAUTH_SECRET` generated (use: `openssl rand -base64 32`)
+- [ ] Legal help pages tested (analyst-only access)
+- [ ] Rate limiting verified
+- [ ] Review `SECURITY-AUDIT.md` for additional checks
+
 ## Quick Deploy (Free Tier)
 
 ### Option 1: Vercel + Neon (Recommended)

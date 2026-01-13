@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
+import { requireServerAuth } from '@/lib/server-auth';
 
 // POST - Submit guest report
 export async function POST(request: NextRequest) {
@@ -17,6 +18,7 @@ export async function POST(request: NextRequest) {
       facility,
       description,
       sourceUrls,
+      mediaUrls,  // NEW: image and video links
       contactEmail,
       incidentType = 'death'
     } = body;
@@ -37,6 +39,7 @@ export async function POST(request: NextRequest) {
       facility: facility?.trim() || null,
       description: description.trim(),
       sourceUrls: sourceUrls || [],
+      mediaUrls: mediaUrls || [],  // NEW: store media URLs
       incidentType,
       submittedAt: new Date().toISOString()
     };
@@ -72,12 +75,9 @@ export async function POST(request: NextRequest) {
 }
 
 // GET - Get guest submissions (admin/analyst only)
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    // Import auth dynamically to avoid circular dependency
-    const { requireAuth } = await import('@/lib/auth');
-    
-    const authCheck = await requireAuth('analyst')(request);
+    const authCheck = await requireServerAuth(request, 'analyst');
     if ('error' in authCheck) {
       return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
     }
@@ -97,7 +97,7 @@ export async function GET(request: Request) {
       LIMIT $2
     `, [status, limit]);
     
-    return NextResponse.json(result.rows);
+    return NextResponse.json({ submissions: result.rows });
     
   } catch (error) {
     console.error('Error fetching guest submissions:', error);
@@ -106,11 +106,9 @@ export async function GET(request: Request) {
 }
 
 // PATCH - Update guest submission status (admin/analyst only)
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
   try {
-    const { requireAuth } = await import('@/lib/auth');
-    
-    const authCheck = await requireAuth('analyst')(request);
+    const authCheck = await requireServerAuth(request, 'analyst');
     if ('error' in authCheck) {
       return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
     }

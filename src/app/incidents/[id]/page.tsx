@@ -1,5 +1,5 @@
 import { getIncidentById } from '@/lib/incidents-db';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { IncidentPageClient } from '@/components/incidents/IncidentPageClient';
 import { auth } from '@/lib/next-auth';
 
@@ -47,16 +47,15 @@ export default async function IncidentDetailPage({
   const userRole = session?.user ? ((session.user as { role?: string }).role || 'user') : null;
   const isAnalystOrAbove = userRole && ['analyst', 'admin', 'editor'].includes(userRole);
   
-  // Analysts can see unverified incidents, public can only see verified
+  // SECURITY: getIncidentById only returns verified incidents for non-analysts
+  // If includeUnverified=false (default for non-analysts), only verified incidents are returned
   const incident = await getIncidentById(incidentId, isAnalystOrAbove || false);
   
   if (!incident) {
+    // If no incident found, it's either:
+    // 1. Doesn't exist at all (404)
+    // 2. Exists but unverified, and user is not analyst (also 404 - don't reveal existence)
     notFound();
-  }
-  
-  // If incident is not verified and user is not analyst+, redirect to auth
-  if (!incident.verified && !isAnalystOrAbove) {
-    redirect('/auth/login?message=This incident is under review. Sign in as an analyst to view.');
   }
 
   const flatData = flattenIncidentData(incident);
