@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         results.existingCases = caseResult.rows;
       }
 
-      // Count guest submissions for this person (including in-review incidents)
+      // Count guest submissions for this person (only pending, not already being processed)
       if (hasName && !isGenericName) {
         try {
           const submissionCountQuery = `
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
             FROM guest_submissions
             WHERE 
               submission_data->>'victimName' ILIKE $1
-              AND status IN ('pending', 'reviewed')
+              AND status = 'pending'
           `;
           console.log('[check-duplicates] Querying guest_submissions:', {
             name: victimName,
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
           // Check if too many submissions (10+)
           if (results.guestSubmissionCount >= 10) {
             results.allowSubmission = false;
-            results.reason = `Too many submissions already exist for "${victimName}" (${results.guestSubmissionCount} pending/in-review). Please wait for existing submissions to be processed.`;
+            results.reason = `Too many pending submissions for "${victimName}" (${results.guestSubmissionCount}). Please wait for existing submissions to be processed.`;
           }
         } catch (guestQueryError) {
           console.error('[check-duplicates] Error querying guest_submissions:', guestQueryError);

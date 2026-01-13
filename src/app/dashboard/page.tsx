@@ -418,7 +418,9 @@ export default function DashboardPage() {
         }),
       });
 
-      router.push(`/dashboard/review/${newIncidentId}`);
+      // Navigate to review page with guest data so victim name displays
+      const guestData = encodeURIComponent(JSON.stringify(data));
+      router.push(`/dashboard/review/${newIncidentId}?fromGuest=true&guestData=${guestData}`);
     } catch (err) {
       setError('Failed to begin review');
       console.error(err);
