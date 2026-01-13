@@ -581,6 +581,27 @@ export default function ReviewPage() {
       console.log('[initializeFromGuestData] Parsed guest data:', guestData);
       setGuestSubmissionId(guestData.guest_submission_id);
       
+      // Create incident object from guest data so page renders
+      const incidentFromGuest = {
+        id: parseInt(incidentId),
+        incident_id: `INC-${incidentId}`,
+        incident_type: guestData.incident_type,
+        victim_name: guestData.victim_name || '',
+        incident_date: guestData.incident_date || '',
+        city: guestData.city || '',
+        state: guestData.state || '',
+        facility: guestData.facility || '',
+        summary: guestData.summary || '',
+        subject_age: guestData.subject_age || '',
+        subject_gender: guestData.subject_gender || '',
+        subject_nationality: guestData.subject_nationality || '',
+        from_guest_submission: true,
+        created_at: new Date().toISOString(),
+        created_by: null,
+        created_by_email: null
+      };
+      setIncident(incidentFromGuest as any);
+      
       // Set edited incident data
       setEditedIncident({
         incident_type: guestData.incident_type,
