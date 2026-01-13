@@ -540,8 +540,6 @@ export default function ReviewPage() {
   const [guestSubmissionId, setGuestSubmissionId] = useState<number | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteReason, setDeleteReason] = useState('');
-  const [relatedGuestReports, setRelatedGuestReports] = useState<any[]>([]);
-  const [showRelatedReports, setShowRelatedReports] = useState(false);
   const [relatedReports, setRelatedReports] = useState<any[]>([]);
   const [relatedReportsSummary, setRelatedReportsSummary] = useState<{ total: number; transferred: number; pending: number } | null>(null);
   const [showRelatedReports, setShowRelatedReports] = useState(false);
