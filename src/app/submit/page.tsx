@@ -913,7 +913,7 @@ export default function GuestSubmitPage() {
                           className="w-4 h-4"
                         />
                         <span className="text-sm text-amber-900">
-                          I understand and want to submit anyway (I have new information)
+                          I may have new or different information
                         </span>
                       </label>
                     </div>

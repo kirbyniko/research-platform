@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
     if (results.hasVerifiedMatch) {
       results.reason = 'Found verified case(s) matching this information. Review them before submitting.';
     } else if (results.guestSubmissionCount > 0 && results.guestSubmissionCount < 10) {
-      results.reason = `${results.guestSubmissionCount} guest submission(s) already exist for this person (pending review). Your submission will be added to the review queue.`;
+      results.reason = `${results.guestSubmissionCount} guest submission(s) already exist for this name (pending review). Your submission will be added to the review queue.`;
     }
 
     return NextResponse.json(results);
