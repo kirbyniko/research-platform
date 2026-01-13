@@ -26,38 +26,29 @@ export async function GET(request: NextRequest) {
     }
     
     // Search for guest submissions with similar names
-    // Using ILIKE for case-insensitive matching and similarity for fuzzy matching
+    // Using ILIKE for case-insensitive matching
     const query = `
       SELECT 
         gs.id,
-        gs.subject_name,
-        gs.incident_type,
-        gs.date_of_incident,
-        gs.facility_location,
-        gs.description,
-        gs.source_urls,
-        gs.transfer_status,
-        gs.transferred_to_incident_id,
-        gs.submitter_email,
+        gs.submission_data->>'victimName' as subject_name,
+        gs.submission_data->>'incidentType' as incident_type,
+        gs.submission_data->>'dateOfDeath' as date_of_incident,
+        gs.submission_data->>'location' as facility_location,
+        gs.submission_data->>'description' as description,
+        gs.submission_data->'sourceUrls' as source_urls,
+        gs.status as transfer_status,
+        gs.email as submitter_email,
         gs.created_at,
-        gs.additional_sources,
         gs.notes
       FROM guest_submissions gs
       WHERE 
         (
-          LOWER(gs.subject_name) LIKE $1
-          OR LOWER(gs.subject_name) LIKE $2
-          OR (
-            LENGTH(gs.subject_name) > 3 
-            AND (
-              LOWER($3) LIKE '%' || LOWER(SPLIT_PART(gs.subject_name, ' ', 1)) || '%'
-              OR LOWER($3) LIKE '%' || LOWER(SPLIT_PART(gs.subject_name, ' ', 2)) || '%'
-            )
-          )
+          gs.submission_data->>'victimName' ILIKE $1
+          OR gs.submission_data->>'victimName' ILIKE $2
         )
-        ${currentIncidentId ? 'AND (gs.transferred_to_incident_id IS NULL OR gs.transferred_to_incident_id != $4)' : ''}
+        ${currentIncidentId ? 'AND gs.id != $3' : ''}
       ORDER BY 
-        CASE WHEN LOWER(gs.subject_name) = $3 THEN 0 ELSE 1 END,
+        CASE WHEN LOWER(gs.submission_data->>'victimName') = $4 THEN 0 ELSE 1 END,
         gs.created_at DESC
       LIMIT 50
     `;
@@ -65,17 +56,18 @@ export async function GET(request: NextRequest) {
     const params = [
       `%${normalizedName}%`,  // $1: Contains full name
       `${normalizedName.split(' ')[0]}%`,  // $2: Starts with first name
-      normalizedName,  // $3: Exact match priority
     ];
     
     if (currentIncidentId) {
-      params.push(currentIncidentId);  // $4: Exclude current incident
+      params.push(currentIncidentId);  // $3: Exclude current incident
     }
+    
+    params.push(normalizedName);  // $4: Exact match priority
     
     const result = await pool.query(query, params);
     
     // Also count how many are transferred vs pending
-    const transferred = result.rows.filter(r => r.transfer_status === 'transferred').length;
+    const transferred = result.rows.filter(r => r.transfer_status === 'accepted').length;
     const pending = result.rows.filter(r => r.transfer_status === 'pending').length;
     
     return NextResponse.json({

@@ -84,20 +84,35 @@ export async function POST(request: NextRequest) {
 
       // Count guest submissions for this person (including in-review incidents)
       if (hasName && !isGenericName) {
-        const submissionCountQuery = `
-          SELECT COUNT(*) as count
-          FROM guest_submissions
-          WHERE 
-            LOWER(subject_name) LIKE LOWER($1)
-            AND transfer_status IN ('pending', 'in_review')
-        `;
-        const countResult = await pool.query(submissionCountQuery, [`%${victimName.trim()}%`]);
-        results.guestSubmissionCount = parseInt(countResult.rows[0]?.count || '0');
+        try {
+          const submissionCountQuery = `
+            SELECT COUNT(*) as count
+            FROM guest_submissions
+            WHERE 
+              submission_data->>'victimName' ILIKE $1
+              AND status IN ('pending', 'reviewed')
+          `;
+          console.log('[check-duplicates] Querying guest_submissions:', {
+            name: victimName,
+            pattern: `%${victimName.trim()}%`
+          });
+          const countResult = await pool.query(submissionCountQuery, [`%${victimName.trim()}%`]);
+          results.guestSubmissionCount = parseInt(countResult.rows[0]?.count || '0');
+          console.log('[check-duplicates] Found submissions:', results.guestSubmissionCount);
 
-        // Check if too many submissions (10+)
-        if (results.guestSubmissionCount >= 10) {
-          results.allowSubmission = false;
-          results.reason = `Too many submissions already exist for "${victimName}" (${results.guestSubmissionCount} pending/in-review). Please wait for existing submissions to be processed.`;
+          // Check if too many submissions (10+)
+          if (results.guestSubmissionCount >= 10) {
+            results.allowSubmission = false;
+            results.reason = `Too many submissions already exist for "${victimName}" (${results.guestSubmissionCount} pending/in-review). Please wait for existing submissions to be processed.`;
+          }
+        } catch (guestQueryError) {
+          console.error('[check-duplicates] Error querying guest_submissions:', guestQueryError);
+          // Don't fail the whole request - just log the error and continue
+          console.error('[check-duplicates] Error details:', {
+            message: guestQueryError instanceof Error ? guestQueryError.message : 'Unknown',
+            code: (guestQueryError as any)?.code,
+            detail: (guestQueryError as any)?.detail
+          });
         }
       }
     }
