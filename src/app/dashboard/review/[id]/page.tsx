@@ -608,7 +608,7 @@ export default function ReviewPage() {
       };
       setIncident(incidentFromGuest as any);
       
-      // Set edited incident data
+      // Set edited incident data - include ALL fields from guest submission
       setEditedIncident({
         incident_type: guestData.incident_type,
         victim_name: guestData.victim_name || '',
@@ -620,6 +620,23 @@ export default function ReviewPage() {
         subject_age: guestData.subject_age || '',
         subject_gender: guestData.subject_gender || '',
         subject_nationality: guestData.subject_nationality || '',
+      });
+      
+      // Set incident details for extended fields
+      setIncidentDetails({
+        agencies: guestData.agencies || {},
+        cause_of_death: guestData.cause_of_death || '',
+        manner_of_death: guestData.manner_of_death || '',
+        custody_duration: guestData.custody_duration || '',
+        medical_denied: guestData.medical_denied || false,
+        shots_fired: guestData.shots_fired || '',
+        weapon_type: guestData.weapon_type || '',
+        bodycam_available: guestData.bodycam_available || false,
+        victim_armed: guestData.victim_armed || false,
+        shooting_context: guestData.shooting_context || '',
+        force_types: guestData.force_types || {},
+        victim_restrained: guestData.victim_restrained || false,
+        victim_complying: guestData.victim_complying
       });
 
       // Initialize media from guest submission

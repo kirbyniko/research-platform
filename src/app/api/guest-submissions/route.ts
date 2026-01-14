@@ -31,17 +31,37 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Build submission data
+    // Build submission data - capture all fields from the form
     const submissionData = {
+      // Core fields
       victimName: victimName?.trim() || null,
       dateOfDeath: dateOfDeath || null,
       location: location?.trim() || null,
       facility: facility?.trim() || null,
       description: description.trim(),
       sourceUrls: sourceUrls || [],
-      mediaUrls: mediaUrls || [],  // NEW: store media URLs
+      mediaUrls: mediaUrls || [],
       incidentType,
-      submittedAt: new Date().toISOString()
+      submittedAt: new Date().toISOString(),
+      // Extended fields - capture all additional data from form
+      age: body.age || null,
+      gender: body.gender || null,
+      nationality: body.nationality || null,
+      city: body.city || null,
+      state: body.state || null,
+      agencies: body.agencies || {},
+      causeOfDeath: body.causeOfDeath || null,
+      mannerOfDeath: body.mannerOfDeath || null,
+      custodyDuration: body.custodyDuration || null,
+      medicalDenied: body.medicalDenied || false,
+      shotsFired: body.shotsFired || null,
+      weaponType: body.weaponType || null,
+      bodycamAvailable: body.bodycamAvailable || false,
+      victimArmed: body.victimArmed || false,
+      shootingContext: body.shootingContext || null,
+      forceTypes: body.forceTypes || {},
+      victimRestrained: body.victimRestrained || false,
+      victimComplying: body.victimComplying !== undefined ? body.victimComplying : null
     };
     
     // Save to database
