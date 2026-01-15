@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import pool, { isDatabaseConfigured } from '@/lib/db';
 import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 import { requireServerAuth } from '@/lib/server-auth';
 
@@ -10,6 +10,15 @@ export async function POST(request: NextRequest) {
   if (rateLimitResponse) return rateLimitResponse;
 
   try {
+    // Check database configuration first
+    if (!isDatabaseConfigured) {
+      console.warn('Database not configured, cannot save guest submission');
+      return NextResponse.json(
+        { error: 'Service temporarily unavailable' },
+        { status: 503 }
+      );
+    }
+
     const body = await request.json();
     const { 
       victimName,
@@ -97,6 +106,12 @@ export async function POST(request: NextRequest) {
 // GET - Get guest submissions (admin/analyst only)
 export async function GET(request: NextRequest) {
   try {
+    // Check database configuration first
+    if (!isDatabaseConfigured) {
+      console.warn('Database not configured, cannot fetch guest submissions');
+      return NextResponse.json({ submissions: [] });
+    }
+
     const authCheck = await requireServerAuth(request, 'analyst');
     if ('error' in authCheck) {
       return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
@@ -135,6 +150,15 @@ export async function GET(request: NextRequest) {
 // PATCH - Update guest submission status (admin/analyst only)
 export async function PATCH(request: NextRequest) {
   try {
+    // Check database configuration first
+    if (!isDatabaseConfigured) {
+      console.warn('Database not configured, cannot update guest submission');
+      return NextResponse.json(
+        { error: 'Service temporarily unavailable' },
+        { status: 503 }
+      );
+    }
+
     const authCheck = await requireServerAuth(request, 'analyst');
     if ('error' in authCheck) {
       return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
@@ -190,6 +214,15 @@ export async function PATCH(request: NextRequest) {
 // DELETE - Permanently delete guest submission (admin only)
 export async function DELETE(request: NextRequest) {
   try {
+    // Check database configuration first
+    if (!isDatabaseConfigured) {
+      console.warn('Database not configured, cannot delete guest submission');
+      return NextResponse.json(
+        { error: 'Service temporarily unavailable' },
+        { status: 503 }
+      );
+    }
+
     const authCheck = await requireServerAuth(request, 'admin');
     if ('error' in authCheck) {
       return NextResponse.json({ error: 'Admin access required' }, { status: authCheck.status });
