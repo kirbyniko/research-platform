@@ -731,18 +731,6 @@ export default function ReviewPage() {
     }
   }
 
-  async function fetchRelatedGuestReports(victimName: string) {
-    try {
-      const res = await fetch(`/api/guest-submissions/by-name?name=${encodeURIComponent(victimName)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setRelatedGuestReports(data.submissions || []);
-      }
-    } catch (err) {
-      console.error('Failed to fetch related guest reports:', err);
-    }
-  }
-
   async function fetchData() {
     try {
       setLoading(true);
