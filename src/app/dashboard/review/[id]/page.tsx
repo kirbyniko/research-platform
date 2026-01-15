@@ -1026,8 +1026,7 @@ export default function ReviewPage() {
   }
 
   function findFieldsWithoutQuotes() {
-    const keyFields = ['victim_name', 'incident_date', 'city', 'state', 'summary'];
-    const firstUnlinked = keyFields.find(field => {
+    const firstUnlinked = LINKABLE_FIELDS.find(field => {
       const value = (editedIncident as any)[field] || (incident as any)?.[field];
       return value && !fieldQuoteMap[field];
     });
@@ -1070,6 +1069,76 @@ export default function ReviewPage() {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
           element.classList.add('ring-4', 'ring-orange-400', 'bg-orange-50');
           setTimeout(() => element.classList.remove('ring-4', 'ring-orange-400', 'bg-orange-50'), 4000);
+        }
+      }, 100);
+    }
+  }
+
+  function findUnverifiedFieldCheckbox() {
+    const fieldsWithData = INCIDENT_FIELDS.filter(f => {
+      const val = editedIncident[f.key];
+      if (val === null || val === undefined || val === '') return false;
+      if (typeof val === 'string' && (val === 'mm/dd/yyyy' || val === 'MM/DD/YYYY' || val.match(/^[mMdDyY\/]+$/))) return false;
+      return true;
+    });
+    const allFieldsToCheck = [...fieldsWithData];
+    if (editedIncident.incident_type) {
+      allFieldsToCheck.push({ key: 'incident_type', label: 'Incident Type', type: 'select' });
+    }
+    const firstUnverified = allFieldsToCheck.find(f => !verifiedFields[f.key]);
+    if (firstUnverified) {
+      setSectionsOpen(prev => ({ ...prev, fields: true }));
+      setTimeout(() => {
+        const element = document.querySelector(`[data-field-key="${firstUnverified.key}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('ring-4', 'ring-yellow-400', 'bg-yellow-50');
+          setTimeout(() => element.classList.remove('ring-4', 'ring-yellow-400', 'bg-yellow-50'), 4000);
+        }
+      }, 100);
+    }
+  }
+
+  function findUnverifiedSource() {
+    const firstUnverified = sources.find(s => !verifiedSources[s.id]);
+    if (firstUnverified) {
+      setSectionsOpen(prev => ({ ...prev, sources: true }));
+      setTimeout(() => {
+        const element = document.querySelector(`[data-source-id="${firstUnverified.id}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('ring-4', 'ring-yellow-400', 'bg-yellow-50');
+          setTimeout(() => element.classList.remove('ring-4', 'ring-yellow-400', 'bg-yellow-50'), 4000);
+        }
+      }, 100);
+    }
+  }
+
+  function findUnverifiedTimelineEntry() {
+    const firstUnverified = timeline.find(t => !verifiedTimeline[t.id]);
+    if (firstUnverified) {
+      setSectionsOpen(prev => ({ ...prev, timeline: true }));
+      setTimeout(() => {
+        const element = document.querySelector(`[data-timeline-id="${firstUnverified.id}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('ring-4', 'ring-yellow-400', 'bg-yellow-50');
+          setTimeout(() => element.classList.remove('ring-4', 'ring-yellow-400', 'bg-yellow-50'), 4000);
+        }
+      }, 100);
+    }
+  }
+
+  function findUnverifiedMediaItem() {
+    const firstUnverified = media.find(m => !verifiedMedia[m.id]);
+    if (firstUnverified) {
+      setSectionsOpen(prev => ({ ...prev, media: true }));
+      setTimeout(() => {
+        const element = document.querySelector(`[data-media-id="${firstUnverified.id}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('ring-4', 'ring-yellow-400', 'bg-yellow-50');
+          setTimeout(() => element.classList.remove('ring-4', 'ring-yellow-400', 'bg-yellow-50'), 4000);
         }
       }, 100);
     }
@@ -2215,8 +2284,7 @@ export default function ReviewPage() {
           <p className="text-sm font-medium text-gray-700 mb-2">Quick Find Tools:</p>
           <div className="flex flex-wrap gap-2">
             {!isNewIncident && (() => {
-              const keyFields = ['victim_name', 'incident_date', 'city', 'state', 'summary'];
-              const unlinkedFields = keyFields.filter(field => {
+              const unlinkedFields = LINKABLE_FIELDS.filter(field => {
                 const value = (editedIncident as any)[field] || (incident as any)?.[field];
                 return value && !fieldQuoteMap[field];
               });
@@ -2237,6 +2305,35 @@ export default function ReviewPage() {
                 🔍 Find Quotes Without Sources ({quotes.filter(q => !q.source_id).length})
               </button>
             )}
+            {quotes.filter(q => !q.verified).length > 0 && (
+              <button
+                onClick={findUnverifiedQuotesData}
+                className="px-3 py-1 bg-orange-100 text-orange-700 border border-orange-300 rounded text-sm hover:bg-orange-200"
+              >
+                🔍 Find Unverified Quotes ({quotes.filter(q => !q.verified).length})
+              </button>
+            )}
+            {(() => {
+              const fieldsWithData = INCIDENT_FIELDS.filter(f => {
+                const val = editedIncident[f.key];
+                if (val === null || val === undefined || val === '') return false;
+                if (typeof val === 'string' && (val === 'mm/dd/yyyy' || val === 'MM/DD/YYYY' || val.match(/^[mMdDyY\/]+$/))) return false;
+                return true;
+              });
+              const allFieldsToCheck = [...fieldsWithData];
+              if (editedIncident.incident_type) {
+                allFieldsToCheck.push({ key: 'incident_type', label: 'Incident Type', type: 'select' });
+              }
+              const unverifiedFieldsList = allFieldsToCheck.filter(f => !verifiedFields[f.key]);
+              return unverifiedFieldsList.length > 0 && (
+                <button
+                  onClick={findUnverifiedFieldCheckbox}
+                  className="px-3 py-1 bg-yellow-100 text-yellow-700 border border-yellow-300 rounded text-sm hover:bg-yellow-200"
+                >
+                  🔍 Find Unchecked Field Boxes ({unverifiedFieldsList.length})
+                </button>
+              );
+            })()}
             {quotes.filter(q => !verifiedQuotes[q.id]).length > 0 && (
               <button
                 onClick={findUnverifiedQuotes}
@@ -2245,12 +2342,28 @@ export default function ReviewPage() {
                 🔍 Find Unchecked Quote Boxes ({quotes.filter(q => !verifiedQuotes[q.id]).length})
               </button>
             )}
-            {quotes.filter(q => !q.verified).length > 0 && (
+            {sources.filter(s => !verifiedSources[s.id]).length > 0 && (
               <button
-                onClick={findUnverifiedQuotesData}
-                className="px-3 py-1 bg-orange-100 text-orange-700 border border-orange-300 rounded text-sm hover:bg-orange-200"
+                onClick={findUnverifiedSource}
+                className="px-3 py-1 bg-yellow-100 text-yellow-700 border border-yellow-300 rounded text-sm hover:bg-yellow-200"
               >
-                🔍 Find Unverified Quotes ({quotes.filter(q => !q.verified).length})
+                🔍 Find Unchecked Source Boxes ({sources.filter(s => !verifiedSources[s.id]).length})
+              </button>
+            )}
+            {timeline.filter(t => !verifiedTimeline[t.id]).length > 0 && (
+              <button
+                onClick={findUnverifiedTimelineEntry}
+                className="px-3 py-1 bg-yellow-100 text-yellow-700 border border-yellow-300 rounded text-sm hover:bg-yellow-200"
+              >
+                🔍 Find Unchecked Timeline Boxes ({timeline.filter(t => !verifiedTimeline[t.id]).length})
+              </button>
+            )}
+            {media.filter(m => !verifiedMedia[m.id]).length > 0 && (
+              <button
+                onClick={findUnverifiedMediaItem}
+                className="px-3 py-1 bg-yellow-100 text-yellow-700 border border-yellow-300 rounded text-sm hover:bg-yellow-200"
+              >
+                🔍 Find Unchecked Media Boxes ({media.filter(m => !verifiedMedia[m.id]).length})
               </button>
             )}
           </div>
