@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { randomBytes, createHash } from 'crypto';
-import pool, { isDatabaseConfigured } from './db';
+import pool from './db';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
@@ -156,11 +156,6 @@ export async function getUserFromToken(token: string): Promise<User | null> {
   const payload = verifyToken(token);
   if (!payload) return null;
 
-  if (!isDatabaseConfigured) {
-    console.warn('Database not configured, cannot fetch user from token');
-    return null;
-  }
-
   const client = await pool.connect();
   try {
     const result = await client.query(
@@ -230,11 +225,6 @@ export function validateApiKey(apiKey: string): boolean {
 
 // Get user from database API key
 export async function getUserFromApiKey(apiKey: string): Promise<AuthUser | null> {
-  if (!isDatabaseConfigured) {
-    console.warn('Database not configured, cannot fetch user from API key');
-    return null;
-  }
-
   const keyHash = createHash('sha256').update(apiKey).digest('hex');
   
   const result = await pool.query(`
