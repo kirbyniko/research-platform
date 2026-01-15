@@ -8,6 +8,30 @@ import { LEGAL_REFERENCES, getCaseLawForViolation, VIOLATION_TO_LEGAL_KEY } from
 import type { LegalCase } from '@/lib/legal-references';
 import DuplicateChecker from '@/components/DuplicateChecker';
 
+// Tooltip component
+function Tooltip({ text }: { text: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setShow(!show)}
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        className="text-gray-400 hover:text-gray-600 cursor-help"
+        title="Click for more info"
+      >
+        ℹ️
+      </button>
+      {show && (
+        <div className="absolute left-0 top-6 bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-50 pointer-events-none">
+          {text}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Types
 interface Incident {
   id: number; incident_id: string; incident_type: string; incident_date: string | null;
@@ -1560,7 +1584,7 @@ export default function ReviewPage() {
             <div key={f.key} className={f.type === 'textarea' ? 'col-span-2' : ''} data-field-key={f.key}>
               <label className={`block text-xs text-gray-500 mb-1 flex items-center gap-2 transition-all ${isUnverified && highlightUnverified ? 'bg-yellow-200 px-2 py-1 rounded animate-pulse' : ''}`}>
                 {f.label}
-                {f.tooltip && <span className="text-gray-400 cursor-help" title={f.tooltip}>ℹ️</span>}
+                {f.tooltip && <Tooltip text={f.tooltip} />}
                 {hasValue && (
                   <input 
                     type="checkbox" 

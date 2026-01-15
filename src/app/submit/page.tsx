@@ -3,6 +3,30 @@
 import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 
+// Tooltip component
+function Tooltip({ text }: { text: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setShow(!show)}
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        className="text-gray-400 hover:text-gray-600 cursor-help"
+        title="Click for more info"
+      >
+        ℹ️
+      </button>
+      {show && (
+        <div className="absolute left-0 top-6 bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-50 pointer-events-none">
+          {text}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface DuplicateResults {
   existingCases: Array<{ id: number; victim_name: string; incident_date: string; facility_name: string; city?: string; state?: string; verification_status: string }>;
   existingSources: Array<{ url: string; incident_id: number; victim_name: string; verification_status?: string }>;
@@ -454,7 +478,7 @@ export default function GuestSubmitPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
                     Nationality
-                    <span className="text-gray-400 cursor-help" title="Victim's country of citizenship/origin (critical for ICE documentation)">ℹ️</span>
+                    <Tooltip text="Victim's country of citizenship/origin (critical for ICE documentation)" />
                   </label>
                   <input type="text" value={formData.nationality} onChange={(e) => handleFormChange('nationality', e.target.value)} placeholder="Country of citizenship" className="w-full px-3 py-2 border rounded" />
                 </div>
