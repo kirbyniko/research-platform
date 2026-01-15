@@ -2773,30 +2773,12 @@ export default function ReviewPage() {
               }
 
               // Determine confirmation message based on verification status
+              // Simplified flow: pending → first_review (validation queue)
               const isFirstReview = incident.verification_status === 'pending';
-              const isSecondReview = incident.verification_status === 'first_review';
-              
-              // Check if current user did the first review
-              const currentUserId = session?.user?.id ? parseInt(session.user.id) : null;
-              const userRole = (session?.user as any)?.role;
-              const isAdmin = userRole === 'admin';
-              const didFirstReview = incident.first_verified_by === currentUserId;
-              
-              // Block if user did first review and is not admin
-              if (isSecondReview && didFirstReview && !isAdmin) {
-                alert('⛔ You cannot perform the second review on an incident you already reviewed.\n\nThis incident needs review by a different analyst to ensure quality.');
-                return;
-              }
               
               let confirmMsg = '';
               if (isFirstReview) {
-                confirmMsg = 'Submit first review? This incident will await a second review before going public.';
-              } else if (isSecondReview) {
-                if (isAdmin && didFirstReview) {
-                  confirmMsg = '⚠️ ADMIN OVERRIDE: You are bypassing the two-analyst requirement.\n\nSubmit second review?';
-                } else {
-                  confirmMsg = 'Submit second review? After this, the incident will go to validation.';
-                }
+                confirmMsg = 'Submit review? After this, the incident will go to the validation queue.';
               } else {
                 confirmMsg = 'Update verification?';
               }
@@ -2804,6 +2786,7 @@ export default function ReviewPage() {
               if (!confirm(confirmMsg)) return;
 
               // Check if user is logged in
+              const currentUserId = session?.user?.id ? parseInt(session.user.id) : null;
               if (!currentUserId) {
                 alert('You must be logged in to submit a review');
                 return;
@@ -2826,9 +2809,7 @@ export default function ReviewPage() {
                 
                 // Show appropriate success message
                 if (result.verification_status === 'first_review') {
-                  alert('✅ First review submitted! This incident will await a second review.');
-                } else if (result.verification_status === 'second_review') {
-                  alert('✅ Second review complete! Incident is now in the validation queue.');
+                  alert('✅ Review submitted! Incident is now in the validation queue.');
                 } else if (result.verification_status === 'verified') {
                   alert('✅ Incident is now publicly visible.');
                 }
@@ -2846,32 +2827,9 @@ export default function ReviewPage() {
           >
             {saving ? 'Submitting...' : 
              isNewIncident ? 'Create & Continue Review' :
-             incident?.verification_status === 'pending' ? 'Submit First Review' :
-             incident?.verification_status === 'first_review' ? 'Submit Second Review' :
+             incident?.verification_status === 'pending' ? 'Submit Review' :
              'Update Verification'}
           </button>
-          
-          {/* Show lock notice if user did first review */}
-          {!isNewIncident && incident && incident.verification_status === 'first_review' && 
-           incident.first_verified_by === (session?.user?.id ? parseInt(session.user.id) : null) &&
-           (session?.user as any)?.role !== 'admin' && (
-            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-sm text-yellow-800">
-                <strong>🔒 Locked:</strong> You completed the first review. This incident requires a second review by a different analyst.
-              </p>
-            </div>
-          )}
-          
-          {/* Show admin override notice */}
-          {!isNewIncident && incident && incident.verification_status === 'first_review' && 
-           incident.first_verified_by === (session?.user?.id ? parseInt(session.user.id) : null) &&
-           (session?.user as any)?.role === 'admin' && (
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800">
-                <strong>👑 Admin Override:</strong> You can bypass the two-analyst requirement and complete both reviews.
-              </p>
-            </div>
-          )}
         </div>
       </div>
       </>

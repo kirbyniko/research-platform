@@ -4839,7 +4839,7 @@ async function submitNewIncidentFromGuest() {
       })
     });
     
-    alert(`Incident created and first review submitted!\n\nIncident ID: ${incident.incident_id}\n\nAnother analyst can now provide second review.`);
+    alert(`Incident created and review submitted!\n\nIncident ID: ${incident.incident_id}\n\nCase is now in the validation queue.`);
     
     // Reset state
     isNewIncidentFromGuest = false;
@@ -6371,9 +6371,10 @@ function updateReviewFilterCounts() {
   const stats = reviewQueueStats || {};
   
   // Use stats from API - now correctly filtered by analyst
+  // Simplified flow: pending → first_review (validation) → verified
   const allCount = parseInt(stats.total) || 0;
-  const needsReviewCount = (parseInt(stats.pending) || 0) + (parseInt(stats.first_review) || 0);
-  const needsValidationCount = (parseInt(stats.second_review) || 0) + (parseInt(stats.first_validation) || 0);
+  const needsReviewCount = parseInt(stats.pending) || 0;
+  const needsValidationCount = (parseInt(stats.first_review) || 0) + (parseInt(stats.first_validation) || 0);
   const rereviewCount = parseInt(stats.returned_for_review) || 0;
   const revalidationCount = parseInt(stats.revalidation) || 0;
   const publishedCount = parseInt(stats.verified) || 0;
@@ -6498,21 +6499,13 @@ function renderReviewQueue() {
     let statusClass = '';
     if (status === 'pending') {
       if (isReturned) {
-        statusBadge = '🔄 Re-Review (Pending)';
+        statusBadge = '🔄 Re-Review';
         statusClass = 'badge-orange';
       } else {
         statusBadge = 'Pending Review';
         statusClass = 'badge-yellow';
       }
     } else if (status === 'first_review') {
-      if (isReturned) {
-        statusBadge = '🔄 Re-Review (2nd)';
-        statusClass = 'badge-orange';
-      } else {
-        statusBadge = 'Needs 2nd Review';
-        statusClass = 'badge-blue';
-      }
-    } else if (status === 'second_review') {
       if (isReturned) {
         statusBadge = '🔁 Re-Validation';
         statusClass = 'badge-cyan';
@@ -6601,14 +6594,14 @@ function renderReviewQueue() {
         return;
       }
       
-      if (['second_review', 'first_validation'].includes(status)) {
+      if (['first_review', 'first_validation'].includes(status)) {
         // Validation cases - switch to Validate tab and load the case
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelector('[data-tab="validate"]')?.classList.add('active');
         document.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
         document.getElementById('tab-validate')?.classList.add('active');
         loadValidationCase(parseInt(incidentId));
-      } else if (['pending', 'first_review'].includes(status)) {
+      } else if (status === 'pending') {
         // Review cases - switch to Incident tab and load for review
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelector('[data-tab="case"]')?.classList.add('active');
@@ -6656,8 +6649,8 @@ async function loadReviewCaseDetails(incidentId) {
     // Check if this case is in a status that allows review
     const incidentData = data.incident;
     
-    // Cases that have completed review (second_review, first_validation, verified) cannot be reviewed in extension
-    if (['second_review', 'first_validation', 'verified', 'rejected'].includes(incidentData.verification_status)) {
+    // Cases that have completed review (first_review is now validation, first_validation, verified) cannot be reviewed in extension
+    if (['first_review', 'first_validation', 'verified', 'rejected'].includes(incidentData.verification_status)) {
       if (incidentData.verification_status === 'rejected') {
         alert('This case has been rejected and cannot be reviewed.');
       } else if (incidentData.verification_status === 'verified') {
@@ -6665,13 +6658,6 @@ async function loadReviewCaseDetails(incidentId) {
       } else {
         alert('This case has completed review and is now in validation.\n\nValidation can be done in the Validate tab or in the web browser at:\n' + apiUrl + '/dashboard/validate/' + incidentId);
       }
-      return;
-    }
-    
-    // First review cases can only do first review in extension
-    // Second review must be done in web browser for independence
-    if (incidentData.verification_status === 'first_review' || incidentData.first_verified_by) {
-      alert('This case already has a first review.\n\nSecond reviews must be completed in the web browser at:\n' + apiUrl + '/dashboard/review/' + incidentId + '\n\nThis ensures independence between reviewers.');
       return;
     }
     
@@ -6863,7 +6849,6 @@ function renderReviewCaseDetails(data) {
         const value = getFieldValue(field.key);
         const verif = getFieldVerification(field.key);
         const status = verif?.verification_status || 'pending';
-        const canVerify = status === 'first_review' && verif?.first_verified_by !== null;
         
         return `
           <div style="
@@ -6881,7 +6866,7 @@ function renderReviewCaseDetails(data) {
                 border-radius: 4px;
                 background: ${status === 'verified' ? '#dcfce7' : status === 'first_review' ? '#dbeafe' : '#f3f4f6'};
                 color: ${status === 'verified' ? '#166534' : status === 'first_review' ? '#1d4ed8' : '#6b7280'};
-              ">${status === 'first_review' ? 'Needs 2nd' : status}</span>
+              ">${status === 'first_review' ? 'In Validation' : status}</span>
             </div>
             
             <div style="font-size: 13px; color: #374151; margin-bottom: 8px; word-break: break-word;">
@@ -6890,23 +6875,12 @@ function renderReviewCaseDetails(data) {
             
             ${verif?.first_verifier_name ? `
               <div style="font-size: 10px; color: #6b7280; margin-bottom: 6px;">
-                1st: ${escapeHtml(verif.first_verifier_name)} 
+                Reviewed: ${escapeHtml(verif.first_verifier_name)} 
                 ${verif.first_verification_notes ? `- "${escapeHtml(verif.first_verification_notes)}"` : ''}
               </div>
             ` : ''}
             
-            ${canVerify ? `
-              <button onclick="verifyField(${incident.id}, '${field.key}')" style="
-                width: 100%;
-                padding: 6px;
-                background: #2563eb;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-size: 11px;
-                cursor: pointer;
-              ">Verify This Field</button>
-            ` : status === 'verified' ? `
+            ${status === 'verified' ? `
               <div style="text-align: center; font-size: 11px; color: #22c55e;">✓ Fully Verified</div>
             ` : ''}
           </div>
@@ -7117,7 +7091,7 @@ async function loadValidationQueue() {
   queueList.innerHTML = '<div class="empty-state">Loading validation queue...</div>';
   
   try {
-    const response = await fetch(`${apiUrl}/api/verification-queue?status=second_review`, {
+    const response = await fetch(`${apiUrl}/api/verification-queue?status=needs_validation`, {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'X-API-Key': apiKey,
@@ -7145,7 +7119,7 @@ async function loadValidationQueue() {
       stats: data.stats
     });
     
-    // The API returns cases with second_review or first_validation status when we pass status=needs_validation
+    // The API returns cases with first_review or first_validation status when we pass status=needs_validation
     // No need to filter further - just use what API returns
     validationQueueData = data.incidents || [];
     
@@ -7155,7 +7129,7 @@ async function loadValidationQueue() {
     updateValidateFilterCounts();
     
     if (validationQueueData.length === 0) {
-      queueList.innerHTML = '<div class="empty-state">No cases ready for validation (need 2 completed reviews)</div>';
+      queueList.innerHTML = '<div class="empty-state">No cases ready for validation</div>';
       return;
     }
     
@@ -7240,7 +7214,7 @@ function renderValidationQueue() {
         <strong>${escapeHtml(incident.subject_name || incident.victim_name || 'Unknown')}</strong>
         <div style="display: flex; gap: 4px; flex-wrap: wrap;">
           <span class="badge badge-purple">
-            ${incident.verification_status === 'second_review' ? '1st Validation' : '2nd Validation'}
+            ${incident.verification_status === 'first_review' ? '1st Validation' : '2nd Validation'}
           </span>
           ${reviewCycle > 1 ? `
             <span class="cycle-badge ${isHighPriority ? 'cycle-3plus' : 'cycle-2'}">
@@ -7315,9 +7289,9 @@ async function loadValidationCase(incidentId) {
     validateIncidentId = incidentId;
     validateMode = true;
     
-    // Check if case is in correct status
+    // Check if case is in correct status for validation
     const incident = data.incident;
-    if (!['second_review', 'first_validation'].includes(incident.verification_status)) {
+    if (!['first_review', 'first_validation'].includes(incident.verification_status)) {
       alert(`Cannot validate case with status: ${incident.verification_status}`);
       return;
     }
@@ -7388,7 +7362,7 @@ function renderValidationCase(data) {
   
   // Set status badge with priority indicator
   const statusBadge = document.getElementById('validateStatusBadge');
-  let statusText = incident.verification_status === 'second_review' 
+  let statusText = incident.verification_status === 'first_review' 
     ? 'Awaiting First Validation' 
     : 'Awaiting Second Validation';
   
@@ -7662,7 +7636,7 @@ function updateValidationButtons() {
   
   if (submitBtn) {
     submitBtn.disabled = !allChecked;
-    submitBtn.textContent = validationData?.incident?.verification_status === 'second_review'
+    submitBtn.textContent = validationData?.incident?.verification_status === 'first_review'
       ? '✓ Submit First Validation'
       : '✓ Submit Second Validation & Publish';
   }

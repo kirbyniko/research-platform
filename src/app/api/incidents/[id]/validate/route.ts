@@ -59,7 +59,8 @@ export async function GET(
     console.log('[validate GET] Incident status:', incident.verification_status);
     
     // Check if case is in validation-ready status
-    if (!['second_review', 'first_validation'].includes(incident.verification_status)) {
+    // Simplified flow: first_review now goes directly to validation
+    if (!['first_review', 'first_validation'].includes(incident.verification_status)) {
       return NextResponse.json(
         { error: `Case is not ready for validation. Current status: ${incident.verification_status}` },
         { status: 400 }
@@ -229,7 +230,8 @@ export async function POST(
     const currentStatus = currentCase.verification_status;
     
     // Only allow validation on cases that have completed review
-    if (!['second_review', 'first_validation'].includes(currentStatus)) {
+    // Simplified flow: first_review now goes directly to validation
+    if (!['first_review', 'first_validation'].includes(currentStatus)) {
       return NextResponse.json(
         { error: `Cannot validate case with status '${currentStatus}'. Case must complete review first.` },
         { status: 400 }
@@ -258,7 +260,7 @@ export async function POST(
           );
         }
         
-        if (currentStatus === 'second_review') {
+        if (currentStatus === 'first_review') {
           // First validation
           await client.query(`
             UPDATE incidents 

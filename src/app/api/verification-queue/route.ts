@@ -58,26 +58,27 @@ export async function GET(request: NextRequest) {
     if (status === 'pending') {
       conditions.push("i.verification_status = 'pending'");
     } else if (status === 'first_review') {
+      // first_review is now in validation queue
       conditions.push("i.verification_status = 'first_review'");
     } else if (status === 'needs_review') {
-      conditions.push("i.verification_status IN ('pending', 'first_review')");
+      // Only pending needs review now (first_review goes to validation)
+      conditions.push("i.verification_status = 'pending'");
     } 
-    // NEW: Returned from validation (review_cycle >= 2)
+    // Returned from validation (review_cycle >= 2)
     else if (status === 'returned_for_review') {
-      conditions.push("i.verification_status IN ('pending', 'first_review', 'second_review')");
+      conditions.push("i.verification_status = 'pending'");
       conditions.push("COALESCE(i.review_cycle, 1) >= 2");
     }
-    // Validation statuses
-    else if (status === 'second_review') {
-      conditions.push("i.verification_status = 'second_review'");
-    } else if (status === 'first_validation') {
+    // Validation statuses - first_review now goes directly to validation
+    else if (status === 'first_validation') {
       conditions.push("i.verification_status = 'first_validation'");
     } else if (status === 'needs_validation') {
-      conditions.push("i.verification_status IN ('second_review', 'first_validation')");
+      // After first_review, cases go to validation (no second_review step)
+      conditions.push("i.verification_status IN ('first_review', 'first_validation')");
     }
-    // NEW: Re-validation (validation cycle 2+)
+    // Re-validation (validation cycle 2+)
     else if (status === 'revalidation') {
-      conditions.push("i.verification_status IN ('second_review', 'first_validation')");
+      conditions.push("i.verification_status IN ('first_review', 'first_validation')");
       conditions.push("COALESCE(i.review_cycle, 1) >= 2");
     }
     // Final statuses
@@ -94,16 +95,14 @@ export async function GET(request: NextRequest) {
       let paramIndex = params.length + 1;
       
       // For 'all' status or review statuses: exclude cases user submitted or verified
-      if (['all', 'pending', 'first_review', 'needs_review', 'returned_for_review'].includes(status)) {
+      if (['all', 'pending', 'needs_review', 'returned_for_review'].includes(status)) {
         conditions.push(`(i.submitted_by IS NULL OR i.submitted_by != $${paramIndex})`);
         conditions.push(`(i.first_verified_by IS NULL OR i.first_verified_by != $${paramIndex})`);
-        conditions.push(`(i.second_verified_by IS NULL OR i.second_verified_by != $${paramIndex})`);
         params.push(user.id);
       }
-      // For validation statuses: exclude if user did first OR second review  
-      else if (['second_review', 'first_validation', 'needs_validation', 'revalidation'].includes(status)) {
+      // For validation statuses: exclude if user did the review  
+      else if (['first_review', 'first_validation', 'needs_validation', 'revalidation'].includes(status)) {
         conditions.push(`(i.first_verified_by IS NULL OR i.first_verified_by != $${paramIndex})`);
-        conditions.push(`(i.second_verified_by IS NULL OR i.second_verified_by != $${paramIndex})`);
         params.push(user.id);
       }
       // For verified/rejected: no analyst filtering needed (anyone can view)
@@ -123,12 +122,11 @@ export async function GET(request: NextRequest) {
       SELECT 
         COUNT(*) FILTER (WHERE verification_status = 'pending') as pending,
         COUNT(*) FILTER (WHERE verification_status = 'first_review') as first_review,
-        COUNT(*) FILTER (WHERE verification_status = 'second_review') as second_review,
         COUNT(*) FILTER (WHERE verification_status = 'first_validation') as first_validation,
         COUNT(*) FILTER (WHERE verification_status = 'verified') as verified,
         COUNT(*) FILTER (WHERE verification_status = 'rejected') as rejected,
-        COUNT(*) FILTER (WHERE verification_status IN ('pending', 'first_review', 'second_review') AND COALESCE(review_cycle, 1) >= 2) as returned_for_review,
-        COUNT(*) FILTER (WHERE verification_status IN ('second_review', 'first_validation') AND COALESCE(review_cycle, 1) >= 2) as revalidation,
+        COUNT(*) FILTER (WHERE verification_status = 'pending' AND COALESCE(review_cycle, 1) >= 2) as returned_for_review,
+        COUNT(*) FILTER (WHERE verification_status IN ('first_review', 'first_validation') AND COALESCE(review_cycle, 1) >= 2) as revalidation,
         COUNT(*) as total
       FROM incidents i
     `;
@@ -140,7 +138,6 @@ export async function GET(request: NextRequest) {
     {
       statsConditions.push(`(i.submitted_by IS NULL OR i.submitted_by != $1)`);
       statsConditions.push(`(i.first_verified_by IS NULL OR i.first_verified_by != $1)`);
-      statsConditions.push(`(i.second_verified_by IS NULL OR i.second_verified_by != $1)`);
       statsParams.push(user.id);
     }
     

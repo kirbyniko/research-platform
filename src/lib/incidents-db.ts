@@ -472,8 +472,10 @@ export async function submitIncidentReview(
     const isAdmin = userRole === 'admin';
     
     // Handle workflow based on current status
+    // New simplified flow: pending → first_review → first_validation → verified
+    // No more second_review step - after first_review, case goes directly to validation
     if (currentStatus === 'pending') {
-      // First review
+      // First review - case goes directly to validation queue after this
       await client.query(`
         UPDATE incidents
         SET 
@@ -488,7 +490,7 @@ export async function submitIncidentReview(
       if (guestSubmissionId) {
         await client.query(`
           UPDATE guest_submissions
-          SET status = 'accepted', notes = 'First review completed'
+          SET status = 'accepted', notes = 'Review completed'
           WHERE id = $1
         `, [guestSubmissionId]);
       }
@@ -497,26 +499,17 @@ export async function submitIncidentReview(
       return {
         success: true,
         verification_status: 'first_review',
-        message: 'First review submitted successfully'
+        message: 'Review submitted successfully. Case is now in the validation queue.'
       };
       
     } else if (currentStatus === 'first_review') {
-      // Second review - check if same user (unless admin)
-      if (firstReviewBy === userId && !isAdmin) {
-        await client.query('ROLLBACK');
-        return {
-          success: false,
-          error: 'You cannot submit the second review for an incident you already reviewed. Another analyst must complete the second review.'
-        };
-      }
-      
-      // Second review by different analyst (or admin override) - send to validation queue
+      // Case is already reviewed and in validation queue
+      // If returned from validation, allow re-review
       await client.query(`
         UPDATE incidents
         SET 
-          verification_status = 'second_review',
-          second_review_by = $1,
-          second_review_at = CURRENT_TIMESTAMP,
+          first_review_by = $1,
+          first_review_at = CURRENT_TIMESTAMP,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
       `, [userId, incidentId]);
@@ -524,19 +517,17 @@ export async function submitIncidentReview(
       await client.query('COMMIT');
       return {
         success: true,
-        verification_status: 'second_review',
-        message: isAdmin && firstReviewBy === userId 
-          ? 'Admin override: Second review complete - incident sent to validation queue'
-          : 'Second review complete - incident sent to validation queue'
+        verification_status: 'first_review',
+        message: 'Re-review submitted successfully. Case is in the validation queue.'
       };
       
     } else {
-      // Already verified - allow update
+      // Already verified or other status - allow update
       await client.query(`
         UPDATE incidents
         SET 
-          second_review_by = $1,
-          second_review_at = CURRENT_TIMESTAMP,
+          first_review_by = $1,
+          first_review_at = CURRENT_TIMESTAMP,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
       `, [userId, incidentId]);

@@ -13,10 +13,9 @@ interface Incident {
   state: string;
   facility_name: string;
   description: string;
-  verification_status: 'pending' | 'first_review' | 'second_review' | 'first_validation' | 'verified' | 'rejected';
+  verification_status: 'pending' | 'first_review' | 'first_validation' | 'verified' | 'rejected';
   submitted_by_email: string | null;
   first_verified_by_email: string | null;
-  second_verified_by_email: string | null;
   first_validated_by_email: string | null;
   second_validated_by_email: string | null;
   rejected_by_email: string | null;
@@ -55,7 +54,6 @@ interface EditSuggestion {
 interface Stats {
   pending: number;
   first_review: number;
-  second_review: number;
   first_validation: number;
   verified: number;
   rejected: number;
@@ -520,11 +518,6 @@ export default function DashboardPage() {
         return <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded">Pending Review</span>;
       case 'first_review':
         if (isReturned) {
-          return <span className="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded">🔄 Re-Review (2nd)</span>;
-        }
-        return <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">Needs 2nd Review</span>;
-      case 'second_review':
-        if (isReturned) {
           return <span className="px-2 py-1 text-xs bg-cyan-100 text-cyan-800 rounded">🔁 Re-Validation</span>;
         }
         return <span className="px-2 py-1 text-xs bg-indigo-100 text-indigo-800 rounded">Awaiting Validation</span>;
@@ -555,8 +548,8 @@ export default function DashboardPage() {
     );
   }
 
-  const totalCaseReviews = stats ? Number(stats.pending) + Number(stats.first_review) : 0;
-  const totalValidations = stats ? Number(stats.second_review) + Number(stats.first_validation) : 0;
+  const totalCaseReviews = stats ? Number(stats.pending) : 0;
+  const totalValidations = stats ? Number(stats.first_review) + Number(stats.first_validation) : 0;
   const totalEditReviews = editStats ? Number(editStats.pending) + Number(editStats.first_review) : 0;
 
   return (
@@ -623,7 +616,7 @@ export default function DashboardPage() {
           {stats && (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-6">
               <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg relative">
-                <div className="text-xl font-bold text-yellow-800">{Number(stats.pending) + Number(stats.first_review)}</div>
+                <div className="text-xl font-bold text-yellow-800">{Number(stats.pending)}</div>
                 <div className="text-xs text-yellow-700">Needs Review</div>
                 {Number(stats.returned_for_review) > 0 && (
                   <div className="absolute -top-2 -right-2 bg-orange-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-md">
@@ -632,7 +625,7 @@ export default function DashboardPage() {
                 )}
               </div>
               <div className="bg-purple-50 border border-purple-200 p-3 rounded-lg relative">
-                <div className="text-xl font-bold text-purple-800">{Number(stats.second_review) + Number(stats.first_validation)}</div>
+                <div className="text-xl font-bold text-purple-800">{Number(stats.first_review) + Number(stats.first_validation)}</div>
                 <div className="text-xs text-purple-700">Needs Validation</div>
                 {Number(stats.revalidation) > 0 && (
                   <div className="absolute -top-2 -right-2 bg-cyan-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-md">
@@ -717,13 +710,13 @@ export default function DashboardPage() {
           onClick={() => setFilter('needs_review')}
           className={`px-4 py-2 rounded-lg text-sm ${filter === 'needs_review' ? 'bg-yellow-600 text-white' : 'bg-yellow-50 text-yellow-800 hover:bg-yellow-100 border border-yellow-200'}`}
         >
-          Needs Review ({stats ? Number(stats.pending) + Number(stats.first_review) : 0})
+          Needs Review ({stats ? Number(stats.pending) : 0})
         </button>
         <button
           onClick={() => setFilter('needs_validation')}
           className={`px-4 py-2 rounded-lg text-sm ${filter === 'needs_validation' ? 'bg-purple-600 text-white' : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200'}`}
         >
-          Needs Validation ({stats ? Number(stats.second_review) + Number(stats.first_validation) : 0})
+          Needs Validation ({stats ? Number(stats.first_review) + Number(stats.first_validation) : 0})
         </button>
         <button
           onClick={() => setFilter('rejected')}
@@ -737,12 +730,6 @@ export default function DashboardPage() {
           className={`px-3 py-2 rounded-lg text-xs ${filter === 'pending' ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
         >
           Pending ({stats?.pending || 0})
-        </button>
-        <button
-          onClick={() => setFilter('first_review')}
-          className={`px-3 py-2 rounded-lg text-xs ${filter === 'first_review' ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-        >
-          2nd Review ({stats?.first_review || 0})
         </button>
         <button
           onClick={() => setFilter('verified')}
@@ -864,10 +851,7 @@ export default function DashboardPage() {
                   <div className="mt-3 text-xs text-gray-400 space-y-0.5">
                     <p>Submitted: {formatDate(incident.created_at)}{incident.submitted_by_email && ` by ${incident.submitted_by_email}`}</p>
                     {incident.first_verified_by_email && (
-                      <p>1st Review: {incident.first_verified_by_email} on {formatDate(incident.first_verified_at!)}</p>
-                    )}
-                    {incident.second_verified_by_email && (
-                      <p>2nd Review: {incident.second_verified_by_email}</p>
+                      <p>Reviewed: {incident.first_verified_by_email} on {formatDate(incident.first_verified_at!)}</p>
                     )}
                     {incident.first_validated_by_email && (
                       <p>1st Validation: {incident.first_validated_by_email}</p>
@@ -897,7 +881,7 @@ export default function DashboardPage() {
                 </div>
                 
                 <div className="flex flex-col gap-2">
-                  {['second_review', 'first_validation'].includes(incident.verification_status) ? (
+                  {['first_review', 'first_validation'].includes(incident.verification_status) ? (
                     <Link
                       href={`/dashboard/validate/${incident.id}`}
                       className="px-3 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 text-center"
@@ -909,7 +893,7 @@ export default function DashboardPage() {
                       href={`/dashboard/review/${incident.id}`}
                       className="px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 text-center"
                     >
-                      {incident.verification_status === 'first_review' && incident.first_verified_by_email === user?.email && user?.role !== 'admin' ? 'View (Locked)' : 'Review Fields'}
+                      Review Fields
                     </Link>
                   )}
                   
@@ -919,12 +903,6 @@ export default function DashboardPage() {
                   >
                     View Details
                   </Link>
-                  
-                  {incident.verification_status === 'first_review' && incident.first_verified_by_email === user?.email && (
-                    <span className="px-3 py-2 text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded text-center">
-                      {user?.role === 'admin' ? '👑 Admin Can Override' : '🔒 Awaiting 2nd Analyst'}
-                    </span>
-                  )}
                 </div>
               </div>
             </div>

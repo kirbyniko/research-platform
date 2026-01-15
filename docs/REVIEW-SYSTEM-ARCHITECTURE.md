@@ -4,21 +4,19 @@
 
 ### Status Flow
 ```
-pending ? first_review ? second_review ? first_validation ? verified
-                                    ?
-                              (if returned)
-                                    ?
-                         first_review (review_cycle increments)
+pending → first_review (validation) → first_validation → verified
+                     ↑                              |
+                     |_____(if returned)____________|
+                     (review_cycle increments)
 ```
 
 ### Review Phase (Edit Mode)
-1. **Pending** - Case needs first review
-2. **First Review** - One analyst reviewed, needs second
-3. **Second Review** - Two analysts reviewed, ready for validation
+1. **Pending** - Case needs review
 
 ### Validation Phase (Read-Only)
-4. **First Validation** - One validator confirmed, needs second
-5. **Verified** - Published and public
+2. **First Review** - Reviewed, awaiting first validation
+3. **First Validation** - First validator confirmed, needs second
+4. **Verified** - Published and public
 
 ### Special States
 - **Rejected** - Case is not publishable
@@ -27,10 +25,9 @@ pending ? first_review ? second_review ? first_validation ? verified
 ## Database Columns
 
 ### incidents table
-- `verification_status`: pending | first_review | second_review | first_validation | verified | rejected
+- `verification_status`: pending | first_review | first_validation | verified | rejected
 - `review_cycle`: INTEGER (default 1, increments when returned from validation)
-- `first_verified_by`, `first_verified_at`: First reviewer
-- `second_verified_by`, `second_verified_at`: Second reviewer  
+- `first_verified_by`, `first_verified_at`: Reviewer
 - `first_validated_by`, `first_validated_at`: First validator
 - `second_validated_by`, `second_validated_at`: Second validator
 - `rejected_by`, `rejected_at`, `rejection_reason`: Rejection tracking
@@ -48,8 +45,8 @@ Stores feedback when cases are returned from validation:
 ## Dashboard Features
 
 ### Stats Cards
-- Needs Review (pending + first_review)
-- Needs Validation (second_review + first_validation)  
+- Needs Review (pending)
+- Needs Validation (first_review + first_validation)  
 - Published
 - Rejected
 - Total
@@ -65,7 +62,7 @@ Primary (colored):
 - Rejected (red)
 
 Secondary (gray):
-- Pending, 2nd Review, Published, All
+- Pending, Published, All
 
 ### Case Cards
 - Orange border + background for returned cases (review_cycle >= 2)

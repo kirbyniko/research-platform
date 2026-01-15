@@ -51,20 +51,10 @@ export async function POST(
     
     if (currentCase.verification_status === 'pending') {
       verificationNumber = 1;
+      // After first review, go directly to validation queue (no second_review step)
       newStatus = 'first_review';
     } else if (currentCase.verification_status === 'first_review') {
-      // Can't be the same person who did first verification
-      if (currentCase.first_verified_by === user.id && user.role !== 'admin') {
-        return NextResponse.json(
-          { error: 'Cannot provide both verifications. A different analyst must verify.' },
-          { status: 403 }
-        );
-      }
-      verificationNumber = 2;
-      // Changed: Now goes to second_review, NOT directly to verified
-      // Case must go through validation phase after review is complete
-      newStatus = 'second_review';
-    } else if (currentCase.verification_status === 'second_review') {
+      // Review is complete after first_review - case goes to validation
       return NextResponse.json(
         { error: 'Review is complete. Case is now in the validation queue.' },
         { status: 400 }
@@ -92,14 +82,13 @@ export async function POST(
         VALUES ($1, $2, $3, $4, $5)
       `, [caseId, user.id, verificationNumber, verificationType, notes]);
       
-      // Update case status
-      const updateField = verificationNumber === 1 ? 'first' : 'second';
+      // Update case status - first review goes directly to validation queue
       await client.query(`
         UPDATE incidents 
         SET 
           verification_status = $1,
-          ${updateField}_verified_by = $2,
-          ${updateField}_verified_at = NOW()
+          first_verified_by = $2,
+          first_verified_at = NOW()
         WHERE id = $3
       `, [newStatus, user.id, caseId]);
       
@@ -107,9 +96,7 @@ export async function POST(
       
       return NextResponse.json({
         success: true,
-        message: verificationNumber === 1 
-          ? 'First review complete. Case requires one more review.'
-          : 'Second review complete. Case sent to validation queue.',
+        message: 'Review complete. Case has been sent to the validation queue.',
         verification_status: newStatus,
         verificationNumber,
         newStatus
