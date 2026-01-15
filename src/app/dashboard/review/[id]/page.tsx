@@ -622,9 +622,21 @@ export default function ReviewPage() {
         subject_nationality: guestData.subject_nationality || '',
       });
       
+      // Convert agencies object {ice: true, cbp: true} to array [{agency: 'ice', role: null}]
+      if (guestData.agencies && typeof guestData.agencies === 'object') {
+        const agenciesArray = Object.entries(guestData.agencies)
+          .filter(([_, val]) => val === true)
+          .map(([key]) => ({
+            id: -(Math.random() * 1000 | 0), // Temporary negative ID
+            agency: key,
+            role: null
+          }));
+        setAgencies(agenciesArray);
+        console.log('[initializeFromGuestData] Set agencies array:', agenciesArray);
+      }
+      
       // Set incident details for extended fields
       setIncidentDetails({
-        agencies: guestData.agencies || {},
         cause_of_death: guestData.cause_of_death || '',
         manner_of_death: guestData.manner_of_death || '',
         custody_duration: guestData.custody_duration || '',
@@ -637,6 +649,15 @@ export default function ReviewPage() {
         force_types: guestData.force_types || {},
         victim_restrained: guestData.victim_restrained || false,
         victim_complying: guestData.victim_complying
+      });
+      
+      console.log('[initializeFromGuestData] Set incidentDetails:', {
+        cause_of_death: guestData.cause_of_death,
+        manner_of_death: guestData.manner_of_death,
+        custody_duration: guestData.custody_duration,
+        medical_denied: guestData.medical_denied,
+        shots_fired: guestData.shots_fired,
+        force_types: guestData.force_types
       });
 
       // Initialize media from guest submission

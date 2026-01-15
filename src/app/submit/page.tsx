@@ -469,10 +469,10 @@ export default function GuestSubmitPage() {
             {/* Agencies Involved */}
             <CollapsibleSection title="Agencies Involved (Optional)">
               <div className="grid grid-cols-3 gap-2">
-                {['ice', 'cbp', 'border_patrol', 'local_police', 'state_police', 'dhs', 'private_contractor', 'unknown'].map(agency => (
+                {['ice', 'ice_ere', 'cbp', 'border_patrol', 'local_police', 'state_police', 'federal_marshals', 'national_guard', 'dhs', 'private_contractor', 'other', 'unknown'].map(agency => (
                   <label key={agency} className="flex items-center gap-2 text-sm">
                     <input type="checkbox" checked={formData.agencies[agency] || false} onChange={(e) => setFormData({...formData, agencies: {...formData.agencies, [agency]: e.target.checked}})} />
-                    {agency.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                    {agency === 'ice_ere' ? 'ICE ERO' : agency === 'federal_marshals' ? 'US Marshals' : agency === 'national_guard' ? 'National Guard' : agency.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                   </label>
                 ))}
               </div>
