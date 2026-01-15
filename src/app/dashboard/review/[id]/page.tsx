@@ -97,7 +97,7 @@ const INCIDENT_FIELDS: { key: string; label: string; type: string; options?: str
   { key: 'summary', label: 'Summary', type: 'textarea' },
 ];
 
-const LINKABLE_FIELDS = ['victim_name', 'incident_date', 'city', 'state', 'facility', 'subject_age', 'subject_nationality', 'summary'];
+const LINKABLE_FIELDS = ['victim_name', 'incident_date', 'incident_type', 'city', 'state', 'facility', 'subject_age', 'subject_gender', 'subject_nationality', 'subject_immigration_status', 'summary'];
 
 const AGENCY_OPTIONS = [
   { value: 'ice', label: 'ICE' }, { value: 'ice_ere', label: 'ICE ERO' }, { value: 'cbp', label: 'CBP' },
@@ -2358,8 +2358,8 @@ export default function ReviewPage() {
               // Validation
               const unverifiedQuotes = quotes.filter(q => !q.verified);
               const quotesWithoutSources = quotes.filter(q => !q.source_id);
-              const keyFields = ['victim_name', 'incident_date', 'city', 'state', 'summary'];
-              const unlinkedFields = keyFields.filter(field => {
+              // Check ALL linkable fields for quote links (expanded from just 5 key fields)
+              const unlinkedFields = LINKABLE_FIELDS.filter(field => {
                 const value = (editedIncident as any)[field] || (incident as any)?.[field];
                 return value && !fieldQuoteMap[field];
               });
