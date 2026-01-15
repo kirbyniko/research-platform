@@ -68,7 +68,7 @@ export default function Navigation() {
             <ul className="flex gap-6 text-sm">
               <li><Link href="/submit" className={navLinkClass('/submit')}>Submit Report</Link></li>
               {(user?.role === 'analyst' || user?.role === 'admin' || user?.role === 'editor') && (
-                <li><Link href="/legal-help" className={navLinkClass('/legal-help')}>Legal Help</Link></li>
+                <li><Link href="/legal-help" className={navLinkClass('/legal-help')}>Habeas Corpus</Link></li>
               )}
             </ul>
 
@@ -184,7 +184,7 @@ export default function Navigation() {
             <ul className="flex flex-col gap-3 text-sm">
               <li><Link href="/submit" className={navLinkClass('/submit')} onClick={() => setMenuOpen(false)}>Submit Report</Link></li>
               {(user?.role === 'analyst' || user?.role === 'admin' || user?.role === 'editor') && (
-                <li><Link href="/legal-help" className={navLinkClass('/legal-help')} onClick={() => setMenuOpen(false)}>Legal Help</Link></li>
+                <li><Link href="/legal-help" className={navLinkClass('/legal-help')} onClick={() => setMenuOpen(false)}>Habeas Corpus</Link></li>
               )}
             </ul>
             
