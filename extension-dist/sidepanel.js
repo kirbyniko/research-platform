@@ -7442,7 +7442,6 @@ function renderValidationCase(data) {
     { key: 'incident_type', label: 'Incident Type' },
     { key: 'city', label: 'City' },
     { key: 'state', label: 'State' },
-    { key: 'country', label: 'Country' },
     { key: 'facility', label: 'Facility' },
     { key: 'subject_age', label: 'Age' },
     { key: 'subject_gender', label: 'Gender' },

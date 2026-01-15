@@ -89,7 +89,6 @@ const INCIDENT_FIELDS: { key: string; label: string; type: string; options?: str
   },
   { key: 'city', label: 'City', type: 'text' },
   { key: 'state', label: 'State', type: 'text' },
-  { key: 'country', label: 'Country', type: 'text', tooltip: 'Where the incident occurred (usually USA for ICE incidents)' },
   { key: 'facility', label: 'Facility', type: 'text' },
   { key: 'subject_age', label: 'Age', type: 'number' },
   { key: 'subject_gender', label: 'Gender', type: 'text' },
