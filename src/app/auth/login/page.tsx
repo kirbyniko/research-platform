@@ -28,8 +28,13 @@ function LoginForm() {
     setLoading(true);
     setError('');
     try {
-      await signIn('google', { callbackUrl });
-    } catch {
+      // Use redirect instead of popup - mobile browsers often block popups
+      await signIn('google', { 
+        callbackUrl,
+        redirect: true // Force redirect flow instead of popup
+      });
+    } catch (err) {
+      console.error('Sign in error:', err);
       setError('Failed to initiate sign in');
       setLoading(false);
     }
