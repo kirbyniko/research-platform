@@ -1715,10 +1715,30 @@ export default function ReviewPage() {
               <div><label className="block text-xs text-gray-500 mb-1">Fatal</label>
                 <input type="checkbox" checked={!!incidentDetails.shooting_fatal} onChange={e => setIncidentDetails({ ...incidentDetails, shooting_fatal: e.target.checked })} className="w-4 h-4" />
               </div>
-              <div><label className="block text-xs text-gray-500 mb-1">Shots Fired</label>
+              <div data-field-key="shots_fired">
+                <div className="flex items-start justify-between mb-1">
+                  <label className="block text-xs text-gray-500">Shots Fired</label>
+                  <div className="flex items-center gap-1">
+                    <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                      <input type="checkbox" checked={verifiedFields['shots_fired'] || false} onChange={e => handleFieldVerify('shots_fired', e.target.checked)} className="w-3 h-3" />
+                      <span>✓</span>
+                    </label>
+                    <QuotePicker field="shots_fired" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
+                  </div>
+                </div>
                 <input type="number" className="w-full border rounded px-3 py-2 text-sm" value={String(incidentDetails.shots_fired || '')} onChange={e => setIncidentDetails({ ...incidentDetails, shots_fired: e.target.value ? Number(e.target.value) : null })} />
               </div>
-              <div><label className="block text-xs text-gray-500 mb-1">Weapon Type</label>
+              <div data-field-key="weapon_type">
+                <div className="flex items-start justify-between mb-1">
+                  <label className="block text-xs text-gray-500">Weapon Type</label>
+                  <div className="flex items-center gap-1">
+                    <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                      <input type="checkbox" checked={verifiedFields['weapon_type'] || false} onChange={e => handleFieldVerify('weapon_type', e.target.checked)} className="w-3 h-3" />
+                      <span>✓</span>
+                    </label>
+                    <QuotePicker field="weapon_type" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
+                  </div>
+                </div>
                 <select className="w-full border rounded px-3 py-2 text-sm" value={String(incidentDetails.weapon_type || '')} onChange={e => setIncidentDetails({ ...incidentDetails, weapon_type: e.target.value })}>
                   <option value="">Select...</option>
                   <option value="handgun">Handgun</option>
@@ -1737,17 +1757,47 @@ export default function ReviewPage() {
               <div><label className="block text-xs text-gray-500 mb-1">Bodycam Available</label>
                 <input type="checkbox" checked={!!incidentDetails.bodycam_available} onChange={e => setIncidentDetails({ ...incidentDetails, bodycam_available: e.target.checked })} className="w-4 h-4" />
               </div>
-              <div className="col-span-2"><label className="block text-xs text-gray-500 mb-1">Context</label>
+              <div className="col-span-2" data-field-key="shooting_context">
+                <div className="flex items-start justify-between mb-1">
+                  <label className="block text-xs text-gray-500">Context</label>
+                  <div className="flex items-center gap-1">
+                    <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                      <input type="checkbox" checked={verifiedFields['shooting_context'] || false} onChange={e => handleFieldVerify('shooting_context', e.target.checked)} className="w-3 h-3" />
+                      <span>✓</span>
+                    </label>
+                    <QuotePicker field="shooting_context" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
+                  </div>
+                </div>
                 <textarea className="w-full border rounded px-3 py-2 text-sm" rows={2} value={String(incidentDetails.shooting_context || '')} onChange={e => setIncidentDetails({ ...incidentDetails, shooting_context: e.target.value })} />
               </div>
             </div>
           )}
           {['death_in_custody', 'death_during_operation', 'death_at_protest', 'death', 'detention_death'].includes(currentType) && (
             <div className="grid grid-cols-2 gap-4">
-              <div><label className="block text-xs text-gray-500 mb-1">Cause of Death</label>
+              <div data-field-key="cause_of_death">
+                <div className="flex items-start justify-between mb-1">
+                  <label className="block text-xs text-gray-500">Cause of Death</label>
+                  <div className="flex items-center gap-1">
+                    <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                      <input type="checkbox" checked={verifiedFields['cause_of_death'] || false} onChange={e => handleFieldVerify('cause_of_death', e.target.checked)} className="w-3 h-3" />
+                      <span>✓</span>
+                    </label>
+                    <QuotePicker field="cause_of_death" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
+                  </div>
+                </div>
                 <input type="text" className="w-full border rounded px-3 py-2 text-sm" value={String(incidentDetails.cause_of_death || '')} onChange={e => setIncidentDetails({ ...incidentDetails, cause_of_death: e.target.value })} />
               </div>
-              <div><label className="block text-xs text-gray-500 mb-1">Official Cause</label>
+              <div data-field-key="official_cause">
+                <div className="flex items-start justify-between mb-1">
+                  <label className="block text-xs text-gray-500">Official Cause</label>
+                  <div className="flex items-center gap-1">
+                    <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                      <input type="checkbox" checked={verifiedFields['official_cause'] || false} onChange={e => handleFieldVerify('official_cause', e.target.checked)} className="w-3 h-3" />
+                      <span>✓</span>
+                    </label>
+                    <QuotePicker field="official_cause" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
+                  </div>
+                </div>
                 <input type="text" className="w-full border rounded px-3 py-2 text-sm" value={String(incidentDetails.official_cause || '')} onChange={e => setIncidentDetails({ ...incidentDetails, official_cause: e.target.value })} />
               </div>
               <div><label className="block text-xs text-gray-500 mb-1">Autopsy Available</label>
@@ -1756,17 +1806,47 @@ export default function ReviewPage() {
               <div><label className="block text-xs text-gray-500 mb-1">Medical Neglect Alleged</label>
                 <input type="checkbox" checked={!!incidentDetails.medical_neglect_alleged} onChange={e => setIncidentDetails({ ...incidentDetails, medical_neglect_alleged: e.target.checked })} className="w-4 h-4" />
               </div>
-              <div className="col-span-2"><label className="block text-xs text-gray-500 mb-1">Circumstances</label>
+              <div className="col-span-2" data-field-key="death_circumstances">
+                <div className="flex items-start justify-between mb-1">
+                  <label className="block text-xs text-gray-500">Circumstances</label>
+                  <div className="flex items-center gap-1">
+                    <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                      <input type="checkbox" checked={verifiedFields['death_circumstances'] || false} onChange={e => handleFieldVerify('death_circumstances', e.target.checked)} className="w-3 h-3" />
+                      <span>✓</span>
+                    </label>
+                    <QuotePicker field="death_circumstances" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
+                  </div>
+                </div>
                 <textarea className="w-full border rounded px-3 py-2 text-sm" rows={2} value={String(incidentDetails.death_circumstances || '')} onChange={e => setIncidentDetails({ ...incidentDetails, death_circumstances: e.target.value })} />
               </div>
             </div>
           )}
           {currentType === 'arrest' && (
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2"><label className="block text-xs text-gray-500 mb-1">Arrest Reason</label>
+              <div className="col-span-2" data-field-key="arrest_reason">
+                <div className="flex items-start justify-between mb-1">
+                  <label className="block text-xs text-gray-500">Arrest Reason</label>
+                  <div className="flex items-center gap-1">
+                    <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                      <input type="checkbox" checked={verifiedFields['arrest_reason'] || false} onChange={e => handleFieldVerify('arrest_reason', e.target.checked)} className="w-3 h-3" />
+                      <span>✓</span>
+                    </label>
+                    <QuotePicker field="arrest_reason" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
+                  </div>
+                </div>
                 <input type="text" className="w-full border rounded px-3 py-2 text-sm" value={String(incidentDetails.arrest_reason || '')} onChange={e => setIncidentDetails({ ...incidentDetails, arrest_reason: e.target.value })} />
               </div>
-              <div className="col-span-2"><label className="block text-xs text-gray-500 mb-1">Charges</label>
+              <div className="col-span-2" data-field-key="arrest_charges">
+                <div className="flex items-start justify-between mb-1">
+                  <label className="block text-xs text-gray-500">Charges</label>
+                  <div className="flex items-center gap-1">
+                    <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                      <input type="checkbox" checked={verifiedFields['arrest_charges'] || false} onChange={e => handleFieldVerify('arrest_charges', e.target.checked)} className="w-3 h-3" />
+                      <span>✓</span>
+                    </label>
+                    <QuotePicker field="arrest_charges" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
+                  </div>
+                </div>
                 <input type="text" className="w-full border rounded px-3 py-2 text-sm" value={String(incidentDetails.arrest_charges || '')} onChange={e => setIncidentDetails({ ...incidentDetails, arrest_charges: e.target.value })} />
               </div>
               <div><label className="block text-xs text-gray-500 mb-1">Warrant Present</label>
@@ -1775,7 +1855,17 @@ export default function ReviewPage() {
               <div><label className="block text-xs text-gray-500 mb-1">Selective Enforcement</label>
                 <input type="checkbox" checked={!!incidentDetails.selective_enforcement} onChange={e => setIncidentDetails({ ...incidentDetails, selective_enforcement: e.target.checked })} className="w-4 h-4" />
               </div>
-              <div className="col-span-2"><label className="block text-xs text-gray-500 mb-1">Context</label>
+              <div className="col-span-2" data-field-key="arrest_context">
+                <div className="flex items-start justify-between mb-1">
+                  <label className="block text-xs text-gray-500">Context</label>
+                  <div className="flex items-center gap-1">
+                    <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                      <input type="checkbox" checked={verifiedFields['arrest_context'] || false} onChange={e => handleFieldVerify('arrest_context', e.target.checked)} className="w-3 h-3" />
+                      <span>✓</span>
+                    </label>
+                    <QuotePicker field="arrest_context" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
+                  </div>
+                </div>
                 <textarea className="w-full border rounded px-3 py-2 text-sm" rows={2} value={String(incidentDetails.arrest_context || '')} onChange={e => setIncidentDetails({ ...incidentDetails, arrest_context: e.target.value })} />
               </div>
             </div>
@@ -1804,7 +1894,17 @@ export default function ReviewPage() {
                   ))}
                 </div>
               </div>
-              <div className="col-span-2"><label className="block text-xs text-gray-500 mb-1">Injuries Sustained</label>
+              <div className="col-span-2" data-field-key="injuries_sustained">
+                <div className="flex items-start justify-between mb-1">
+                  <label className="block text-xs text-gray-500">Injuries Sustained</label>
+                  <div className="flex items-center gap-1">
+                    <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                      <input type="checkbox" checked={verifiedFields['injuries_sustained'] || false} onChange={e => handleFieldVerify('injuries_sustained', e.target.checked)} className="w-3 h-3" />
+                      <span>✓</span>
+                    </label>
+                    <QuotePicker field="injuries_sustained" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
+                  </div>
+                </div>
                 <input type="text" className="w-full border rounded px-3 py-2 text-sm" value={String(incidentDetails.injuries_sustained || '')} onChange={e => setIncidentDetails({ ...incidentDetails, injuries_sustained: e.target.value })} />
               </div>
               <div><label className="block text-xs text-gray-500 mb-1">Victim Restrained</label>
@@ -1823,10 +1923,30 @@ export default function ReviewPage() {
           )}
           {currentType === 'medical_neglect' && (
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2"><label className="block text-xs text-gray-500 mb-1">Medical Condition</label>
+              <div className="col-span-2" data-field-key="medical_condition">
+                <div className="flex items-start justify-between mb-1">
+                  <label className="block text-xs text-gray-500">Medical Condition</label>
+                  <div className="flex items-center gap-1">
+                    <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                      <input type="checkbox" checked={verifiedFields['medical_condition'] || false} onChange={e => handleFieldVerify('medical_condition', e.target.checked)} className="w-3 h-3" />
+                      <span>✓</span>
+                    </label>
+                    <QuotePicker field="medical_condition" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
+                  </div>
+                </div>
                 <input type="text" className="w-full border rounded px-3 py-2 text-sm" value={String(incidentDetails.medical_condition || '')} onChange={e => setIncidentDetails({ ...incidentDetails, medical_condition: e.target.value })} />
               </div>
-              <div className="col-span-2"><label className="block text-xs text-gray-500 mb-1">Treatment Denied</label>
+              <div className="col-span-2" data-field-key="treatment_denied">
+                <div className="flex items-start justify-between mb-1">
+                  <label className="block text-xs text-gray-500">Treatment Denied</label>
+                  <div className="flex items-center gap-1">
+                    <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                      <input type="checkbox" checked={verifiedFields['treatment_denied'] || false} onChange={e => handleFieldVerify('treatment_denied', e.target.checked)} className="w-3 h-3" />
+                      <span>✓</span>
+                    </label>
+                    <QuotePicker field="treatment_denied" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
+                  </div>
+                </div>
                 <textarea className="w-full border rounded px-3 py-2 text-sm" rows={2} value={String(incidentDetails.treatment_denied || '')} onChange={e => setIncidentDetails({ ...incidentDetails, treatment_denied: e.target.value })} />
               </div>
               <div><label className="block text-xs text-gray-500 mb-1">Requests Documented</label>
@@ -1839,7 +1959,17 @@ export default function ReviewPage() {
           )}
           {currentType === 'protest_suppression' && (
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2"><label className="block text-xs text-gray-500 mb-1">Protest Topic</label>
+              <div className="col-span-2" data-field-key="protest_topic">
+                <div className="flex items-start justify-between mb-1">
+                  <label className="block text-xs text-gray-500">Protest Topic</label>
+                  <div className="flex items-center gap-1">
+                    <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                      <input type="checkbox" checked={verifiedFields['protest_topic'] || false} onChange={e => handleFieldVerify('protest_topic', e.target.checked)} className="w-3 h-3" />
+                      <span>✓</span>
+                    </label>
+                    <QuotePicker field="protest_topic" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
+                  </div>
+                </div>
                 <input type="text" className="w-full border rounded px-3 py-2 text-sm" value={String(incidentDetails.protest_topic || '')} onChange={e => setIncidentDetails({ ...incidentDetails, protest_topic: e.target.value })} />
               </div>
               <div><label className="block text-xs text-gray-500 mb-1">Protest Size</label>
@@ -1848,7 +1978,17 @@ export default function ReviewPage() {
               <div><label className="block text-xs text-gray-500 mb-1">Permit Obtained</label>
                 <input type="checkbox" checked={!!incidentDetails.permitted} onChange={e => setIncidentDetails({ ...incidentDetails, permitted: e.target.checked })} className="w-4 h-4" />
               </div>
-              <div><label className="block text-xs text-gray-500 mb-1">Dispersal Method</label>
+              <div data-field-key="dispersal_method">
+                <div className="flex items-start justify-between mb-1">
+                  <label className="block text-xs text-gray-500">Dispersal Method</label>
+                  <div className="flex items-center gap-1">
+                    <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                      <input type="checkbox" checked={verifiedFields['dispersal_method'] || false} onChange={e => handleFieldVerify('dispersal_method', e.target.checked)} className="w-3 h-3" />
+                      <span>✓</span>
+                    </label>
+                    <QuotePicker field="dispersal_method" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
+                  </div>
+                </div>
                 <select className="w-full border rounded px-3 py-2 text-sm" value={String(incidentDetails.dispersal_method || '')} onChange={e => setIncidentDetails({ ...incidentDetails, dispersal_method: e.target.value })}>
                   <option value="">Select...</option>
                   <option value="tear_gas">Tear Gas</option>
