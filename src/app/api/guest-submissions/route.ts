@@ -107,9 +107,24 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const includeDeleted = searchParams.get('include_deleted') === 'true';
     
-    // Build WHERE clause - exclude soft-deleted by default
+    // First check if guest_submissions table exists and what columns it has
+    const tableCheck = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'guest_submissions'
+    `);
+    
+    if (tableCheck.rows.length === 0) {
+      console.warn('guest_submissions table does not exist');
+      return NextResponse.json({ submissions: [] });
+    }
+    
+    const columns = tableCheck.rows.map(row => row.column_name);
+    const hasDeletedAt = columns.includes('deleted_at');
+    
+    // Build WHERE clause - exclude soft-deleted by default if column exists
     let whereClause = '(gs.status = $1 OR $1 = \'all\')';
-    if (!includeDeleted) {
+    if (!includeDeleted && hasDeletedAt) {
       whereClause += ' AND gs.deleted_at IS NULL';
     }
     
@@ -128,6 +143,7 @@ export async function GET(request: NextRequest) {
     
   } catch (error) {
     console.error('Error fetching guest submissions:', error);
+    console.error('Error details:', error instanceof Error ? error.message : String(error));
     return NextResponse.json({ error: 'Failed to fetch submissions' }, { status: 500 });
   }
 }
