@@ -6,6 +6,9 @@ import Navigation from '@/components/Navigation';
 export const metadata: Metadata = {
   title: 'ICE Incident Tracker',
   description: 'Verified records of incidents connected to U.S. Immigration and Customs Enforcement',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({
