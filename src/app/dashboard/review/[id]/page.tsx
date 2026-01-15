@@ -97,7 +97,17 @@ const INCIDENT_FIELDS: { key: string; label: string; type: string; options?: str
   { key: 'summary', label: 'Summary', type: 'textarea' },
 ];
 
-const LINKABLE_FIELDS = ['victim_name', 'incident_date', 'incident_type', 'city', 'state', 'facility', 'subject_age', 'subject_gender', 'subject_nationality', 'subject_immigration_status', 'summary'];
+const LINKABLE_FIELDS = [
+  'victim_name', 'incident_date', 'incident_type', 'city', 'state', 'facility', 
+  'subject_age', 'subject_gender', 'subject_nationality', 'subject_immigration_status', 'summary',
+  // Type-specific detail fields
+  'shots_fired', 'weapon_type', 'shooting_context',
+  'cause_of_death', 'official_cause', 'death_circumstances',
+  'arrest_reason', 'arrest_charges', 'arrest_context',
+  'injuries_sustained',
+  'medical_condition', 'treatment_denied',
+  'protest_topic', 'dispersal_method'
+];
 
 const AGENCY_OPTIONS = [
   { value: 'ice', label: 'ICE' }, { value: 'ice_ere', label: 'ICE ERO' }, { value: 'cbp', label: 'CBP' },
@@ -1027,12 +1037,17 @@ export default function ReviewPage() {
 
   function findFieldsWithoutQuotes() {
     const firstUnlinked = LINKABLE_FIELDS.find(field => {
-      const value = (editedIncident as any)[field] || (incident as any)?.[field];
+      const value = (editedIncident as any)[field] || (incident as any)?.[field] || (incidentDetails as any)[field];
       return value && !fieldQuoteMap[field];
     });
     
     if (firstUnlinked) {
-      setSectionsOpen(prev => ({ ...prev, fields: true }));
+      // Open appropriate section based on field type
+      if (['shots_fired', 'weapon_type', 'shooting_context', 'cause_of_death', 'official_cause', 'death_circumstances', 'arrest_reason', 'arrest_charges', 'arrest_context', 'injuries_sustained', 'medical_condition', 'treatment_denied', 'protest_topic', 'dispersal_method'].includes(firstUnlinked)) {
+        setSectionsOpen(prev => ({ ...prev, typeDetails: true }));
+      } else {
+        setSectionsOpen(prev => ({ ...prev, fields: true }));
+      }
       setTimeout(() => {
         const element = document.querySelector(`[data-field-key="${firstUnlinked}"]`);
         if (element) {
@@ -1085,9 +1100,29 @@ export default function ReviewPage() {
     if (editedIncident.incident_type) {
       allFieldsToCheck.push({ key: 'incident_type', label: 'Incident Type', type: 'select' });
     }
+    // Add type-specific detail fields that have data
+    const typeSpecificFieldKeys = [
+      'shots_fired', 'weapon_type', 'shooting_context',
+      'cause_of_death', 'official_cause', 'death_circumstances',
+      'arrest_reason', 'arrest_charges', 'arrest_context',
+      'injuries_sustained', 'medical_condition', 'treatment_denied',
+      'protest_topic', 'dispersal_method'
+    ];
+    typeSpecificFieldKeys.forEach(key => {
+      const val = (incidentDetails as any)[key];
+      if (val !== null && val !== undefined && val !== '') {
+        const label = key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        allFieldsToCheck.push({ key, label, type: 'text' });
+      }
+    });
     const firstUnverified = allFieldsToCheck.find(f => !verifiedFields[f.key]);
     if (firstUnverified) {
-      setSectionsOpen(prev => ({ ...prev, fields: true }));
+      // Open appropriate section based on field type
+      if (typeSpecificFieldKeys.includes(firstUnverified.key)) {
+        setSectionsOpen(prev => ({ ...prev, typeDetails: true }));
+      } else {
+        setSectionsOpen(prev => ({ ...prev, fields: true }));
+      }
       setTimeout(() => {
         const element = document.querySelector(`[data-field-key="${firstUnverified.key}"]`);
         if (element) {
@@ -2425,7 +2460,7 @@ export default function ReviewPage() {
           <div className="flex flex-wrap gap-2">
             {!isNewIncident && (() => {
               const unlinkedFields = LINKABLE_FIELDS.filter(field => {
-                const value = (editedIncident as any)[field] || (incident as any)?.[field];
+                const value = (editedIncident as any)[field] || (incident as any)?.[field] || (incidentDetails as any)[field];
                 return value && !fieldQuoteMap[field];
               });
               return unlinkedFields.length > 0 && (
@@ -2464,6 +2499,21 @@ export default function ReviewPage() {
               if (editedIncident.incident_type) {
                 allFieldsToCheck.push({ key: 'incident_type', label: 'Incident Type', type: 'select' });
               }
+              // Add type-specific detail fields that have data
+              const typeSpecificFieldKeys = [
+                'shots_fired', 'weapon_type', 'shooting_context',
+                'cause_of_death', 'official_cause', 'death_circumstances',
+                'arrest_reason', 'arrest_charges', 'arrest_context',
+                'injuries_sustained', 'medical_condition', 'treatment_denied',
+                'protest_topic', 'dispersal_method'
+              ];
+              typeSpecificFieldKeys.forEach(key => {
+                const val = (incidentDetails as any)[key];
+                if (val !== null && val !== undefined && val !== '') {
+                  const label = key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                  allFieldsToCheck.push({ key, label, type: 'text' });
+                }
+              });
               const unverifiedFieldsList = allFieldsToCheck.filter(f => !verifiedFields[f.key]);
               return unverifiedFieldsList.length > 0 && (
                 <button
@@ -2613,7 +2663,8 @@ export default function ReviewPage() {
               const quotesWithoutSources = quotes.filter(q => !q.source_id);
               // Check ALL linkable fields for quote links (expanded from just 5 key fields)
               const unlinkedFields = LINKABLE_FIELDS.filter(field => {
-                const value = (editedIncident as any)[field] || (incident as any)?.[field];
+                // Check both editedIncident and incidentDetails for values
+                const value = (editedIncident as any)[field] || (incident as any)?.[field] || (incidentDetails as any)[field];
                 return value && !fieldQuoteMap[field];
               });
 
@@ -2631,6 +2682,24 @@ export default function ReviewPage() {
               if (editedIncident.incident_type) {
                 allFieldsToCheck.push({ key: 'incident_type', label: 'Incident Type', type: 'select' });
               }
+              
+              // Add type-specific detail fields that have data
+              const typeSpecificFieldKeys = [
+                'shots_fired', 'weapon_type', 'shooting_context',
+                'cause_of_death', 'official_cause', 'death_circumstances',
+                'arrest_reason', 'arrest_charges', 'arrest_context',
+                'injuries_sustained', 'medical_condition', 'treatment_denied',
+                'protest_topic', 'dispersal_method'
+              ];
+              
+              typeSpecificFieldKeys.forEach(key => {
+                const val = (incidentDetails as any)[key];
+                if (val !== null && val !== undefined && val !== '') {
+                  // Create readable labels
+                  const label = key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                  allFieldsToCheck.push({ key, label, type: 'text' });
+                }
+              });
               
               const unverifiedFieldsList = allFieldsToCheck.filter(f => !verifiedFields[f.key]);
 
