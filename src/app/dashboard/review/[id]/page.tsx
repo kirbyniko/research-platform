@@ -1319,7 +1319,7 @@ export default function ReviewPage() {
   const verifiedTimelineCount = Object.values(verifiedTimeline).filter(Boolean).length;
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className="w-full max-w-5xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
       {saving && <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm z-50">Saving...</div>}
       
       {loading && <div className="text-center py-8">Loading...</div>}
@@ -1642,7 +1642,7 @@ export default function ReviewPage() {
             <option value="other">Other</option>
           </select>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {INCIDENT_FIELDS.filter(f => f.key !== 'incident_type').map(f => {
             const showAutoSuggest = ['victim_name', 'facility', 'city', 'summary'].includes(f.key);
             
@@ -1735,7 +1735,7 @@ export default function ReviewPage() {
         return (
           <Section title={`${typeLabel} Details`} open={sectionsOpen.typeDetails} onToggle={() => toggleSection('typeDetails')}>
             {currentType === 'shooting' && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div><label className="block text-xs text-gray-500 mb-1">Fatal</label>
                 <input type="checkbox" checked={!!incidentDetails.shooting_fatal} onChange={e => setIncidentDetails({ ...incidentDetails, shooting_fatal: e.target.checked })} className="w-4 h-4" />
               </div>
@@ -1797,7 +1797,7 @@ export default function ReviewPage() {
             </div>
           )}
           {['death_in_custody', 'death_during_operation', 'death_at_protest', 'death', 'detention_death'].includes(currentType) && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div data-field-key="cause_of_death">
                 <div className="flex items-start justify-between mb-1">
                   <label className="block text-xs text-gray-500">Cause of Death</label>
@@ -1846,7 +1846,7 @@ export default function ReviewPage() {
             </div>
           )}
           {currentType === 'arrest' && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div className="col-span-2" data-field-key="arrest_reason">
                 <div className="flex items-start justify-between mb-1">
                   <label className="block text-xs text-gray-500">Arrest Reason</label>
@@ -1895,7 +1895,7 @@ export default function ReviewPage() {
             </div>
           )}
           {(currentType === 'excessive_force' || currentType === 'injury') && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div className="col-span-2">
                 <label className="block text-xs text-gray-500 mb-2">Force Types Used</label>
                 <div className="flex flex-wrap gap-3">
@@ -1946,7 +1946,7 @@ export default function ReviewPage() {
             </div>
           )}
           {currentType === 'medical_neglect' && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div className="col-span-2" data-field-key="medical_condition">
                 <div className="flex items-start justify-between mb-1">
                   <label className="block text-xs text-gray-500">Medical Condition</label>
@@ -1982,7 +1982,7 @@ export default function ReviewPage() {
             </div>
           )}
           {currentType === 'protest_suppression' && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div className="col-span-2" data-field-key="protest_topic">
                 <div className="flex items-start justify-between mb-1">
                   <label className="block text-xs text-gray-500">Protest Topic</label>
@@ -2442,11 +2442,11 @@ export default function ReviewPage() {
       </Section>
 
       {/* Final Submit Section */}
-      <div className="mt-8 p-6 bg-gray-50 border-2 border-gray-300 rounded-lg">
+      <div className="mt-8 p-4 sm:p-6 bg-gray-50 border-2 border-gray-300 rounded-lg">
         {/* Helper Find Buttons */}
         <div className="mb-4 p-3 bg-white border border-gray-300 rounded">
-          <p className="text-sm font-medium text-gray-700 mb-2">Quick Find Tools:</p>
-          <div className="flex flex-wrap gap-2">
+          <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Quick Find Tools:</p>
+          <div className="flex flex-wrap gap-1 sm:gap-2">
             {!isNewIncident && (() => {
               const unlinkedFields = LINKABLE_FIELDS.filter(field => {
                 const value = (editedIncident as any)[field] || (incident as any)?.[field] || (incidentDetails as any)[field];
@@ -2455,26 +2455,26 @@ export default function ReviewPage() {
               return unlinkedFields.length > 0 && (
                 <button
                   onClick={findFieldsWithoutQuotes}
-                  className="px-3 py-1 bg-red-100 text-red-700 border border-red-300 rounded text-sm hover:bg-red-200"
+                  className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-red-100 text-red-700 border border-red-300 rounded hover:bg-red-200 whitespace-nowrap"
                 >
-                  🔍 Find Fields Missing Quotes ({unlinkedFields.length})
+                  🔍 Find Missing Quotes ({unlinkedFields.length})
                 </button>
               );
             })()}
             {quotes.filter(q => !q.source_id).length > 0 && (
               <button
                 onClick={findQuotesWithoutSources}
-                className="px-3 py-1 bg-red-100 text-red-700 border border-red-300 rounded text-sm hover:bg-red-200"
+                className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-red-100 text-red-700 border border-red-300 rounded hover:bg-red-200 whitespace-nowrap"
               >
-                🔍 Find Quotes Without Sources ({quotes.filter(q => !q.source_id).length})
+                🔍 Missing Sources ({quotes.filter(q => !q.source_id).length})
               </button>
             )}
             {quotes.filter(q => !q.verified).length > 0 && (
               <button
                 onClick={findUnverifiedQuotesData}
-                className="px-3 py-1 bg-orange-100 text-orange-700 border border-orange-300 rounded text-sm hover:bg-orange-200"
+                className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-orange-100 text-orange-700 border border-orange-300 rounded hover:bg-orange-200 whitespace-nowrap"
               >
-                🔍 Find Unverified Quotes ({quotes.filter(q => !q.verified).length})
+                🔍 Unverified Quotes ({quotes.filter(q => !q.verified).length})
               </button>
             )}
             {(() => {
@@ -2507,51 +2507,51 @@ export default function ReviewPage() {
               return unverifiedFieldsList.length > 0 && (
                 <button
                   onClick={findUnverifiedFieldCheckbox}
-                  className="px-3 py-1 bg-yellow-100 text-yellow-700 border border-yellow-300 rounded text-sm hover:bg-yellow-200"
+                  className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-yellow-100 text-yellow-700 border border-yellow-300 rounded hover:bg-yellow-200 whitespace-nowrap"
                 >
-                  🔍 Find Unchecked Field Boxes ({unverifiedFieldsList.length})
+                  🔍 Unchecked Fields ({unverifiedFieldsList.length})
                 </button>
               );
             })()}
             {quotes.filter(q => !verifiedQuotes[q.id]).length > 0 && (
               <button
                 onClick={findUnverifiedQuotes}
-                className="px-3 py-1 bg-yellow-100 text-yellow-700 border border-yellow-300 rounded text-sm hover:bg-yellow-200"
+                className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-yellow-100 text-yellow-700 border border-yellow-300 rounded hover:bg-yellow-200 whitespace-nowrap"
               >
-                🔍 Find Unchecked Quote Boxes ({quotes.filter(q => !verifiedQuotes[q.id]).length})
+                🔍 Unchecked Quotes ({quotes.filter(q => !verifiedQuotes[q.id]).length})
               </button>
             )}
             {sources.filter(s => !verifiedSources[s.id]).length > 0 && (
               <button
                 onClick={findUnverifiedSource}
-                className="px-3 py-1 bg-yellow-100 text-yellow-700 border border-yellow-300 rounded text-sm hover:bg-yellow-200"
+                className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-yellow-100 text-yellow-700 border border-yellow-300 rounded hover:bg-yellow-200 whitespace-nowrap"
               >
-                🔍 Find Unchecked Source Boxes ({sources.filter(s => !verifiedSources[s.id]).length})
+                🔍 Unchecked Sources ({sources.filter(s => !verifiedSources[s.id]).length})
               </button>
             )}
             {timeline.filter(t => !verifiedTimeline[t.id]).length > 0 && (
               <button
                 onClick={findUnverifiedTimelineEntry}
-                className="px-3 py-1 bg-yellow-100 text-yellow-700 border border-yellow-300 rounded text-sm hover:bg-yellow-200"
+                className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-yellow-100 text-yellow-700 border border-yellow-300 rounded hover:bg-yellow-200 whitespace-nowrap"
               >
-                🔍 Find Unchecked Timeline Boxes ({timeline.filter(t => !verifiedTimeline[t.id]).length})
+                🔍 Unchecked Timeline ({timeline.filter(t => !verifiedTimeline[t.id]).length})
               </button>
             )}
             {media.filter(m => !verifiedMedia[m.id]).length > 0 && (
               <button
                 onClick={findUnverifiedMediaItem}
-                className="px-3 py-1 bg-yellow-100 text-yellow-700 border border-yellow-300 rounded text-sm hover:bg-yellow-200"
+                className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-yellow-100 text-yellow-700 border border-yellow-300 rounded hover:bg-yellow-200 whitespace-nowrap"
               >
-                🔍 Find Unchecked Media Boxes ({media.filter(m => !verifiedMedia[m.id]).length})
+                🔍 Unchecked Media ({media.filter(m => !verifiedMedia[m.id]).length})
               </button>
             )}
           </div>
         </div>
         
-        <div className="flex justify-between items-center">
-          <div>
-            <h3 className="font-semibold text-lg mb-1">Complete Review</h3>
-            <p className="text-sm text-gray-600">All changes have been auto-saved. Review validation checklist before verifying:</p>
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-6 mt-8 pt-6 border-t">
+          <div className="flex-1">
+            <h3 className="font-semibold text-base sm:text-lg mb-1">Complete Review</h3>
+            <p className="text-xs sm:text-sm text-gray-600">All changes have been auto-saved. Review validation checklist before verifying:</p>
             <ul className="text-xs text-gray-500 mt-2 space-y-1">
               <li>✓ All key fields (name, date, location) linked to verified quotes</li>
               <li>✓ All quotes linked to verified sources</li>
@@ -2842,7 +2842,7 @@ export default function ReviewPage() {
               }
             }}
             disabled={saving}
-            className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="px-4 sm:px-6 py-2 sm:py-3 bg-green-600 text-white text-sm sm:text-base rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed whitespace-nowrap"
           >
             {saving ? 'Submitting...' : 
              isNewIncident ? 'Create & Continue Review' :

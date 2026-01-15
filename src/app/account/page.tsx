@@ -131,7 +131,7 @@ export default function AccountPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8">
         <div className="max-w-4xl mx-auto">
           <p>Loading...</p>
         </div>
@@ -140,24 +140,24 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <Link href="/" className="text-blue-600 hover:underline">← Back to Home</Link>
+        <div className="mb-6 sm:mb-8">
+          <Link href="/" className="text-sm sm:text-base text-blue-600 hover:underline">← Back to Home</Link>
         </div>
         
-        <h1 className="text-3xl font-bold mb-2">Account Settings</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">Account Settings</h1>
         
         {user && (
-          <div className="mb-8 bg-white p-4 rounded-lg shadow">
-            <p className="text-gray-600">Signed in as: <strong>{user.email}</strong></p>
-            <p className="text-gray-600">Role: <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">{user.role}</span></p>
+          <div className="mb-6 sm:mb-8 bg-white p-4 rounded-lg shadow">
+            <p className="text-sm sm:text-base text-gray-600">Signed in as: <strong className="break-all">{user.email}</strong></p>
+            <p className="text-sm sm:text-base text-gray-600">Role: <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs sm:text-sm">{user.role}</span></p>
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">API Keys</h2>
-          <p className="text-gray-600 mb-4">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-6 sm:mb-8">
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">API Keys</h2>
+          <p className="text-sm sm:text-base text-gray-600 mb-4">
             API keys allow the browser extension to submit data on your behalf. 
             Keys expire automatically and can be revoked at any time.
           </p>
@@ -169,25 +169,25 @@ export default function AccountPage() {
           )}
 
           {createdKey && (
-            <div className="bg-green-50 border border-green-200 p-4 rounded mb-4">
-              <p className="font-semibold text-green-800 mb-2">🔑 New API Key Created!</p>
-              <p className="text-sm text-green-700 mb-2">
+            <div className="bg-green-50 border border-green-200 p-3 sm:p-4 rounded mb-4">
+              <p className="text-sm sm:text-base font-semibold text-green-800 mb-2">🔑 New API Key Created!</p>
+              <p className="text-xs sm:text-sm text-green-700 mb-2">
                 Copy this key now - you won&apos;t be able to see it again.
               </p>
-              <div className="flex items-center gap-2">
-                <code className="bg-white px-3 py-2 rounded border flex-1 text-sm font-mono break-all">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <code className="bg-white px-2 sm:px-3 py-2 rounded border flex-1 text-xs sm:text-sm font-mono break-all">
                   {createdKey}
                 </code>
                 <button
                   onClick={() => copyToClipboard(createdKey)}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                  className="px-3 sm:px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 whitespace-nowrap"
                 >
                   Copy
                 </button>
               </div>
               <button
                 onClick={() => setCreatedKey(null)}
-                className="mt-2 text-sm text-green-600 hover:underline"
+                className="mt-2 text-xs sm:text-sm text-green-600 hover:underline"
               >
                 I&apos;ve saved the key
               </button>
@@ -195,8 +195,8 @@ export default function AccountPage() {
           )}
 
           {/* Create new key form */}
-          <form onSubmit={createKey} className="mb-6 p-4 bg-gray-50 rounded">
-            <h3 className="font-medium mb-3">Create New API Key</h3>
+          <form onSubmit={createKey} className="mb-6 p-3 sm:p-4 bg-gray-50 rounded">
+            <h3 className="text-sm sm:text-base font-medium mb-3">Create New API Key</h3>
             <div className="flex flex-wrap gap-3">
               <input
                 type="text"
