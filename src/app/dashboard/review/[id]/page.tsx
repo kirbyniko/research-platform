@@ -759,10 +759,6 @@ export default function ReviewPage() {
       setValidationIssues(data.validation_issues || []);
       if (data.incident) {
         setEditedIncident(data.incident);
-        // Fetch related guest reports if we have a victim name
-        if (data.incident.victim_name && data.incident.victim_name.toLowerCase() !== 'unknown') {
-          fetchRelatedGuestReports(data.incident.victim_name);
-        }
       }
       
       // Fetch type-specific details
@@ -1181,6 +1177,11 @@ export default function ReviewPage() {
     }, 2000);
   }
 
+  // Handle field verification checkbox toggle
+  function handleFieldVerify(fieldKey: string, checked: boolean) {
+    setVerifiedFields(prev => ({ ...prev, [fieldKey]: checked }));
+  }
+
   // Verify an unverified quote
   async function verifyQuote(quoteId: number) {
     try {
@@ -1582,8 +1583,8 @@ export default function ReviewPage() {
       {/* Duplicate Checker Tool */}
       <div className="mb-6">
         <DuplicateChecker
-          initialQuery={editedIncident.victim_name || editedIncident.subject_name || ''}
-          excludeIncidentId={incident?.id}
+          initialQuery={String(editedIncident.victim_name || editedIncident.subject_name || '')}
+          excludeIncidentId={incident?.id ? Number(incident.id) : undefined}
           showSources={true}
           className="shadow-sm"
         />
