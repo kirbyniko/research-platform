@@ -452,8 +452,11 @@ export default function GuestSubmitPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nationality</label>
-                  <input type="text" value={formData.nationality} onChange={(e) => handleFormChange('nationality', e.target.value)} placeholder="Country" className="w-full px-3 py-2 border rounded" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                    Nationality
+                    <span className="text-gray-400 cursor-help" title="Victim's country of citizenship/origin (critical for ICE documentation)">ℹ️</span>
+                  </label>
+                  <input type="text" value={formData.nationality} onChange={(e) => handleFormChange('nationality', e.target.value)} placeholder="Country of citizenship" className="w-full px-3 py-2 border rounded" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">City</label>

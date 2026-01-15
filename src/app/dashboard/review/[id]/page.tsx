@@ -38,7 +38,7 @@ interface TimelineEntry {
 interface IncidentDetails { [key: string]: unknown; }
 
 // Field definitions
-const INCIDENT_FIELDS: { key: string; label: string; type: string; options?: string[] }[] = [
+const INCIDENT_FIELDS: { key: string; label: string; type: string; options?: string[]; tooltip?: string }[] = [
   { key: 'victim_name', label: 'Victim Name', type: 'text' },
   { key: 'incident_date', label: 'Date', type: 'date' },
   { 
@@ -65,11 +65,11 @@ const INCIDENT_FIELDS: { key: string; label: string; type: string; options?: str
   },
   { key: 'city', label: 'City', type: 'text' },
   { key: 'state', label: 'State', type: 'text' },
-  { key: 'country', label: 'Country', type: 'text' },
+  { key: 'country', label: 'Country', type: 'text', tooltip: 'Where the incident occurred (usually USA for ICE incidents)' },
   { key: 'facility', label: 'Facility', type: 'text' },
   { key: 'subject_age', label: 'Age', type: 'number' },
   { key: 'subject_gender', label: 'Gender', type: 'text' },
-  { key: 'subject_nationality', label: 'Nationality', type: 'text' },
+  { key: 'subject_nationality', label: 'Nationality', type: 'text', tooltip: "Victim's country of citizenship/origin (critical for ICE documentation)" },
   { key: 'subject_immigration_status', label: 'Immigration Status', type: 'text' },
   { key: 'summary', label: 'Summary', type: 'textarea' },
 ];
@@ -1560,6 +1560,7 @@ export default function ReviewPage() {
             <div key={f.key} className={f.type === 'textarea' ? 'col-span-2' : ''} data-field-key={f.key}>
               <label className={`block text-xs text-gray-500 mb-1 flex items-center gap-2 transition-all ${isUnverified && highlightUnverified ? 'bg-yellow-200 px-2 py-1 rounded animate-pulse' : ''}`}>
                 {f.label}
+                {f.tooltip && <span className="text-gray-400 cursor-help" title={f.tooltip}>ℹ️</span>}
                 {hasValue && (
                   <input 
                     type="checkbox" 
