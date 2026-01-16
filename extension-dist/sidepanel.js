@@ -62,7 +62,7 @@ let pendingQuotes = [];
 let sources = [];
 let media = [];  // Array of {url, media_type, title?, description?}
 let isConnected = false;
-let apiUrl = 'http://localhost:3000';
+let apiUrl = 'https://ice-deaths.vercel.app';
 let apiKey = '';
 let currentSelectors = {};
 let isExtracting = false;
@@ -594,10 +594,16 @@ function cacheElements() {
 // Load settings from storage
 async function loadSettings() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(['apiKey', 'customSelectors'], (result) => {
+    chrome.storage.local.get(['apiKey', 'apiUrl', 'customSelectors'], (result) => {
       if (result.apiKey) {
         apiKey = result.apiKey;
         elements.apiKey.value = apiKey;
+      }
+      if (result.apiUrl) {
+        apiUrl = result.apiUrl;
+        console.log('Loaded API URL from storage:', apiUrl);
+      } else {
+        console.log('Using default API URL:', apiUrl);
       }
       if (result.customSelectors) {
         currentSelectors = result.customSelectors;
@@ -1124,6 +1130,19 @@ function setupEventListeners() {
   
   // Test connection
   elements.testConnectionBtn.addEventListener('click', testConnection);
+  
+  // Reset API URL to production
+  const resetApiUrlBtn = document.getElementById('resetApiUrlBtn');
+  if (resetApiUrlBtn) {
+    resetApiUrlBtn.addEventListener('click', () => {
+      apiUrl = 'https://ice-deaths.vercel.app';
+      chrome.storage.local.set({ apiUrl }, () => {
+        document.getElementById('apiUrlDisplay').textContent = apiUrl;
+        alert('API URL reset to production: ' + apiUrl);
+        checkConnection();
+      });
+    });
+  }
   
   // API Key change
   elements.apiKey.addEventListener('change', async () => {
@@ -5747,7 +5766,7 @@ async function checkForDuplicates() {
   
   // Get API base URL from settings
   const settings = await chrome.storage.local.get('apiUrl');
-  const apiUrl = settings.apiUrl || 'http://localhost:3000';
+  const apiUrl = settings.apiUrl || 'https://ice-deaths.vercel.app';
   
   // Show loading state
   if (btn) {
