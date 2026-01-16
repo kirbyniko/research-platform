@@ -20,8 +20,8 @@ let currentCase = {
   deathMedicalDenied: false,
   // Injury-specific
   injuryType: '',
-  injurySeverity: 'moderate',
-  injuryWeapon: '',
+  injurySeverity: '',
+  injuryWeapon: '',,
   injuryCause: '',
   // Arrest-specific
   arrestReason: '',
@@ -1951,7 +1951,7 @@ function populateCaseForm() {
   if (elements.deathMedicalDenied) elements.deathMedicalDenied.checked = currentCase.deathMedicalDenied || false;
   
   if (elements.injuryType) elements.injuryType.value = currentCase.injuryType || '';
-  if (elements.injurySeverity) elements.injurySeverity.value = currentCase.injurySeverity || 'moderate';
+  if (elements.injurySeverity) elements.injurySeverity.value = currentCase.injurySeverity || '';
   if (elements.injuryWeapon) elements.injuryWeapon.value = currentCase.injuryWeapon || '';
   if (elements.injuryCause) elements.injuryCause.value = currentCase.injuryCause || '';
   
@@ -2504,6 +2504,7 @@ function handleIncidentTypeChange() {
     case 'death':
     case 'death_in_custody':
     case 'death_during_operation':
+    case 'detention_death':
       if (elements.deathFields) elements.deathFields.classList.remove('hidden');
       break;
     case 'death_at_protest':
@@ -2650,7 +2651,7 @@ function updateCaseFromForm() {
     deathMedicalDenied: elements.deathMedicalDenied ? elements.deathMedicalDenied.checked : false,
     // Injury-specific
     injuryType: elements.injuryType ? elements.injuryType.value : '',
-    injurySeverity: elements.injurySeverity ? elements.injurySeverity.value : 'moderate',
+    injurySeverity: elements.injurySeverity ? elements.injurySeverity.value : '',
     injuryWeapon: elements.injuryWeapon ? elements.injuryWeapon.value : '',
     injuryCause: elements.injuryCause ? elements.injuryCause.value : '',
     // Arrest-specific
@@ -4721,7 +4722,7 @@ function buildIncidentObject() {
     case 'injury':
       incident.injury_details = {
         injury_type: currentCase.injuryType || '',
-        severity: currentCase.injurySeverity || 'moderate',
+        severity: currentCase.injurySeverity || undefined,
         cause: currentCase.injuryCause || '',
         weapon_used: currentCase.injuryWeapon || undefined
       };
@@ -5769,7 +5770,7 @@ function clearCase() {
     deathCustodyDuration: '',
     deathMedicalDenied: false,
     injuryType: '',
-    injurySeverity: 'moderate',
+    injurySeverity: '',
     injuryWeapon: '',
     injuryCause: '',
     arrestReason: '',
