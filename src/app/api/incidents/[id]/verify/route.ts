@@ -153,12 +153,32 @@ export async function GET(
 
     const incidentRow = incidentResult.rows[0];
     
-    // Format the incident with proper type conversion for arrays
+    // Fetch agencies from incident_agencies table (primary source of truth)
+    const agenciesResult = await pool.query(`
+      SELECT agency, role FROM incident_agencies
+      WHERE incident_id = $1
+      ORDER BY id
+    `, [incidentId]);
+    
+    // Fetch violations from incident_violations table (primary source of truth)
+    const violationsResult = await pool.query(`
+      SELECT violation_type, description, constitutional_basis FROM incident_violations
+      WHERE incident_id = $1
+      ORDER BY id
+    `, [incidentId]);
+    
+    // Get agencies array from the relational table
+    const agenciesFromTable = agenciesResult.rows.map((r: { agency: string }) => r.agency);
+    
+    // Get violations array from the relational table
+    const violationsFromTable = violationsResult.rows.map((r: { violation_type: string }) => r.violation_type);
+    
+    // Format the incident with agencies and violations from their tables
     const incident = {
       ...incidentRow,
       tags: incidentRow.tags as string[] | undefined,
-      agencies_involved: incidentRow.agencies_involved as string[] | undefined,
-      legal_violations: incidentRow.legal_violations as string[] | undefined,
+      agencies_involved: agenciesFromTable,
+      legal_violations: violationsFromTable,
     };
 
     // Get sources
@@ -220,7 +240,10 @@ export async function GET(
       timeline: timelineResult.rows,
       media: mediaResult.rows,
       field_verifications: fieldVerificationsResult.rows,
-      quote_field_links: quoteFieldLinksResult.rows
+      quote_field_links: quoteFieldLinksResult.rows,
+      // Include detailed agencies and violations data
+      agencies: agenciesResult.rows,
+      violations: violationsResult.rows
     });
     
   } catch (error) {

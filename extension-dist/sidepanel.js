@@ -1936,6 +1936,15 @@ function populateCaseForm() {
   if (elements.deathManner) elements.deathManner.value = currentCase.deathManner || '';
   if (elements.deathCustodyDuration) elements.deathCustodyDuration.value = currentCase.deathCustodyDuration || '';
   if (elements.deathMedicalDenied) elements.deathMedicalDenied.checked = currentCase.deathMedicalDenied || false;
+  // ADDED: Official cause, autopsy, and circumstances
+  if (elements.officialCause) elements.officialCause.value = currentCase.officialCause || '';
+  if (elements.autopsyAvailable) elements.autopsyAvailable.checked = currentCase.autopsyAvailable || false;
+  if (elements.deathCircumstances) elements.deathCircumstances.value = currentCase.deathCircumstances || '';
+  // ADDED: Medical neglect fields
+  if (elements.medicalCondition) elements.medicalCondition.value = currentCase.medicalCondition || '';
+  if (elements.treatmentDenied) elements.treatmentDenied.value = currentCase.treatmentDenied || '';
+  if (elements.requestsDocumented) elements.requestsDocumented.checked = currentCase.requestsDocumented || false;
+  if (elements.resultedInDeath) elements.resultedInDeath.checked = currentCase.resultedInDeath || false;
   
   if (elements.injuryType) elements.injuryType.value = currentCase.injuryType || '';
   if (elements.injurySeverity) elements.injurySeverity.value = currentCase.injurySeverity || '';
@@ -7444,6 +7453,19 @@ async function loadReviewCaseDetails(incidentId) {
     const incidentSources = data.sources || [];
     reviewTimeline = data.timeline || [];
     
+    // Transform violations data from API format to extension format
+    const violationsFromApi = (data.violations || []).map(v => ({
+      type: v.violation_type,
+      classification: v.classification || 'alleged',  // Default to 'alleged' if not specified
+      description: v.description || '',
+      constitutional_basis: v.constitutional_basis || ''
+    }));
+    console.log('[loadReviewCaseDetails] Transformed violations from API:', violationsFromApi);
+    
+    // Transform agencies data from API format
+    const agenciesFromApi = (data.agencies || []).map(a => a.agency);
+    console.log('[loadReviewCaseDetails] Transformed agencies from API:', agenciesFromApi);
+    
     // Helper function to normalize incident type values
     function normalizeIncidentType(type) {
       if (!type) return 'death_in_custody';
@@ -7462,19 +7484,37 @@ async function loadReviewCaseDetails(incidentId) {
       return typeMap[normalized] || type;
     }
     
-    // Populate currentCase from incident - ensure ALL fields are mapped
+    // Helper: Get field value using the registry with fallbacks
+    const getField = (fieldName, defaultVal = '') => {
+      // Try incidentDetails first (JSONB data), then incident (main table)
+      if (window.FieldRegistry && window.FieldRegistry.getFieldValue) {
+        const fromDetails = window.FieldRegistry.getFieldValue(incidentDetails, fieldName);
+        if (fromDetails !== undefined && fromDetails !== null && fromDetails !== '') return fromDetails;
+        return window.FieldRegistry.getFieldValue(incident, fieldName, defaultVal);
+      }
+      // Fallback if registry not loaded
+      return incidentDetails[fieldName] || incident[fieldName] || defaultVal;
+    };
+    
+    const getFieldBool = (fieldName, defaultVal = false) => {
+      const val = getField(fieldName, defaultVal);
+      return val === true || val === 'true' || val === 1;
+    };
+    
+    // Populate currentCase from incident - using field registry for consistent mapping
     currentCase = {
       // Core identity fields
       incidentType: normalizeIncidentType(incident.incident_type),
-      name: incident.subject_name || incident.victim_name || '',
+      incident_types: incident.incident_types || [],
+      name: getField('subject_name') || getField('victim_name') || '',
       dateOfDeath: incident.incident_date ? incident.incident_date.split('T')[0] : '',
       age: incident.subject_age?.toString() || '',
-      country: incident.subject_nationality || '',
-      gender: incident.subject_gender || '',
-      immigration_status: incident.subject_immigration_status || '',
+      country: getField('subject_nationality') || '',
+      gender: getField('subject_gender') || '',
+      immigration_status: getField('subject_immigration_status') || '',
       occupation: incident.subject_occupation || '',
       
-      // Location fields - set BOTH individual fields AND combined location
+      // Location fields
       city: incident.city || '',
       state: incident.state || '',
       facility: incident.facility || '',
@@ -7482,61 +7522,71 @@ async function loadReviewCaseDetails(incidentId) {
       
       // Summary and cause
       summary: incident.summary || '',
-      causeOfDeath: incident.cause_of_death || '',
+      causeOfDeath: getField('cause_of_death') || '',
       
-      // Related entities
-      agencies: incident.agencies_involved || [],
-      violations: incident.legal_violations || [],
+      // Related entities - use transformed API data if available
+      agencies: agenciesFromApi.length > 0 ? agenciesFromApi : (incident.agencies_involved || []),
+      violations: violationsFromApi.length > 0 ? violationsFromApi.map(v => v.type) : (incident.legal_violations || []),
+      violations_data: violationsFromApi.length > 0 ? violationsFromApi : null,
       tags: incident.tags || [],
       
-      // Death-specific fields - check incidentDetails first, then incident
-      deathCause: incidentDetails.cause_of_death || incident.cause_of_death || '',
-      deathManner: incidentDetails.manner_of_death || incident.manner_of_death || '',
-      deathCustodyDuration: incidentDetails.custody_duration || incident.custody_duration || '',
-      deathMedicalDenied: incidentDetails.medical_care_denied || incident.medical_care_denied || false,
+      // Death-specific fields - registry handles aliases
+      deathCause: getField('cause_of_death') || '',
+      deathManner: getField('manner_of_death') || '',
+      deathCustodyDuration: getField('custody_duration') || '',
+      deathMedicalDenied: getFieldBool('medical_requests_denied') || getFieldBool('medical_care_denied'),
+      officialCause: getField('official_cause') || '',
+      autopsyAvailable: getFieldBool('autopsy_available'),
+      deathCircumstances: getField('circumstances') || '',
+      
+      // Medical neglect specific fields
+      medicalCondition: getField('medical_condition') || '',
+      treatmentDenied: getField('treatment_denied') || '',
+      requestsDocumented: getFieldBool('requests_documented'),
+      resultedInDeath: getFieldBool('resulted_in_death'),
       
       // Injury-specific fields
-      injuryType: incidentDetails.injury_type || incident.injury_type || '',
-      injurySeverity: incidentDetails.injury_severity || incident.injury_severity || '',
-      injuryWeapon: incidentDetails.injury_weapon || incident.injury_weapon || '',
-      injuryCause: incidentDetails.injury_cause || incident.injury_cause || '',
+      injuryType: getField('injury_type') || '',
+      injurySeverity: getField('injury_severity') || '',
+      injuryWeapon: getField('injury_weapon') || '',
+      injuryCause: getField('injury_cause') || '',
       
       // Arrest-specific fields
-      arrestReason: incidentDetails.arrest_reason || incident.arrest_reason || '',
-      arrestContext: incidentDetails.arrest_context || incident.arrest_context || '',
-      arrestCharges: incidentDetails.arrest_charges || incident.arrest_charges || '',
-      arrestTimingSuspicious: incidentDetails.arrest_timing_suspicious || incident.arrest_timing_suspicious || false,
-      arrestPretext: incidentDetails.arrest_pretext || incident.arrest_pretext || false,
-      arrestSelective: incidentDetails.arrest_selective || incident.arrest_selective || false,
+      arrestReason: getField('arrest_reason') || '',
+      arrestContext: getField('arrest_context') || '',
+      arrestCharges: getField('arrest_charges') || (incidentDetails.charges ? incidentDetails.charges.join(', ') : ''),
+      arrestTimingSuspicious: getFieldBool('timing_suspicious'),
+      arrestPretext: getFieldBool('pretext_arrest'),
+      arrestSelective: getFieldBool('selective_enforcement'),
       
       // Violation-specific fields
-      violationJournalism: incidentDetails.violation_journalism || incident.violation_journalism || false,
-      violationProtest: incidentDetails.violation_protest || incident.violation_protest || false,
-      violationActivism: incidentDetails.violation_activism || incident.violation_activism || false,
-      violationSpeech: incidentDetails.violation_speech || incident.violation_speech || '',
-      violationRuling: incidentDetails.violation_ruling || incident.violation_ruling || '',
+      violationJournalism: getFieldBool('violation_journalism'),
+      violationProtest: getFieldBool('violation_protest'),
+      violationActivism: getFieldBool('violation_activism'),
+      violationSpeech: getField('violation_speech') || '',
+      violationRuling: getField('violation_ruling') || '',
       
       // Shooting-specific fields
-      shootingFatal: incidentDetails.shooting_fatal || incident.shooting_fatal || false,
-      shotsFired: incidentDetails.shots_fired || incident.shots_fired || '',
-      weaponType: incidentDetails.weapon_type || incident.weapon_type || '',
-      bodycamAvailable: incidentDetails.bodycam_available || incident.bodycam_available || false,
-      victimArmed: incidentDetails.victim_armed || incident.victim_armed || false,
-      warningGiven: incidentDetails.warning_given || incident.warning_given || false,
-      shootingContext: incidentDetails.shooting_context || incident.shooting_context || '',
+      shootingFatal: getFieldBool('shooting_fatal'),
+      shotsFired: getField('shots_fired') || '',
+      weaponType: getField('weapon_type') || '',
+      bodycamAvailable: getFieldBool('bodycam_available'),
+      victimArmed: getFieldBool('victim_armed'),
+      warningGiven: getFieldBool('warning_given'),
+      shootingContext: getField('shooting_context') || '',
       
       // Excessive force-specific fields
-      forceTypes: incidentDetails.force_types || incident.force_types || [],
-      victimRestrained: incidentDetails.victim_restrained || incident.victim_restrained || false,
-      victimComplying: incidentDetails.victim_complying || incident.victim_complying || false,
-      videoEvidence: incidentDetails.video_evidence || incident.video_evidence || false,
+      forceTypes: getField('force_types') || [],
+      victimRestrained: getFieldBool('victim_restrained'),
+      victimComplying: getFieldBool('victim_complying'),
+      videoEvidence: getFieldBool('video_evidence'),
       
       // Protest-specific fields
-      protestTopic: incidentDetails.protest_topic || incident.protest_topic || '',
-      protestSize: incidentDetails.protest_size || incident.protest_size || '',
-      protestPermitted: incidentDetails.permitted || incidentDetails.protest_permitted || incident.protest_permitted || false,
-      dispersalMethod: incidentDetails.dispersal_method || incident.dispersal_method || '',
-      arrestsMade: incidentDetails.arrests_made || incident.arrests_made || '',
+      protestTopic: getField('protest_topic') || '',
+      protestSize: getField('protest_size') || '',
+      protestPermitted: getFieldBool('permitted'),
+      dispersalMethod: getField('dispersal_method') || '',
+      arrestsMade: getField('arrests_made') || '',
     };
     
     console.log('currentCase.tags after population:', currentCase.tags);

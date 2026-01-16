@@ -7,6 +7,19 @@ import Link from 'next/link';
 import { LEGAL_REFERENCES, getCaseLawForViolation, VIOLATION_TO_LEGAL_KEY } from '@/lib/legal-references';
 import type { LegalCase } from '@/lib/legal-references';
 import DuplicateChecker from '@/components/DuplicateChecker';
+import { normalizeFieldNames, getFieldValue } from '@/lib/field-registry';
+import { 
+  TYPE_SECTIONS, 
+  getSectionsForTypes,
+  WEAPON_TYPE_OPTIONS,
+  MANNER_OF_DEATH_OPTIONS,
+  INJURY_SEVERITY_OPTIONS,
+  DISPERSAL_METHOD_OPTIONS,
+  FORCE_TYPE_OPTIONS,
+  type FieldDefinition,
+  type TypeSection 
+} from '@/lib/type-field-definitions';
+import { useFieldGetter } from '@/lib/use-field-value';
 
 // Tooltip component
 function Tooltip({ text }: { text: string }) {
@@ -554,6 +567,221 @@ function QuoteAutoSuggest({
   );
 }
 
+// ============================================
+// TYPE-SPECIFIC FIELD RENDERER
+// Uses shared type definitions for consistency
+// ============================================
+
+interface TypeFieldRendererProps {
+  field: FieldDefinition;
+  value: unknown;
+  onChange: (key: string, value: unknown) => void;
+  verifiedFields: Record<string, boolean>;
+  onVerify: (key: string, checked: boolean) => void;
+  quotes: Quote[];
+  fieldQuoteMap: Record<string, number>;
+  onLinkQuote: (field: string, quoteId: number) => void;
+  onUnlinkQuote: (field: string) => void;
+  onVerifyQuote: (quoteId: number) => void;
+}
+
+function TypeFieldRenderer({ 
+  field, 
+  value, 
+  onChange, 
+  verifiedFields, 
+  onVerify, 
+  quotes, 
+  fieldQuoteMap, 
+  onLinkQuote, 
+  onUnlinkQuote, 
+  onVerifyQuote 
+}: TypeFieldRendererProps) {
+  const renderInput = () => {
+    switch (field.type) {
+      case 'checkbox':
+        return (
+          <input 
+            type="checkbox" 
+            checked={!!value} 
+            onChange={e => onChange(field.key, e.target.checked)} 
+            className="w-4 h-4" 
+          />
+        );
+      
+      case 'number':
+        return (
+          <input 
+            type="number" 
+            className="w-full border rounded px-3 py-2 text-sm" 
+            value={String(value || '')} 
+            onChange={e => onChange(field.key, e.target.value ? Number(e.target.value) : null)} 
+          />
+        );
+      
+      case 'textarea':
+        return (
+          <textarea 
+            className="w-full border rounded px-3 py-2 text-sm" 
+            rows={2} 
+            value={String(value || '')} 
+            onChange={e => onChange(field.key, e.target.value)} 
+          />
+        );
+      
+      case 'select':
+        return (
+          <select 
+            className="w-full border rounded px-3 py-2 text-sm" 
+            value={String(value || '')} 
+            onChange={e => onChange(field.key, e.target.value)}
+          >
+            <option value="">Select...</option>
+            {field.options?.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        );
+      
+      case 'multiselect':
+        return (
+          <div className="flex flex-wrap gap-3">
+            {field.options?.map(opt => (
+              <label key={opt.value} className="flex items-center gap-1 text-sm">
+                <input 
+                  type="checkbox" 
+                  checked={Array.isArray(value) && value.includes(opt.value)}
+                  onChange={e => {
+                    const current = Array.isArray(value) ? value : [];
+                    const updated = e.target.checked 
+                      ? [...current, opt.value] 
+                      : current.filter((t: string) => t !== opt.value);
+                    onChange(field.key, updated);
+                  }}
+                  className="w-4 h-4"
+                />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+        );
+      
+      default: // text
+        return (
+          <input 
+            type="text" 
+            className="w-full border rounded px-3 py-2 text-sm" 
+            placeholder={field.placeholder}
+            value={String(value || '')} 
+            onChange={e => onChange(field.key, e.target.value)} 
+          />
+        );
+    }
+  };
+
+  // For checkbox fields, render simply
+  if (field.type === 'checkbox') {
+    return (
+      <div>
+        <label className="block text-xs text-gray-500 mb-1">{field.label}</label>
+        {renderInput()}
+      </div>
+    );
+  }
+
+  // For quotable/verifiable fields, include verification controls
+  if (field.quotable || field.verifiable) {
+    return (
+      <div data-field-key={field.key}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
+          <label className="block text-xs text-gray-500">{field.label}</label>
+          <div className="flex items-center gap-1">
+            {field.verifiable && (
+              <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={verifiedFields[field.key] || false} 
+                  onChange={e => onVerify(field.key, e.target.checked)} 
+                  className="w-3 h-3" 
+                />
+                <span>✓</span>
+              </label>
+            )}
+            {field.quotable && (
+              <QuotePicker 
+                field={field.key} 
+                quotes={quotes} 
+                fieldQuoteMap={fieldQuoteMap} 
+                onLinkQuote={onLinkQuote} 
+                onUnlinkQuote={onUnlinkQuote} 
+                onVerifyQuote={onVerifyQuote} 
+                showLinkedDetails 
+              />
+            )}
+          </div>
+        </div>
+        {renderInput()}
+      </div>
+    );
+  }
+
+  // Simple field
+  return (
+    <div data-field-key={field.key}>
+      <label className="block text-xs text-gray-500 mb-1">{field.label}</label>
+      {renderInput()}
+    </div>
+  );
+}
+
+// Render a complete type section
+interface TypeSectionRendererProps {
+  section: TypeSection;
+  incidentDetails: Record<string, unknown>;
+  onChange: (key: string, value: unknown) => void;
+  verifiedFields: Record<string, boolean>;
+  onVerify: (key: string, checked: boolean) => void;
+  quotes: Quote[];
+  fieldQuoteMap: Record<string, number>;
+  onLinkQuote: (field: string, quoteId: number) => void;
+  onUnlinkQuote: (field: string) => void;
+  onVerifyQuote: (quoteId: number) => void;
+}
+
+function TypeSectionRenderer({
+  section,
+  incidentDetails,
+  onChange,
+  verifiedFields,
+  onVerify,
+  quotes,
+  fieldQuoteMap,
+  onLinkQuote,
+  onUnlinkQuote,
+  onVerifyQuote,
+}: TypeSectionRendererProps) {
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:gap-4">
+      <h4 className="col-span-full font-medium text-gray-700 border-b pb-1">{section.title}</h4>
+      {section.fields.map(field => (
+        <TypeFieldRenderer
+          key={field.key}
+          field={field}
+          value={getFieldValue(incidentDetails, field.key)}
+          onChange={onChange}
+          verifiedFields={verifiedFields}
+          onVerify={onVerify}
+          quotes={quotes}
+          fieldQuoteMap={fieldQuoteMap}
+          onLinkQuote={onLinkQuote}
+          onUnlinkQuote={onUnlinkQuote}
+          onVerifyQuote={onVerifyQuote}
+        />
+      ))}
+    </div>
+  );
+}
+
 // Validation Issue type
 interface ValidationIssue {
   id: number;
@@ -719,8 +947,8 @@ export default function ReviewPage() {
         console.log('[initializeFromGuestData] Set agencies array:', agenciesArray);
       }
       
-      // Set incident details for extended fields
-      setIncidentDetails({
+      // Set incident details for extended fields - normalize field names for consistency
+      setIncidentDetails(normalizeFieldNames({
         cause_of_death: guestData.cause_of_death || '',
         manner_of_death: guestData.manner_of_death || '',
         custody_duration: guestData.custody_duration || '',
@@ -733,7 +961,7 @@ export default function ReviewPage() {
         force_types: guestData.force_types || {},
         victim_restrained: guestData.victim_restrained || false,
         victim_complying: guestData.victim_complying
-      });
+      }));
       
       console.log('[initializeFromGuestData] Set incidentDetails:', {
         cause_of_death: guestData.cause_of_death,
@@ -817,11 +1045,13 @@ export default function ReviewPage() {
         setSelectedIncidentTypes(types);
       }
       
-      // Fetch type-specific details
+      // Fetch type-specific details and normalize field names for consistency
       const detailsRes = await fetch(`/api/incidents/${incidentId}/details`);
       if (detailsRes.ok) {
         const detailsData = await detailsRes.json();
-        setIncidentDetails(detailsData.details || {});
+        // Normalize field names to canonical form (e.g., 'stated_reason' -> 'arrest_reason')
+        const normalizedDetails = normalizeFieldNames(detailsData.details || {});
+        setIncidentDetails(normalizedDetails);
       }
       
       // Fetch related guest reports if we have a victim name
@@ -1555,7 +1785,7 @@ export default function ReviewPage() {
           )}
         </div>
         <h1 className="text-2xl font-bold mt-2">
-          {isNewIncident ? 'New Incident Review' : (incident?.victim_name || incident?.subject_name || 'Unknown')}
+          {isNewIncident ? 'New Incident Review' : (incident?.subject_name || incident?.victim_name || 'Unknown')}
         </h1>
         <p className="text-gray-500 text-sm">
           {isNewIncident ? 'Creating from guest submission' : `${incident?.incident_id} • ${incident?.incident_type}`}
@@ -2009,19 +2239,27 @@ export default function ReviewPage() {
         </div>
       </Section>
 
-      {/* Type-Specific Details Section - Uses editedIncident for dynamic switching */}
+      {/* Type-Specific Details Section - Shows ALL sections for all selected incident types */}
       {(() => {
-        const currentType = String(editedIncident.incident_type || incident?.incident_type || '');
-        const showTypeDetails = ['shooting', 'death_in_custody', 'death_during_operation', 'death_at_protest', 'death', 'detention_death', 'arrest', 'excessive_force', 'injury', 'medical_neglect', 'protest_suppression'].includes(currentType);
+        // Use selectedIncidentTypes to determine which sections to show
+        const typesToShow = selectedIncidentTypes.length > 0 
+          ? selectedIncidentTypes 
+          : (editedIncident.incident_type ? [String(editedIncident.incident_type)] : []);
+        
+        // Check if any of the selected types should show details
+        const relevantTypes = ['shooting', 'death_in_custody', 'death_during_operation', 'death_at_protest', 'death', 'detention_death', 'arrest', 'excessive_force', 'injury', 'medical_neglect', 'protest_suppression'];
+        const showTypeDetails = typesToShow.some(t => relevantTypes.includes(t));
         
         if (!showTypeDetails) return null;
         
-        const typeLabel = currentType.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        // Helper to check if any selected type matches
+        const hasType = (types: string[]) => types.some(t => typesToShow.includes(t));
         
         return (
-          <Section title={`${typeLabel} Details`} open={sectionsOpen.typeDetails} onToggle={() => toggleSection('typeDetails')}>
-            {currentType === 'shooting' && (
+          <Section title={`Type-Specific Details (${typesToShow.length} types)`} open={sectionsOpen.typeDetails} onToggle={() => toggleSection('typeDetails')}>
+            {hasType(['shooting']) && (
             <div className="grid grid-cols-1 gap-3 sm:gap-4">
+              <h4 className="col-span-full font-medium text-gray-700 border-b pb-1">Shooting Details</h4>
               <div><label className="block text-xs text-gray-500 mb-1">Fatal</label>
                 <input type="checkbox" checked={!!incidentDetails.shooting_fatal} onChange={e => setIncidentDetails({ ...incidentDetails, shooting_fatal: e.target.checked })} className="w-4 h-4" />
               </div>
@@ -2082,8 +2320,9 @@ export default function ReviewPage() {
               </div>
             </div>
           )}
-          {['death_in_custody', 'death_during_operation', 'death_at_protest', 'death', 'detention_death'].includes(currentType) && (
+          {hasType(['death_in_custody', 'death_during_operation', 'death_at_protest', 'death', 'detention_death']) && (
             <div className="grid grid-cols-1 gap-3 sm:gap-4">
+              <h4 className="col-span-full font-medium text-gray-700 border-b pb-1">Death Details</h4>
               <div data-field-key="cause_of_death">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                   <label className="block text-xs text-gray-500">Cause of Death</label>
@@ -2143,12 +2382,13 @@ export default function ReviewPage() {
                     <QuotePicker field="death_circumstances" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
                   </div>
                 </div>
-                <textarea className="w-full border rounded px-3 py-2 text-sm" rows={2} value={String(incidentDetails.death_circumstances || '')} onChange={e => setIncidentDetails({ ...incidentDetails, death_circumstances: e.target.value })} />
+                <textarea className="w-full border rounded px-3 py-2 text-sm" rows={2} value={String(incidentDetails.death_circumstances || incidentDetails.circumstances || '')} onChange={e => setIncidentDetails({ ...incidentDetails, death_circumstances: e.target.value })} />
               </div>
             </div>
           )}
-          {currentType === 'arrest' && (
+          {hasType(['arrest']) && (
             <div className="grid grid-cols-1 gap-3 sm:gap-4">
+              <h4 className="col-span-full font-medium text-gray-700 border-b pb-1">Arrest Details</h4>
               <div data-field-key="arrest_reason">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                   <label className="block text-xs text-gray-500">Arrest Reason</label>
@@ -2202,8 +2442,9 @@ export default function ReviewPage() {
               </div>
             </div>
           )}
-          {(currentType === 'excessive_force' || currentType === 'injury') && (
+          {hasType(['excessive_force', 'injury']) && (
             <div className="grid grid-cols-1 gap-3 sm:gap-4">
+              <h4 className="col-span-full font-medium text-gray-700 border-b pb-1">Excessive Force / Injury Details</h4>
               <div className="col-span-2">
                 <label className="block text-xs text-gray-500 mb-2">Force Types Used</label>
                 <div className="flex flex-wrap gap-3">
@@ -2252,7 +2493,7 @@ export default function ReviewPage() {
                 <input type="checkbox" checked={!!incidentDetails.hospitalization_required} onChange={e => setIncidentDetails({ ...incidentDetails, hospitalization_required: e.target.checked })} className="w-4 h-4" />
               </div>
               {/* Injury-specific fields (for injury type) */}
-              {currentType === 'injury' && (
+              {hasType(['injury']) && (
                 <>
                   <div data-field-key="injury_type">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
@@ -2308,8 +2549,9 @@ export default function ReviewPage() {
               )}
             </div>
           )}
-          {currentType === 'medical_neglect' && (
+          {hasType(['medical_neglect']) && (
             <div className="grid grid-cols-1 gap-3 sm:gap-4">
+              <h4 className="col-span-full font-medium text-gray-700 border-b pb-1">Medical Neglect Details</h4>
               <div data-field-key="medical_condition">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                   <label className="block text-xs text-gray-500">Medical Condition</label>
@@ -2344,8 +2586,9 @@ export default function ReviewPage() {
               </div>
             </div>
           )}
-          {currentType === 'protest_suppression' && (
+          {hasType(['protest_suppression']) && (
             <div className="grid grid-cols-1 gap-3 sm:gap-4">
+              <h4 className="col-span-full font-medium text-gray-700 border-b pb-1">Protest Suppression Details</h4>
               <div data-field-key="protest_topic">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                   <label className="block text-xs text-gray-500">Protest Topic</label>
