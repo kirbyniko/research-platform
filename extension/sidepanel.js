@@ -62,7 +62,7 @@ let pendingQuotes = [];
 let sources = [];
 let media = [];  // Array of {url, media_type, title?, description?}
 let isConnected = false;
-let apiUrl = 'https://ice-deaths.vercel.app';
+let apiUrl = 'http://localhost:3000';
 let apiKey = '';
 let currentSelectors = {};
 let isExtracting = false;
@@ -5747,7 +5747,7 @@ async function checkForDuplicates() {
   
   // Get API base URL from settings
   const settings = await chrome.storage.local.get('apiUrl');
-  const apiUrl = settings.apiUrl || 'https://ice-deaths.vercel.app';
+  const apiUrl = settings.apiUrl || 'http://localhost:3000';
   
   // Show loading state
   if (btn) {
@@ -6975,6 +6975,21 @@ function renderReviewQueue() {
         ${incident.incident_date ? ' • ' + new Date(incident.incident_date).toLocaleDateString() : ''}
       </div>
       
+      ${incident.tags && incident.tags.length > 0 ? `
+        <div style="display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0;">
+          ${incident.tags.slice(0, 4).map(tag => `
+            <span style="padding: 2px 6px; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 4px; font-size: 10px;">
+              ${escapeHtml(tag)}
+            </span>
+          `).join('')}
+          ${incident.tags.length > 4 ? `
+            <span style="padding: 2px 6px; background: #f3f4f6; color: #4b5563; border-radius: 4px; font-size: 10px;">
+              +${incident.tags.length - 4} more
+            </span>
+          ` : ''}
+        </div>
+      ` : ''}
+      
       ${isReturned && incident.rejection_reason ? `
         <div style="background: #fef3c7; padding: 8px; border-radius: 4px; margin: 8px 0; font-size: 11px; color: #92400e; border-left: 3px solid #f59e0b;">
           <strong>📝 Feedback:</strong> ${escapeHtml(incident.rejection_reason)}
@@ -7170,6 +7185,8 @@ async function loadReviewCaseDetails(incidentId) {
     
     const data = await response.json();
     console.log('API data received:', data);
+    console.log('Incident tags from API:', data.incident?.tags);
+    console.log('Type of tags:', typeof data.incident?.tags, 'Is array:', Array.isArray(data.incident?.tags));
     
     // Check if this case is in a status that allows review
     const incidentData = data.incident;
@@ -7250,27 +7267,10 @@ async function loadReviewCaseDetails(incidentId) {
       agencies: incident.agencies_involved || [],
       violations: incident.legal_violations || [],
       tags: incident.tags || [],
-      
-      // Death-specific details
-      deathCause: incident.cause_of_death || '',
-      deathManner: incident.manner_of_death || '',
-      deathCustodyDuration: incident.custody_duration || '',
-      deathMedicalDenied: incident.medical_care_denied || false,
-      
-      // Injury-specific details
-      injuryType: incident.injury_type || '',
-      injurySeverity: incident.injury_severity || '',
-      injuryWeapon: incident.injury_weapon || '',
-      injuryCause: incident.injury_cause || '',
-      
-      // Arrest-specific details  
-      arrestReason: incident.arrest_reason || '',
-      arrestContext: incident.arrest_context || '',
-      arrestCharges: incident.arrest_charges || '',
-      arrestTimingSuspicious: incident.arrest_timing_suspicious || false,
-      arrestPretext: incident.arrest_pretext || false,
-      arrestSelective: incident.arrest_selective || false
     };
+    
+    console.log('currentCase.tags after population:', currentCase.tags);
+    console.log('incident.tags was:', incident.tags);
     
     // Populate verified quotes
     verifiedQuotes = quotes.map(q => ({
@@ -7799,6 +7799,21 @@ function renderValidationQueue() {
         ${incident.incident_type ? incident.incident_type.replace(/_/g, ' ') : 'Unknown type'}
         ${incident.incident_date ? ' • ' + new Date(incident.incident_date).toLocaleDateString() : ''}
       </div>
+      
+      ${incident.tags && incident.tags.length > 0 ? `
+        <div style="display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0;">
+          ${incident.tags.slice(0, 4).map(tag => `
+            <span style="padding: 2px 6px; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 4px; font-size: 10px;">
+              ${escapeHtml(tag)}
+            </span>
+          `).join('')}
+          ${incident.tags.length > 4 ? `
+            <span style="padding: 2px 6px; background: #f3f4f6; color: #4b5563; border-radius: 4px; font-size: 10px;">
+              +${incident.tags.length - 4} more
+            </span>
+          ` : ''}
+        </div>
+      ` : ''}
       
       ${isReturned && incident.rejection_reason ? `
         <div style="background: #fef3c7; padding: 6px 8px; border-radius: 4px; margin: 8px 0; font-size: 11px; color: #92400e;">
