@@ -2024,12 +2024,19 @@ function populateCaseForm() {
   handleIncidentTypeChange();
   
   // Populate agencies
+  console.log('[populateCaseForm] Populating agencies, currentCase.agencies:', currentCase.agencies);
   document.querySelectorAll('[id^="agency-"]').forEach(checkbox => {
     const agency = checkbox.value;
-    checkbox.checked = currentCase.agencies && currentCase.agencies.includes(agency);
+    const shouldCheck = currentCase.agencies && currentCase.agencies.includes(agency);
+    checkbox.checked = shouldCheck;
+    if (shouldCheck) {
+      console.log('[populateCaseForm] Checked agency:', agency);
+    }
   });
   
   // Populate violations using new checkbox-based system
+  console.log('[populateCaseForm] Populating violations, violations_data:', currentCase.violations_data);
+  console.log('[populateCaseForm] Populating violations, violations:', currentCase.violations);
   // First try to use violations_data (full data), then fall back to legacy arrays
   if (currentCase.violations_data && Array.isArray(currentCase.violations_data)) {
     populateViolationsFromData(currentCase.violations_data);

@@ -136,18 +136,8 @@ const TYPE_SECTIONS = [
       { key: 'arrests_made', label: 'Arrests Made', type: 'number' },
     ],
   },
-  {
-    title: 'Violation Details',
-    types: ['rights_violation', 'retaliation'],
-    fields: [
-      { key: 'journalism_related', label: 'Journalism Related', type: 'checkbox' },
-      { key: 'protest_related', label: 'Protest Related', type: 'checkbox' },
-      { key: 'activism_related', label: 'Activism Related', type: 'checkbox' },
-      { key: 'speech_content', label: 'Speech/Activity Content', type: 'textarea', quotable: true, verifiable: true, placeholder: 'What they said/did (quoted if possible)' },
-      { key: 'court_ruling', label: 'Court Ruling', type: 'text', quotable: true, verifiable: true, placeholder: 'Court decision (if any)' },
-    ],
-  },
 ];
+
 
 /**
  * Get all sections that should be shown for given incident types
