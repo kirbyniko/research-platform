@@ -896,6 +896,18 @@ function setupEventListeners() {
   // Save button
   elements.saveCaseBtn.addEventListener('click', saveCase);
   
+  // Cancel review button
+  const cancelReviewBtn = document.getElementById('cancelReviewBtn');
+  if (cancelReviewBtn) {
+    cancelReviewBtn.addEventListener('click', exitReviewMode);
+  }
+  
+  // Reject case button
+  const rejectCaseBtn = document.getElementById('rejectCaseBtn');
+  if (rejectCaseBtn) {
+    rejectCaseBtn.addEventListener('click', rejectCase);
+  }
+  
   // New case button
   elements.newCaseBtn.addEventListener('click', newCase);
   
@@ -5184,6 +5196,9 @@ function updateSubmitButtonForReview() {
 // Show/hide verification checkboxes based on review mode
 function updateReviewModeUI() {
   const checkboxWrappers = document.querySelectorAll('.verification-checkbox-wrapper');
+  const cancelBtn = document.getElementById('cancelReviewBtn');
+  const rejectBtn = document.getElementById('rejectCaseBtn');
+  const saveBtn = document.getElementById('saveCaseBtn');
   
   if (reviewMode) {
     // Show checkboxes for fields with values
@@ -5237,8 +5252,18 @@ function updateReviewModeUI() {
     
     // Update verification counter
     updateVerificationCounter();
+    
+    // Show cancel and reject buttons in review mode
+    if (cancelBtn) cancelBtn.style.display = 'block';
+    if (rejectBtn) rejectBtn.style.display = 'block';
+    if (saveBtn) saveBtn.innerHTML = 'Submit Review';
   } else {
     hideVerificationCheckboxes();
+    
+    // Hide cancel and reject buttons when not in review mode
+    if (cancelBtn) cancelBtn.style.display = 'none';
+    if (rejectBtn) rejectBtn.style.display = 'none';
+    if (saveBtn) saveBtn.innerHTML = 'Save Incident';
   }
 }
 
@@ -5589,6 +5614,12 @@ async function submitVerification() {
 
 // Create new case
 function newCase() {
+  // Prevent starting new case while reviewing
+  if (reviewMode) {
+    alert('You are currently reviewing a case. Please finish or cancel that review before starting a new incident.');
+    return;
+  }
+  
   if (verifiedQuotes.length > 0 || currentCase.name) {
     if (!confirm('Start a new incident? Current data will be cleared.')) {
       return;
@@ -6902,9 +6933,117 @@ function renderReviewQueue() {
   });
 }
 
+// Exit review mode and return to queue
+function exitReviewMode() {
+  console.log('Exiting review mode');
+  
+  // Reset review state
+  reviewMode = false;
+  reviewIncidentId = null;
+  
+  // Clear form
+  document.getElementById('caseName').value = '';
+  document.getElementById('caseDod').value = '';
+  document.getElementById('caseAge').value = '';
+  document.getElementById('caseCountry').value = '';
+  document.getElementById('caseGender').value = '';
+  document.getElementById('caseImmigrationStatus').value = '';
+  document.getElementById('caseFacility').value = '';
+  document.getElementById('caseCity').value = '';
+  document.getElementById('caseState').value = '';
+  document.getElementById('caseCause').value = '';
+  document.getElementById('incidentType').value = 'death';
+  document.getElementById('deathCause').value = '';
+  document.getElementById('deathManner').value = '';
+  document.getElementById('deathCustodyDuration').value = '';
+  document.getElementById('injuryType').value = '';
+  document.getElementById('injurySeverity').value = '';
+  document.getElementById('injuryWeapon').value = '';
+  document.getElementById('injuryCause').value = '';
+  document.getElementById('arrestReason').value = '';
+  document.getElementById('arrestContext').value = '';
+  document.getElementById('arrestCharges').value = '';
+  
+  // Reset verification state
+  verifiedFields = {};
+  verifiedQuotes = [];
+  fieldQuoteAssociations = {};
+  
+  // Update UI
+  updateReviewModeUI();
+  showSection('formSection');
+  
+  console.log('Review mode exited, returned to form');
+}
+
+// Reject case during review
+async function rejectCase() {
+  if (!reviewIncidentId) {
+    alert('No incident loaded for review');
+    return;
+  }
+  
+  // Prompt for rejection reason
+  const reason = prompt('Enter rejection reason (required):', '');
+  
+  if (reason === null || reason.trim() === '') {
+    console.log('Rejection cancelled or reason empty');
+    return;
+  }
+  
+  const rejectBtn = document.getElementById('rejectCaseBtn');
+  if (!rejectBtn) return;
+  
+  rejectBtn.disabled = true;
+  rejectBtn.innerHTML = '<div class="spinner"></div> Rejecting...';
+  
+  try {
+    const response = await fetch(`${apiUrl}/api/incidents/${reviewIncidentId}/validate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        action: 'reject',
+        rejection_reason: reason.trim()
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to reject case');
+    }
+    
+    const result = await response.json();
+    console.log('Case rejected:', result);
+    
+    alert('Case rejected successfully.');
+    
+    // Exit review mode and refresh queue
+    exitReviewMode();
+    refreshVerificationQueue();
+    
+  } catch (error) {
+    console.error('Error rejecting case:', error);
+    alert('Error rejecting case: ' + error.message);
+  } finally {
+    rejectBtn.disabled = false;
+    rejectBtn.innerHTML = '✗ Reject';
+  }
+}
+
 // Load full case details for review
 async function loadReviewCaseDetails(incidentId) {
   console.log('loadReviewCaseDetails called with ID:', incidentId);
+  
+  // Prevent loading different case while already reviewing
+  if (reviewMode && reviewIncidentId && reviewIncidentId !== incidentId) {
+    if (!confirm(`You are reviewing incident #${reviewIncidentId}. Cancel that review and load incident #${incidentId}?`)) {
+      return;
+    }
+    exitReviewMode();
+  }
   
   // Prevent conflict with validate mode
   if (validateMode) {
