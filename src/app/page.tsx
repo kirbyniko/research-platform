@@ -23,10 +23,22 @@ export default async function Home() {
 
   try {
     // Only get verified incidents (default behavior)
-    const [incidents, stats] = await Promise.all([
+    const [incidents, stats, guestSubmissionCountResult] = await Promise.all([
       getIncidents({ limit: 20 }), // Recent verified incidents
       getIncidentStats(), // Stats for verified incidents only
+      // Get guest submission count
+      (async () => {
+        try {
+          const pool = (await import('@/lib/db')).default;
+          const result = await pool.query(`SELECT COUNT(*) as count FROM guest_submissions WHERE deleted_at IS NULL`);
+          return parseInt(result.rows[0].count);
+        } catch {
+          return 0;
+        }
+      })()
     ]);
+
+    const guestSubmissionCount = guestSubmissionCountResult;
 
     // Calculate stats from verified incidents
     const currentYear = new Date().getFullYear();
@@ -53,7 +65,7 @@ export default async function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
           <StatCard 
             number={stats.total_incidents} 
             label="Total documented incidents" 
@@ -70,6 +82,10 @@ export default async function Home() {
           <StatCard 
             number={facilitiesCount} 
             label="States involved" 
+          />
+          <StatCard 
+            number={guestSubmissionCount} 
+            label="Community reports pending review" 
           />
         </div>
 

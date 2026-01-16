@@ -37,8 +37,19 @@ export async function POST(
       verification_status: result.verification_status,
       message: result.message
     });
-  } catch (error) {
-    console.error('Error submitting review:', error);
-    return NextResponse.json({ error: 'Failed to submit review' }, { status: 500 });
+  } catch (error: any) {
+    console.error('[review-submit] Error submitting review:', error);
+    console.error('[review-submit] Error details:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      position: error.position,
+      stack: error.stack
+    });
+    return NextResponse.json({ 
+      error: 'Failed to submit review',
+      details: error.message,
+      code: error.code
+    }, { status: 500 });
   }
 }

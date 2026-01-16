@@ -1611,59 +1611,133 @@
       cursor: pointer;
     }
     
-    /* Violation grid (three-tier system) */
-    .violation-grid {
+    /* Violation cards (checkbox-based with expandable details) */
+    .violations-list {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
     }
     
-    .violation-item {
+    .violation-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      background: white;
+      overflow: hidden;
+      transition: all 0.2s;
+    }
+    
+    .violation-card.selected {
+      border-color: #3b82f6;
+      background: #f8fafc;
+    }
+    
+    .violation-header {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 4px 0;
-      border-bottom: 1px solid #eee;
+      justify-content: space-between;
+      padding: 10px 12px;
+      cursor: pointer;
+    }
+    
+    .violation-checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      flex: 1;
+    }
+    
+    .violation-checkbox {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
     }
     
     .violation-name {
-      flex: 1;
-      font-size: 12px;
-      min-width: 100px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #1f2937;
     }
     
-    .violation-select {
-      width: 90px;
-      padding: 3px 6px;
+    .violation-subtitle {
       font-size: 11px;
-      border: 1px solid #ddd;
+      color: #6b7280;
+      margin-left: 4px;
+    }
+    
+    .violation-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .violation-details {
+      padding: 0 12px 12px 38px;
+      border-top: 1px solid #e5e7eb;
+      background: #f9fafb;
+    }
+    
+    .violation-details.hidden {
+      display: none;
+    }
+    
+    .violation-detail-row {
+      margin-top: 10px;
+    }
+    
+    .violation-detail-row .detail-label {
+      display: block;
+      font-size: 11px;
+      color: #6b7280;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    
+    .violation-classification {
+      width: 120px;
+      padding: 5px 8px;
+      font-size: 12px;
+      border: 1px solid #d1d5db;
       border-radius: 4px;
       background: white;
     }
     
-    .violation-select:focus {
-      border-color: #3b82f6;
-      outline: none;
+    .violation-description {
+      width: 100%;
+      padding: 8px;
+      font-size: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      resize: vertical;
+      min-height: 50px;
     }
     
-    .violation-select option[value="alleged"] { color: #dc2626; }
-    .violation-select option[value="potential"] { color: #f59e0b; }
-    .violation-select option[value="possible"] { color: #6b7280; }
+    .violation-caselaw-select {
+      width: 100%;
+      padding: 5px 8px;
+      font-size: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      background: white;
+    }
     
-    .violation-select.has-value-alleged { 
-      background: #fef2f2; 
-      border-color: #dc2626; 
-      color: #dc2626;
+    .violation-caselaw-custom {
+      width: 100%;
+      padding: 5px 8px;
+      font-size: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      margin-top: 6px;
     }
-    .violation-select.has-value-potential { 
-      background: #fffbeb; 
-      border-color: #f59e0b;
-      color: #b45309;
+    
+    .violation-caselaw-custom.hidden {
+      display: none;
     }
-    .violation-select.has-value-possible { 
-      background: #f9fafb; 
-      border-color: #6b7280;
-      color: #4b5563;
+    
+    .violation-count {
+      font-size: 12px;
+      color: #6b7280;
+      margin-left: 6px;
     }
     
     .violation-quote-link {
@@ -1970,6 +2044,87 @@
       85% { opacity: 1; transform: translateX(-50%) translateY(0); }
       100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
     }
+    
+    /* Duplicate Checker Styles */
+    .duplicate-checker {
+      border-top: 1px solid #e5e7eb;
+      padding-top: 8px;
+    }
+    
+    .duplicate-results {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+    }
+    
+    .duplicate-results.has-matches {
+      background: #fef3c7;
+      border-color: #f59e0b;
+    }
+    
+    .duplicate-results.no-matches {
+      background: #dcfce7;
+      border-color: #22c55e;
+    }
+    
+    .duplicate-results.error {
+      background: #fee2e2;
+      border-color: #ef4444;
+    }
+    
+    .duplicate-match {
+      padding: 8px;
+      margin-top: 6px;
+      background: white;
+      border-radius: 4px;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .duplicate-match-name {
+      font-weight: 600;
+      color: #1f2937;
+    }
+    
+    .duplicate-match-details {
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+    
+    .duplicate-match-status {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 500;
+      margin-top: 4px;
+    }
+    
+    .duplicate-match-status.verified {
+      background: #dcfce7;
+      color: #166534;
+    }
+    
+    .duplicate-match-status.unverified {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    .duplicate-match-status.in_review {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    
+    .duplicate-match-link {
+      display: block;
+      margin-top: 4px;
+      font-size: 11px;
+      color: #2563eb;
+      text-decoration: none;
+    }
+    
+    .duplicate-match-link:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -2157,157 +2312,349 @@
         </div>
       </div>
       
-      <!-- Violations Section -->
-      <div class="section hidden" id="violationsSection">
+      <!-- Violations Section - Always visible (matches web review page) -->
+      <div class="section" id="violationsSection">
         <div class="collapsible-header open" id="violationsHeader">
           <span class="section-title">Constitutional Violations</span>
+          <span class="violation-count" id="violationCount">(0)</span>
         </div>
         <div class="collapsible-content open" id="violationsContent">
-          <p class="section-hint">Select classification type for each violation:</p>
-          <div class="violation-grid">
-            <div class="violation-item">
-              <span class="violation-name">1st Amendment</span>
-              <select class="violation-select" id="violation-first_amendment" data-violation="first_amendment">
-                <option value="">—</option>
-                <option value="alleged">Alleged</option>
-                <option value="potential">Potential</option>
-                <option value="possible">Possible</option>
-              </select>
-              <span class="violation-info-btn" data-violation="first_amendment" title="View constitutional text &amp; case law">?</span>
-              <span class="checkbox-quote-link violation-quote-link" data-field="violation_first_amendment">[src]</span>
-            </div>
-            <div class="violation-item">
-              <span class="violation-name">4th Amendment</span>
-              <select class="violation-select" id="violation-fourth_amendment" data-violation="fourth_amendment">
-                <option value="">—</option>
-                <option value="alleged">Alleged</option>
-                <option value="potential">Potential</option>
-                <option value="possible">Possible</option>
-              </select>
-              <span class="violation-info-btn" data-violation="fourth_amendment" title="View constitutional text &amp; case law">?</span>
-              <span class="checkbox-quote-link violation-quote-link" data-field="violation_fourth_amendment">[src]</span>
-            </div>
-            <div class="violation-item">
-              <span class="violation-name">5th Amendment</span>
-              <select class="violation-select" id="violation-fifth_amendment" data-violation="fifth_amendment">
-                <option value="">—</option>
-                <option value="alleged">Alleged</option>
-                <option value="potential">Potential</option>
-                <option value="possible">Possible</option>
-              </select>
-              <span class="violation-info-btn" data-violation="fifth_amendment" title="View constitutional text &amp; case law">?</span>
-              <span class="checkbox-quote-link violation-quote-link" data-field="violation_fifth_amendment">[src]</span>
-            </div>
-            <div class="violation-item">
-              <span class="violation-name">6th Amendment</span>
-              <select class="violation-select" id="violation-sixth_amendment" data-violation="sixth_amendment">
-                <option value="">—</option>
-                <option value="alleged">Alleged</option>
-                <option value="potential">Potential</option>
-                <option value="possible">Possible</option>
-              </select>
-              <span class="violation-info-btn" data-violation="sixth_amendment" title="View constitutional text &amp; case law">?</span>
-              <span class="checkbox-quote-link violation-quote-link" data-field="violation_sixth_amendment">[src]</span>
-            </div>
-            <div class="violation-item">
-              <span class="violation-name">8th Amendment</span>
-              <select class="violation-select" id="violation-eighth_amendment" data-violation="eighth_amendment">
-                <option value="">—</option>
-                <option value="alleged">Alleged</option>
-                <option value="potential">Potential</option>
-                <option value="possible">Possible</option>
-              </select>
-              <span class="violation-info-btn" data-violation="eighth_amendment" title="View constitutional text &amp; case law">?</span>
-              <span class="checkbox-quote-link violation-quote-link" data-field="violation_eighth_amendment">[src]</span>
-            </div>
-            <div class="violation-item">
-              <span class="violation-name">14th Amendment</span>
-              <select class="violation-select" id="violation-14th_amendment" data-violation="14th_amendment">
-                <option value="">—</option>
-                <option value="alleged">Alleged</option>
-                <option value="potential">Potential</option>
-                <option value="possible">Possible</option>
-              </select>
-              <span class="violation-info-btn" data-violation="fourteenth_amendment" title="View constitutional text &amp; case law">?</span>
-              <span class="checkbox-quote-link violation-quote-link" data-field="violation_14th_amendment">[src]</span>
-            </div>
-            <div class="violation-item">
-              <span class="violation-name">Civil Rights</span>
-              <select class="violation-select" id="violation-civil_rights" data-violation="civil_rights">
-                <option value="">—</option>
-                <option value="alleged">Alleged</option>
-                <option value="potential">Potential</option>
-                <option value="possible">Possible</option>
-              </select>
-              <span class="violation-info-btn" data-violation="civil_rights" title="View legal framework">?</span>
-              <span class="checkbox-quote-link violation-quote-link" data-field="violation_civil_rights">[src]</span>
-            </div>
-            <div class="violation-item">
-              <span class="violation-name">Excessive Force</span>
-              <select class="violation-select" id="violation-excessive_force" data-violation="excessive_force">
-                <option value="">—</option>
-                <option value="alleged">Alleged</option>
-                <option value="potential">Potential</option>
-                <option value="possible">Possible</option>
-              </select>
-              <span class="violation-info-btn" data-violation="excessive_force" title="View legal framework">?</span>
-              <span class="checkbox-quote-link violation-quote-link" data-field="violation_excessive_force">[src]</span>
-            </div>
-            <div class="violation-item">
-              <span class="violation-name">Wrongful Death</span>
-              <select class="violation-select" id="violation-wrongful_death" data-violation="wrongful_death">
-                <option value="">—</option>
-                <option value="alleged">Alleged</option>
-                <option value="potential">Potential</option>
-                <option value="possible">Possible</option>
-              </select>
-              <span class="violation-info-btn" data-violation="wrongful_death" title="View legal framework">?</span>
-              <span class="checkbox-quote-link violation-quote-link" data-field="violation_wrongful_death">[src]</span>
-            </div>
-            <div class="violation-item">
-              <span class="violation-name">Asylum Violation</span>
-              <select class="violation-select" id="violation-asylum_violation" data-violation="asylum_violation">
-                <option value="">—</option>
-                <option value="alleged">Alleged</option>
-                <option value="potential">Potential</option>
-                <option value="possible">Possible</option>
-              </select>
-              <span class="violation-info-btn" data-violation="asylum_violation" title="View legal framework">?</span>
-              <span class="checkbox-quote-link violation-quote-link" data-field="violation_asylum_violation">[src]</span>
-            </div>
-          </div>
-          
-          <!-- Violation Basis Entry (shown when potential/possible selected) -->
-          <div class="violation-basis-section hidden" id="violationBasisSection">
-            <h4>Legal Basis (for Potential/Possible)</h4>
-            <div class="form-group">
-              <label class="form-label">Violation Type</label>
-              <select class="form-input" id="violationBasisType">
-                <option value="">Select violation...</option>
-                <!-- Populated dynamically with only selected violations -->
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Case Law / Legal Framework</label>
-              <div style="display: flex; gap: 6px; align-items: center;">
-                <select class="form-input" id="violationCaseLawSelect" style="flex: 1;">
-                  <option value="">Select case law...</option>
-                  <option value="custom">-- Custom Entry --</option>
-                </select>
-                <button type="button" class="view-case-law-btn" id="viewSelectedCaseLaw" title="View selected case law details" style="padding: 6px 10px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">View</button>
+          <p class="section-hint">Check violations that apply. Each selected violation can have its own description and case law.</p>
+          <div class="violations-list" id="violationsList">
+            
+            <!-- 1st Amendment -->
+            <div class="violation-card" data-violation="1st_amendment">
+              <div class="violation-header">
+                <label class="violation-checkbox-label">
+                  <input type="checkbox" class="violation-checkbox" data-violation="1st_amendment">
+                  <span class="violation-name">1st Amendment</span>
+                  <span class="violation-subtitle">Free Speech/Assembly</span>
+                </label>
+                <div class="violation-actions">
+                  <span class="violation-info-btn" data-violation="first_amendment" title="View constitutional text">?</span>
+                  <span class="checkbox-quote-link violation-quote-link" data-field="violation_1st_amendment">[src]</span>
+                </div>
               </div>
-              <input type="text" class="form-input hidden" id="violationLegalFrameworkCustom" placeholder="Enter custom case law citation..." style="margin-top: 6px;">
-              <input type="hidden" id="violationLegalFramework">
+              <div class="violation-details hidden">
+                <div class="violation-detail-row">
+                  <label class="detail-label">Classification</label>
+                  <select class="violation-classification" data-violation="1st_amendment">
+                    <option value="alleged">Alleged</option>
+                    <option value="potential">Potential</option>
+                    <option value="possible">Possible</option>
+                  </select>
+                </div>
+                <div class="violation-detail-row">
+                  <label class="detail-label">Description</label>
+                  <textarea class="violation-description" data-violation="1st_amendment" rows="2" placeholder="Brief description of how this violation applies..."></textarea>
+                </div>
+                <div class="violation-detail-row">
+                  <label class="detail-label">Case Law</label>
+                  <select class="violation-caselaw-select" data-violation="1st_amendment">
+                    <option value="">Select case law...</option>
+                    <option value="custom">-- Custom Entry --</option>
+                  </select>
+                  <input type="text" class="violation-caselaw-custom hidden" data-violation="1st_amendment" placeholder="Enter custom citation...">
+                </div>
+              </div>
             </div>
-            <div class="form-group">
-              <label class="form-label">Relevant Facts (one per line)</label>
-              <textarea class="form-input" id="violationRelevantFacts" rows="3" placeholder="Subject was unarmed&#10;No threat posed to officers&#10;Shot while seated in vehicle"></textarea>
+
+            <!-- 4th Amendment -->
+            <div class="violation-card" data-violation="4th_amendment">
+              <div class="violation-header">
+                <label class="violation-checkbox-label">
+                  <input type="checkbox" class="violation-checkbox" data-violation="4th_amendment">
+                  <span class="violation-name">4th Amendment</span>
+                  <span class="violation-subtitle">Unreasonable Search/Seizure</span>
+                </label>
+                <div class="violation-actions">
+                  <span class="violation-info-btn" data-violation="fourth_amendment" title="View constitutional text">?</span>
+                  <span class="checkbox-quote-link violation-quote-link" data-field="violation_4th_amendment">[src]</span>
+                </div>
+              </div>
+              <div class="violation-details hidden">
+                <div class="violation-detail-row">
+                  <label class="detail-label">Classification</label>
+                  <select class="violation-classification" data-violation="4th_amendment">
+                    <option value="alleged">Alleged</option>
+                    <option value="potential">Potential</option>
+                    <option value="possible">Possible</option>
+                  </select>
+                </div>
+                <div class="violation-detail-row">
+                  <label class="detail-label">Description</label>
+                  <textarea class="violation-description" data-violation="4th_amendment" rows="2" placeholder="Brief description of how this violation applies..."></textarea>
+                </div>
+                <div class="violation-detail-row">
+                  <label class="detail-label">Case Law</label>
+                  <select class="violation-caselaw-select" data-violation="4th_amendment">
+                    <option value="">Select case law...</option>
+                    <option value="custom">-- Custom Entry --</option>
+                  </select>
+                  <input type="text" class="violation-caselaw-custom hidden" data-violation="4th_amendment" placeholder="Enter custom citation...">
+                </div>
+              </div>
             </div>
-            <div class="form-group">
-              <label class="form-label">Note</label>
-              <input type="text" class="form-input" id="violationNote" placeholder="Additional context">
+
+            <!-- 5th Amendment -->
+            <div class="violation-card" data-violation="5th_amendment_due_process">
+              <div class="violation-header">
+                <label class="violation-checkbox-label">
+                  <input type="checkbox" class="violation-checkbox" data-violation="5th_amendment_due_process">
+                  <span class="violation-name">5th Amendment</span>
+                  <span class="violation-subtitle">Due Process</span>
+                </label>
+                <div class="violation-actions">
+                  <span class="violation-info-btn" data-violation="fifth_amendment" title="View constitutional text">?</span>
+                  <span class="checkbox-quote-link violation-quote-link" data-field="violation_5th_amendment_due_process">[src]</span>
+                </div>
+              </div>
+              <div class="violation-details hidden">
+                <div class="violation-detail-row">
+                  <label class="detail-label">Classification</label>
+                  <select class="violation-classification" data-violation="5th_amendment_due_process">
+                    <option value="alleged">Alleged</option>
+                    <option value="potential">Potential</option>
+                    <option value="possible">Possible</option>
+                  </select>
+                </div>
+                <div class="violation-detail-row">
+                  <label class="detail-label">Description</label>
+                  <textarea class="violation-description" data-violation="5th_amendment_due_process" rows="2" placeholder="Brief description of how this violation applies..."></textarea>
+                </div>
+                <div class="violation-detail-row">
+                  <label class="detail-label">Case Law</label>
+                  <select class="violation-caselaw-select" data-violation="5th_amendment_due_process">
+                    <option value="">Select case law...</option>
+                    <option value="custom">-- Custom Entry --</option>
+                  </select>
+                  <input type="text" class="violation-caselaw-custom hidden" data-violation="5th_amendment_due_process" placeholder="Enter custom citation...">
+                </div>
+              </div>
             </div>
-            <button type="button" class="btn btn-sm" id="saveViolationBasis">Save Basis</button>
+
+            <!-- 8th Amendment -->
+            <div class="violation-card" data-violation="8th_amendment">
+              <div class="violation-header">
+                <label class="violation-checkbox-label">
+                  <input type="checkbox" class="violation-checkbox" data-violation="8th_amendment">
+                  <span class="violation-name">8th Amendment</span>
+                  <span class="violation-subtitle">Cruel & Unusual Punishment</span>
+                </label>
+                <div class="violation-actions">
+                  <span class="violation-info-btn" data-violation="eighth_amendment" title="View constitutional text">?</span>
+                  <span class="checkbox-quote-link violation-quote-link" data-field="violation_8th_amendment">[src]</span>
+                </div>
+              </div>
+              <div class="violation-details hidden">
+                <div class="violation-detail-row">
+                  <label class="detail-label">Classification</label>
+                  <select class="violation-classification" data-violation="8th_amendment">
+                    <option value="alleged">Alleged</option>
+                    <option value="potential">Potential</option>
+                    <option value="possible">Possible</option>
+                  </select>
+                </div>
+                <div class="violation-detail-row">
+                  <label class="detail-label">Description</label>
+                  <textarea class="violation-description" data-violation="8th_amendment" rows="2" placeholder="Brief description of how this violation applies..."></textarea>
+                </div>
+                <div class="violation-detail-row">
+                  <label class="detail-label">Case Law</label>
+                  <select class="violation-caselaw-select" data-violation="8th_amendment">
+                    <option value="">Select case law...</option>
+                    <option value="custom">-- Custom Entry --</option>
+                  </select>
+                  <input type="text" class="violation-caselaw-custom hidden" data-violation="8th_amendment" placeholder="Enter custom citation...">
+                </div>
+              </div>
+            </div>
+
+            <!-- 14th Amendment -->
+            <div class="violation-card" data-violation="14th_amendment_equal_protection">
+              <div class="violation-header">
+                <label class="violation-checkbox-label">
+                  <input type="checkbox" class="violation-checkbox" data-violation="14th_amendment_equal_protection">
+                  <span class="violation-name">14th Amendment</span>
+                  <span class="violation-subtitle">Equal Protection</span>
+                </label>
+                <div class="violation-actions">
+                  <span class="violation-info-btn" data-violation="fourteenth_amendment" title="View constitutional text">?</span>
+                  <span class="checkbox-quote-link violation-quote-link" data-field="violation_14th_amendment_equal_protection">[src]</span>
+                </div>
+              </div>
+              <div class="violation-details hidden">
+                <div class="violation-detail-row">
+                  <label class="detail-label">Classification</label>
+                  <select class="violation-classification" data-violation="14th_amendment_equal_protection">
+                    <option value="alleged">Alleged</option>
+                    <option value="potential">Potential</option>
+                    <option value="possible">Possible</option>
+                  </select>
+                </div>
+                <div class="violation-detail-row">
+                  <label class="detail-label">Description</label>
+                  <textarea class="violation-description" data-violation="14th_amendment_equal_protection" rows="2" placeholder="Brief description of how this violation applies..."></textarea>
+                </div>
+                <div class="violation-detail-row">
+                  <label class="detail-label">Case Law</label>
+                  <select class="violation-caselaw-select" data-violation="14th_amendment_equal_protection">
+                    <option value="">Select case law...</option>
+                    <option value="custom">-- Custom Entry --</option>
+                  </select>
+                  <input type="text" class="violation-caselaw-custom hidden" data-violation="14th_amendment_equal_protection" placeholder="Enter custom citation...">
+                </div>
+              </div>
+            </div>
+
+            <!-- Medical Neglect -->
+            <div class="violation-card" data-violation="medical_neglect">
+              <div class="violation-header">
+                <label class="violation-checkbox-label">
+                  <input type="checkbox" class="violation-checkbox" data-violation="medical_neglect">
+                  <span class="violation-name">Medical Neglect</span>
+                  <span class="violation-subtitle">Denial of Medical Care</span>
+                </label>
+                <div class="violation-actions">
+                  <span class="violation-info-btn" data-violation="medical_neglect" title="View legal framework">?</span>
+                  <span class="checkbox-quote-link violation-quote-link" data-field="violation_medical_neglect">[src]</span>
+                </div>
+              </div>
+              <div class="violation-details hidden">
+                <div class="violation-detail-row">
+                  <label class="detail-label">Classification</label>
+                  <select class="violation-classification" data-violation="medical_neglect">
+                    <option value="alleged">Alleged</option>
+                    <option value="potential">Potential</option>
+                    <option value="possible">Possible</option>
+                  </select>
+                </div>
+                <div class="violation-detail-row">
+                  <label class="detail-label">Description</label>
+                  <textarea class="violation-description" data-violation="medical_neglect" rows="2" placeholder="Brief description of how this violation applies..."></textarea>
+                </div>
+                <div class="violation-detail-row">
+                  <label class="detail-label">Case Law</label>
+                  <select class="violation-caselaw-select" data-violation="medical_neglect">
+                    <option value="">Select case law...</option>
+                    <option value="custom">-- Custom Entry --</option>
+                  </select>
+                  <input type="text" class="violation-caselaw-custom hidden" data-violation="medical_neglect" placeholder="Enter custom citation...">
+                </div>
+              </div>
+            </div>
+
+            <!-- Excessive Force -->
+            <div class="violation-card" data-violation="excessive_force">
+              <div class="violation-header">
+                <label class="violation-checkbox-label">
+                  <input type="checkbox" class="violation-checkbox" data-violation="excessive_force">
+                  <span class="violation-name">Excessive Force</span>
+                  <span class="violation-subtitle">Unreasonable Use of Force</span>
+                </label>
+                <div class="violation-actions">
+                  <span class="violation-info-btn" data-violation="excessive_force" title="View legal framework">?</span>
+                  <span class="checkbox-quote-link violation-quote-link" data-field="violation_excessive_force">[src]</span>
+                </div>
+              </div>
+              <div class="violation-details hidden">
+                <div class="violation-detail-row">
+                  <label class="detail-label">Classification</label>
+                  <select class="violation-classification" data-violation="excessive_force">
+                    <option value="alleged">Alleged</option>
+                    <option value="potential">Potential</option>
+                    <option value="possible">Possible</option>
+                  </select>
+                </div>
+                <div class="violation-detail-row">
+                  <label class="detail-label">Description</label>
+                  <textarea class="violation-description" data-violation="excessive_force" rows="2" placeholder="Brief description of how this violation applies..."></textarea>
+                </div>
+                <div class="violation-detail-row">
+                  <label class="detail-label">Case Law</label>
+                  <select class="violation-caselaw-select" data-violation="excessive_force">
+                    <option value="">Select case law...</option>
+                    <option value="custom">-- Custom Entry --</option>
+                  </select>
+                  <input type="text" class="violation-caselaw-custom hidden" data-violation="excessive_force" placeholder="Enter custom citation...">
+                </div>
+              </div>
+            </div>
+
+            <!-- False Imprisonment -->
+            <div class="violation-card" data-violation="false_imprisonment">
+              <div class="violation-header">
+                <label class="violation-checkbox-label">
+                  <input type="checkbox" class="violation-checkbox" data-violation="false_imprisonment">
+                  <span class="violation-name">False Imprisonment</span>
+                  <span class="violation-subtitle">Unlawful Detention</span>
+                </label>
+                <div class="violation-actions">
+                  <span class="violation-info-btn" data-violation="false_imprisonment" title="View legal framework">?</span>
+                  <span class="checkbox-quote-link violation-quote-link" data-field="violation_false_imprisonment">[src]</span>
+                </div>
+              </div>
+              <div class="violation-details hidden">
+                <div class="violation-detail-row">
+                  <label class="detail-label">Classification</label>
+                  <select class="violation-classification" data-violation="false_imprisonment">
+                    <option value="alleged">Alleged</option>
+                    <option value="potential">Potential</option>
+                    <option value="possible">Possible</option>
+                  </select>
+                </div>
+                <div class="violation-detail-row">
+                  <label class="detail-label">Description</label>
+                  <textarea class="violation-description" data-violation="false_imprisonment" rows="2" placeholder="Brief description of how this violation applies..."></textarea>
+                </div>
+                <div class="violation-detail-row">
+                  <label class="detail-label">Case Law</label>
+                  <select class="violation-caselaw-select" data-violation="false_imprisonment">
+                    <option value="">Select case law...</option>
+                    <option value="custom">-- Custom Entry --</option>
+                  </select>
+                  <input type="text" class="violation-caselaw-custom hidden" data-violation="false_imprisonment" placeholder="Enter custom citation...">
+                </div>
+              </div>
+            </div>
+
+            <!-- Civil Rights Violation -->
+            <div class="violation-card" data-violation="civil_rights_violation">
+              <div class="violation-header">
+                <label class="violation-checkbox-label">
+                  <input type="checkbox" class="violation-checkbox" data-violation="civil_rights_violation">
+                  <span class="violation-name">Civil Rights Violation</span>
+                  <span class="violation-subtitle">Section 1983 / General</span>
+                </label>
+                <div class="violation-actions">
+                  <span class="violation-info-btn" data-violation="civil_rights" title="View legal framework">?</span>
+                  <span class="checkbox-quote-link violation-quote-link" data-field="violation_civil_rights_violation">[src]</span>
+                </div>
+              </div>
+              <div class="violation-details hidden">
+                <div class="violation-detail-row">
+                  <label class="detail-label">Classification</label>
+                  <select class="violation-classification" data-violation="civil_rights_violation">
+                    <option value="alleged">Alleged</option>
+                    <option value="potential">Potential</option>
+                    <option value="possible">Possible</option>
+                  </select>
+                </div>
+                <div class="violation-detail-row">
+                  <label class="detail-label">Description</label>
+                  <textarea class="violation-description" data-violation="civil_rights_violation" rows="2" placeholder="Brief description of how this violation applies..."></textarea>
+                </div>
+                <div class="violation-detail-row">
+                  <label class="detail-label">Case Law</label>
+                  <select class="violation-caselaw-select" data-violation="civil_rights_violation">
+                    <option value="">Select case law...</option>
+                    <option value="custom">-- Custom Entry --</option>
+                  </select>
+                  <input type="text" class="violation-caselaw-custom hidden" data-violation="civil_rights_violation" placeholder="Enter custom citation...">
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -2468,6 +2815,16 @@
               <div class="quote-picker-list" data-field="name"></div>
             </div>
           </div>
+          
+          <!-- Duplicate Checker -->
+          <div id="duplicateChecker" class="duplicate-checker" style="margin-top: 8px;">
+            <button type="button" id="checkDuplicatesBtn" class="btn btn-sm btn-secondary" style="width: 100%;">
+              🔍 Check for Duplicates
+            </button>
+            <div id="duplicateResults" class="duplicate-results hidden" style="margin-top: 8px; padding: 8px; border-radius: 4px; font-size: 12px;">
+              <!-- Results will be populated here -->
+            </div>
+          </div>
         </div>
         
         <div class="form-row">
@@ -2535,22 +2892,60 @@
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">Occupation
-              <span class="verification-checkbox-wrapper" style="display: none;" data-field="occupation">
-                <input type="checkbox" class="field-verify-checkbox" data-field="occupation">
+            <label class="form-label">Gender
+              <span class="verification-checkbox-wrapper" style="display: none;" data-field="gender">
+                <input type="checkbox" class="field-verify-checkbox" data-field="gender">
                 <span class="checkbox-label">Verified</span>
               </span>
             </label>
-            <input type="text" class="form-input" id="caseOccupation" placeholder="e.g., Journalist">
+            <select class="form-input" id="caseGender">
+              <option value="">Select...</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
             <div class="quote-association" style="position: relative;">
-              <button type="button" class="quote-picker-trigger" data-field="occupation">
+              <button type="button" class="quote-picker-trigger" data-field="gender">
                 <span class="selected-quote-preview">[src] Link...</span>
               </button>
-              <div class="quote-picker-dropdown" data-field="occupation">
+              <div class="quote-picker-dropdown" data-field="gender">
                 <div class="quote-picker-search">
-                  <input type="text" placeholder="Search quotes..." data-field="occupation">
+                  <input type="text" placeholder="Search quotes..." data-field="gender">
                 </div>
-                <div class="quote-picker-list" data-field="occupation"></div>
+                <div class="quote-picker-list" data-field="gender"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Immigration Status
+              <span class="verification-checkbox-wrapper" style="display: none;" data-field="immigration_status">
+                <input type="checkbox" class="field-verify-checkbox" data-field="immigration_status">
+                <span class="checkbox-label">Verified</span>
+              </span>
+            </label>
+            <select class="form-input" id="caseImmigrationStatus">
+              <option value="">Unknown</option>
+              <option value="undocumented">Undocumented</option>
+              <option value="visa_holder">Visa Holder</option>
+              <option value="green_card">Green Card Holder</option>
+              <option value="asylum_seeker">Asylum Seeker</option>
+              <option value="daca">DACA Recipient</option>
+              <option value="tps">TPS Holder</option>
+              <option value="citizen">U.S. Citizen</option>
+              <option value="other">Other</option>
+            </select>
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="immigration_status">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="immigration_status">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="immigration_status">
+                </div>
+                <div class="quote-picker-list" data-field="immigration_status"></div>
               </div>
             </div>
           </div>
@@ -2577,23 +2972,45 @@
           </div>
         </div>
         
-        <div class="form-group">
-          <label class="form-label">Location
-            <span class="verification-checkbox-wrapper" style="display: none;" data-field="location">
-              <input type="checkbox" class="field-verify-checkbox" data-field="location">
-              <span class="checkbox-label">Verified</span>
-            </span>
-          </label>
-          <input type="text" class="form-input" id="caseLocation" placeholder="City, State">
-          <div class="quote-association" style="position: relative;">
-            <button type="button" class="quote-picker-trigger" data-field="location">
-              <span class="selected-quote-preview">[src] Link quote...</span>
-            </button>
-            <div class="quote-picker-dropdown" data-field="location">
-              <div class="quote-picker-search">
-                <input type="text" placeholder="Search quotes..." data-field="location">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">City
+              <span class="verification-checkbox-wrapper" style="display: none;" data-field="city">
+                <input type="checkbox" class="field-verify-checkbox" data-field="city">
+                <span class="checkbox-label">Verified</span>
+              </span>
+            </label>
+            <input type="text" class="form-input" id="caseCity" placeholder="City">
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="city">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="city">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="city">
+                </div>
+                <div class="quote-picker-list" data-field="city"></div>
               </div>
-              <div class="quote-picker-list" data-field="location"></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">State
+              <span class="verification-checkbox-wrapper" style="display: none;" data-field="state">
+                <input type="checkbox" class="field-verify-checkbox" data-field="state">
+                <span class="checkbox-label">Verified</span>
+              </span>
+            </label>
+            <input type="text" class="form-input" id="caseState" placeholder="State">
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="state">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="state">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="state">
+                </div>
+                <div class="quote-picker-list" data-field="state"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -3054,7 +3471,6 @@
             <label class="form-label">Category</label>
             <select class="form-input" id="manualQuoteCategory">
               <option value="timeline">Timeline Event</option>
-              <option value="official">Official Statement</option>
               <option value="medical">Medical Information</option>
               <option value="legal">Legal/Immigration</option>
               <option value="context">Background Context</option>
@@ -3092,7 +3508,7 @@
         <div style="margin-bottom: 12px;">
           <button id="reviewFilterToggle" class="filter-btn active" style="width: 100%; padding: 10px; text-align: left; display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <span style="font-weight: 600; font-size: 13px;" id="reviewFilterLabel">All Cases</span>
+              <span style="font-weight: 600; font-size: 13px;" id="reviewFilterLabel">Needs Review</span>
               <span style="font-size: 18px; font-weight: bold; margin-left: 8px;" id="reviewFilterActiveCount">0</span>
             </div>
             <span style="font-size: 12px; opacity: 0.6;">▼ Filters</span>
@@ -3100,11 +3516,11 @@
           
           <div id="reviewFilterDropdown" style="display: none; margin-top: 8px; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px; background: #f9fafb;">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px;">
-              <button class="filter-btn active" data-filter="all" data-label="All Cases" style="padding: 8px; text-align: center; font-size: 11px;">
+              <button class="filter-btn" data-filter="all" data-label="All Cases" style="padding: 8px; text-align: center; font-size: 11px;">
                 <div style="font-size: 16px; font-weight: bold;" id="reviewFilterAllCount">0</div>
                 <div style="opacity: 0.8;">All Cases</div>
               </button>
-              <button class="filter-btn" data-filter="needs_review" data-label="Needs Review" style="padding: 8px; text-align: center; font-size: 11px; background: #fef3c7; border-color: #fbbf24;">
+              <button class="filter-btn active" data-filter="needs_review" data-label="Needs Review" style="padding: 8px; text-align: center; font-size: 11px; background: #fef3c7; border-color: #fbbf24;">
                 <div style="font-size: 16px; font-weight: bold;" id="reviewFilterNeedsReviewCount">0</div>
                 <div style="opacity: 0.8;">Needs Review</div>
               </button>

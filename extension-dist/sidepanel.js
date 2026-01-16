@@ -403,6 +403,10 @@ async function init() {
   updatePageInfo();
   loadQuoteAssociations();
   
+  // Initialize violation case law dropdowns
+  initializeAllCaseLawDropdowns();
+  updateViolationCount();
+  
   // Check if opened in wide mode popup
   if (window.location.search.includes('wide=true')) {
     enableWideMode();
@@ -436,9 +440,11 @@ function cacheElements() {
   elements.caseDod = document.getElementById('caseDod');
   elements.caseAge = document.getElementById('caseAge');
   elements.caseCountry = document.getElementById('caseCountry');
-  elements.caseOccupation = document.getElementById('caseOccupation');
+  elements.caseGender = document.getElementById('caseGender');
+  elements.caseImmigrationStatus = document.getElementById('caseImmigrationStatus');
   elements.caseFacility = document.getElementById('caseFacility');
-  elements.caseLocation = document.getElementById('caseLocation');
+  elements.caseCity = document.getElementById('caseCity');
+  elements.caseState = document.getElementById('caseState');
   elements.caseCause = document.getElementById('caseCause');
   // Media elements
   elements.addMediaBtn = document.getElementById('addMediaBtn');
@@ -644,7 +650,7 @@ function setupEventListeners() {
   elements.incidentType.addEventListener('change', handleIncidentTypeChange);
   
   // Form inputs - save on change
-  ['caseName', 'caseDod', 'caseAge', 'caseCountry', 'caseOccupation', 'caseFacility', 'caseLocation', 'caseCause'].forEach(id => {
+  ['caseName', 'caseDod', 'caseAge', 'caseCountry', 'caseGender', 'caseImmigrationStatus', 'caseFacility', 'caseCity', 'caseState', 'caseCause'].forEach(id => {
     if (elements[id]) {
       elements[id].addEventListener('input', () => {
         updateCaseFromForm();
@@ -657,9 +663,11 @@ function setupEventListeners() {
             'caseDod': 'date',
             'caseAge': 'age',
             'caseCountry': 'nationality',
-            'caseOccupation': 'occupation',
+            'caseGender': 'gender',
+            'caseImmigrationStatus': 'immigration_status',
             'caseFacility': 'facility',
-            'caseLocation': 'location',
+            'caseCity': 'city',
+            'caseState': 'state',
             'caseCause': 'summary'
           }[id];
           if (mappedName && verifiedFields[mappedName]) {
@@ -756,42 +764,57 @@ function setupEventListeners() {
     checkbox.addEventListener('change', updateCaseFromForm);
   });
   
-  // Violation select dropdowns (three-tier system)
-  document.querySelectorAll('.violation-select').forEach(select => {
-    select.addEventListener('change', (e) => {
-      updateViolationSelectStyle(e.target);
-      updateViolationBasisVisibility();
+  // NEW: Violation checkbox cards
+  document.querySelectorAll('.violation-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', (e) => {
+      const violationType = e.target.dataset.violation;
+      const card = e.target.closest('.violation-card');
+      const details = card.querySelector('.violation-details');
+      
+      if (e.target.checked) {
+        card.classList.add('selected');
+        details.classList.remove('hidden');
+      } else {
+        card.classList.remove('selected');
+        details.classList.add('hidden');
+      }
+      
+      updateViolationCount();
       updateCaseFromForm();
     });
   });
   
-  // Violation basis save button
-  const saveViolationBasisBtn = document.getElementById('saveViolationBasis');
-  if (saveViolationBasisBtn) {
-    saveViolationBasisBtn.addEventListener('click', saveViolationBasis);
-  }
-  
-  // Violation basis type dropdown - populate case law when changed
-  const violationBasisType = document.getElementById('violationBasisType');
-  if (violationBasisType) {
-    violationBasisType.addEventListener('change', populateCaseLawDropdown);
-  }
-  
-  // Case law dropdown - show custom input when "custom" selected
-  const caseLawSelect = document.getElementById('violationCaseLawSelect');
-  if (caseLawSelect) {
-    caseLawSelect.addEventListener('change', handleCaseLawSelection);
-  }
-  
-  // View selected case law button
-  const viewCaseLawBtn = document.getElementById('viewSelectedCaseLaw');
-  console.log('View case law button found:', !!viewCaseLawBtn);
-  if (viewCaseLawBtn) {
-    viewCaseLawBtn.addEventListener('click', () => {
-      console.log('View button clicked');
-      viewSelectedCaseLaw();
+  // Violation case law dropdown - show custom input when "custom" selected
+  document.querySelectorAll('.violation-caselaw-select').forEach(select => {
+    select.addEventListener('change', (e) => {
+      const violationType = e.target.dataset.violation;
+      const customInput = document.querySelector(`.violation-caselaw-custom[data-violation="${violationType}"]`);
+      if (customInput) {
+        if (e.target.value === 'custom') {
+          customInput.classList.remove('hidden');
+          customInput.focus();
+        } else {
+          customInput.classList.add('hidden');
+        }
+      }
+      updateCaseFromForm();
     });
-  }
+  });
+  
+  // Violation descriptions - auto-save on change
+  document.querySelectorAll('.violation-description').forEach(textarea => {
+    textarea.addEventListener('change', updateCaseFromForm);
+  });
+  
+  // Violation classification dropdowns
+  document.querySelectorAll('.violation-classification').forEach(select => {
+    select.addEventListener('change', updateCaseFromForm);
+  });
+  
+  // Custom case law inputs
+  document.querySelectorAll('.violation-caselaw-custom').forEach(input => {
+    input.addEventListener('change', updateCaseFromForm);
+  });
   
   // Agencies collapsible
   if (elements.agenciesHeader) {
@@ -878,6 +901,12 @@ function setupEventListeners() {
   
   // Clear case button
   elements.clearCaseBtn.addEventListener('click', clearCase);
+  
+  // Duplicate checker button
+  const checkDuplicatesBtn = document.getElementById('checkDuplicatesBtn');
+  if (checkDuplicatesBtn) {
+    checkDuplicatesBtn.addEventListener('click', checkForDuplicates);
+  }
   
   // Add source button
   elements.addSourceBtn.addEventListener('click', addCurrentPageAsSource);
@@ -1192,9 +1221,13 @@ async function checkUserRole() {
         const isAnalyst = userRole === 'analyst' || userRole === 'admin' || userRole === 'editor';
         reviewTab.style.display = isAnalyst ? '' : 'none';
         
-        // If analyst, load review queue
+        // If analyst, load review queue (only pending cases needing review)
         if (isAnalyst) {
-          loadReviewQueue();
+          loadReviewQueue('needs_review');
+          // Update UI to show "Needs Review" as default filter
+          reviewQueueFilter = 'needs_review';
+          const labelEl = document.getElementById('reviewFilterLabel');
+          if (labelEl) labelEl.textContent = 'Needs Review';
         }
       }
       
@@ -1786,7 +1819,8 @@ function populateCaseForm() {
   elements.caseAge.value = currentCase.age || '';
   elements.caseCountry.value = currentCase.country || '';
   elements.caseFacility.value = currentCase.facility || '';
-  elements.caseLocation.value = currentCase.location || '';
+  elements.caseCity.value = currentCase.city || '';
+  elements.caseState.value = currentCase.state || '';
   elements.caseCause.value = currentCase.causeOfDeath || '';
   
   // Populate image URL and show preview if valid
@@ -1800,9 +1834,14 @@ function populateCaseForm() {
     }
   }
   
-  // Populate occupation
-  if (elements.caseOccupation) {
-    elements.caseOccupation.value = currentCase.occupation || '';
+  // Populate gender
+  if (elements.caseGender) {
+    elements.caseGender.value = currentCase.gender || '';
+  }
+  
+  // Populate immigration status
+  if (elements.caseImmigrationStatus) {
+    elements.caseImmigrationStatus.value = currentCase.immigration_status || '';
   }
   
   // Populate incident type
@@ -1817,29 +1856,63 @@ function populateCaseForm() {
     checkbox.checked = currentCase.agencies && currentCase.agencies.includes(agency);
   });
   
-  // Populate violations (new three-tier system)
-  document.querySelectorAll('.violation-select').forEach(select => {
-    const violation = select.dataset.violation;
-    let classification = '';
+  // Populate violations using new checkbox-based system
+  // First try to use violations_data (full data), then fall back to legacy arrays
+  if (currentCase.violations_data && Array.isArray(currentCase.violations_data)) {
+    populateViolationsFromData(currentCase.violations_data);
+  } else {
+    // Legacy support - convert old format to new format
+    const legacyViolations = [];
     
-    // Check each tier
-    if (currentCase.violations_alleged && currentCase.violations_alleged.includes(violation)) {
-      classification = 'alleged';
-    } else if (currentCase.violations_potential && currentCase.violations_potential.includes(violation)) {
-      classification = 'potential';
-    } else if (currentCase.violations_possible && currentCase.violations_possible.includes(violation)) {
-      classification = 'possible';
-    } else if (currentCase.violations && currentCase.violations.includes(violation)) {
-      // Legacy support - treat as alleged
-      classification = 'alleged';
+    // Build from tiered arrays
+    if (currentCase.violations_alleged) {
+      currentCase.violations_alleged.forEach(v => {
+        const details = currentCase.violation_details_map?.[v] || {};
+        legacyViolations.push({
+          type: v,
+          classification: 'alleged',
+          description: details.description || '',
+          constitutional_basis: details.constitutional_basis || ''
+        });
+      });
+    }
+    if (currentCase.violations_potential) {
+      currentCase.violations_potential.forEach(v => {
+        const details = currentCase.violation_details_map?.[v] || {};
+        legacyViolations.push({
+          type: v,
+          classification: 'potential',
+          description: details.description || '',
+          constitutional_basis: details.constitutional_basis || ''
+        });
+      });
+    }
+    if (currentCase.violations_possible) {
+      currentCase.violations_possible.forEach(v => {
+        const details = currentCase.violation_details_map?.[v] || {};
+        legacyViolations.push({
+          type: v,
+          classification: 'possible',
+          description: details.description || '',
+          constitutional_basis: details.constitutional_basis || ''
+        });
+      });
     }
     
-    select.value = classification;
-    updateViolationSelectStyle(select);
-  });
-  
-  // Show/hide violation basis section
-  updateViolationBasisVisibility();
+    // If still nothing, try plain violations array
+    if (legacyViolations.length === 0 && currentCase.violations) {
+      currentCase.violations.forEach(v => {
+        legacyViolations.push({
+          type: v,
+          classification: 'alleged',
+          description: '',
+          constitutional_basis: ''
+        });
+      });
+    }
+    
+    populateViolationsFromData(legacyViolations);
+  }
   
   // Populate type-specific fields
   if (elements.deathCause) elements.deathCause.value = currentCase.deathCause || '';
@@ -1892,92 +1965,170 @@ function populateCaseForm() {
 }
 
 // ============================================
-// VIOLATION CLASSIFICATION (THREE-TIER SYSTEM)
+// VIOLATION CLASSIFICATION (CHECKBOX-BASED)
 // ============================================
 
-// Update violation select dropdown styling based on value
-function updateViolationSelectStyle(select) {
-  select.classList.remove('has-value-alleged', 'has-value-potential', 'has-value-possible');
-  const violationItem = select.closest('.violation-item');
+// Update violation count in header
+function updateViolationCount() {
+  const countEl = document.getElementById('violationCount');
+  if (!countEl) return;
   
-  if (select.value) {
-    select.classList.add(`has-value-${select.value}`);
-    if (violationItem) violationItem.classList.add('has-violation');
-  } else {
-    if (violationItem) violationItem.classList.remove('has-violation');
-  }
+  const checkedCount = document.querySelectorAll('.violation-checkbox:checked').length;
+  countEl.textContent = `(${checkedCount})`;
 }
 
-// Show/hide violation basis section based on whether potential/possible is selected
-function updateViolationBasisVisibility() {
-  const basisSection = document.getElementById('violationBasisSection');
-  if (!basisSection) return;
+// Populate case law dropdown for a specific violation type
+function populateViolationCaseLaw(violationType) {
+  const select = document.querySelector(`.violation-caselaw-select[data-violation="${violationType}"]`);
+  if (!select) return;
   
-  let hasPotentialOrPossible = false;
-  document.querySelectorAll('.violation-select').forEach(select => {
-    if (select.value === 'potential' || select.value === 'possible') {
-      hasPotentialOrPossible = true;
-    }
-  });
-  
-  basisSection.classList.toggle('hidden', !hasPotentialOrPossible);
-  
-  // Update the violation type dropdown to only show selected violations
-  if (hasPotentialOrPossible) {
-    populateViolationTypeDropdown();
-  }
-}
-
-// Populate the violation type dropdown with only selected potential/possible violations
-function populateViolationTypeDropdown() {
-  const violationBasisType = document.getElementById('violationBasisType');
-  if (!violationBasisType) return;
-  
-  const currentValue = violationBasisType.value;
-  
-  // Clear and rebuild
-  violationBasisType.innerHTML = '<option value="">Select violation...</option>';
-  
-  // Map of violation data-violation values to display names and LEGAL_REFERENCES keys
-  const violationMap = {
-    'first_amendment': { display: '1st Amendment (Speech/Assembly)', refKey: 'first_amendment' },
-    'fourth_amendment': { display: '4th Amendment (Search & Seizure)', refKey: 'fourth_amendment' },
-    'fifth_amendment': { display: '5th Amendment (Due Process)', refKey: 'fifth_amendment' },
-    'sixth_amendment': { display: '6th Amendment (Right to Counsel)', refKey: 'sixth_amendment' },
-    'eighth_amendment': { display: '8th Amendment (Cruel & Unusual)', refKey: 'eighth_amendment' },
-    '14th_amendment': { display: '14th Amendment (Equal Protection)', refKey: 'fourteenth_amendment' },
-    'civil_rights': { display: 'Civil Rights (§ 1983/Bivens)', refKey: 'civil_rights' },
-    'excessive_force': { display: 'Excessive Force', refKey: 'excessive_force' },
-    'wrongful_death': { display: 'Wrongful Death', refKey: 'wrongful_death' },
-    'asylum_violation': { display: 'Asylum Violation', refKey: 'asylum_violation' }
+  // Map violation types to legal reference keys
+  const refKeyMap = {
+    '1st_amendment': 'first_amendment',
+    '4th_amendment': 'fourth_amendment',
+    '5th_amendment_due_process': 'fifth_amendment',
+    '8th_amendment': 'eighth_amendment',
+    '14th_amendment_equal_protection': 'fourteenth_amendment',
+    'medical_neglect': 'eighth_amendment',  // Medical neglect cases like Estelle v. Gamble are 8th Amendment
+    'excessive_force': 'excessive_force',
+    'false_imprisonment': 'civil_rights',
+    'civil_rights_violation': 'civil_rights'
   };
   
-  // Find which violations are set to potential or possible
-  document.querySelectorAll('.violation-select').forEach(select => {
-    if (select.value === 'potential' || select.value === 'possible') {
-      const violationType = select.dataset.violation;
-      const mapping = violationMap[violationType];
+  const refKey = refKeyMap[violationType];
+  if (!refKey || !LEGAL_REFERENCES || !LEGAL_REFERENCES[refKey]) {
+    return;
+  }
+  
+  const ref = LEGAL_REFERENCES[refKey];
+  const cases = ref.cases || [];
+  
+  // Clear existing options except first two
+  while (select.options.length > 2) {
+    select.remove(2);
+  }
+  
+  // Add case law options
+  cases.forEach(c => {
+    const option = document.createElement('option');
+    option.value = `${c.name} (${c.citation})`;
+    option.textContent = `${c.name} (${c.citation})`;
+    select.appendChild(option);
+  });
+}
+
+// Initialize all case law dropdowns
+function initializeAllCaseLawDropdowns() {
+  document.querySelectorAll('.violation-caselaw-select').forEach(select => {
+    const violationType = select.dataset.violation;
+    populateViolationCaseLaw(violationType);
+  });
+}
+
+// Get selected violations data for submission
+function getSelectedViolations() {
+  const violations = [];
+  
+  document.querySelectorAll('.violation-checkbox:checked').forEach(checkbox => {
+    const violationType = checkbox.dataset.violation;
+    const card = checkbox.closest('.violation-card');
+    
+    const classification = card.querySelector('.violation-classification')?.value || 'alleged';
+    const description = card.querySelector('.violation-description')?.value || '';
+    const caseLawSelect = card.querySelector('.violation-caselaw-select');
+    const caseLawCustom = card.querySelector('.violation-caselaw-custom');
+    
+    let caseLaw = '';
+    if (caseLawSelect && caseLawSelect.value === 'custom' && caseLawCustom) {
+      caseLaw = caseLawCustom.value;
+    } else if (caseLawSelect && caseLawSelect.value && caseLawSelect.value !== 'custom') {
+      caseLaw = caseLawSelect.value;
+    }
+    
+    violations.push({
+      type: violationType,
+      classification: classification,
+      description: description,
+      constitutional_basis: caseLaw
+    });
+  });
+  
+  return violations;
+}
+
+// Populate violations from loaded case data
+function populateViolationsFromData(violationsData) {
+  // First, clear all checkboxes
+  document.querySelectorAll('.violation-checkbox').forEach(cb => {
+    cb.checked = false;
+    const card = cb.closest('.violation-card');
+    card.classList.remove('selected');
+    card.querySelector('.violation-details').classList.add('hidden');
+  });
+  
+  if (!violationsData || !Array.isArray(violationsData)) {
+    updateViolationCount();
+    return;
+  }
+  
+  violationsData.forEach(v => {
+    const checkbox = document.querySelector(`.violation-checkbox[data-violation="${v.type}"]`);
+    if (!checkbox) return;
+    
+    checkbox.checked = true;
+    const card = checkbox.closest('.violation-card');
+    card.classList.add('selected');
+    card.querySelector('.violation-details').classList.remove('hidden');
+    
+    // Set classification
+    const classSelect = card.querySelector('.violation-classification');
+    if (classSelect && v.classification) {
+      classSelect.value = v.classification;
+    }
+    
+    // Set description
+    const descTextarea = card.querySelector('.violation-description');
+    if (descTextarea && v.description) {
+      descTextarea.value = v.description;
+    }
+    
+    // Set case law
+    const caseLawSelect = card.querySelector('.violation-caselaw-select');
+    const caseLawCustom = card.querySelector('.violation-caselaw-custom');
+    
+    if (v.constitutional_basis && caseLawSelect) {
+      // Check if it's a known case law option
+      const options = Array.from(caseLawSelect.options);
+      const matchingOption = options.find(opt => opt.value === v.constitutional_basis);
       
-      if (mapping) {
-        const option = document.createElement('option');
-        option.value = mapping.refKey;
-        option.textContent = `${mapping.display} [${select.value}]`;
-        violationBasisType.appendChild(option);
+      if (matchingOption) {
+        caseLawSelect.value = v.constitutional_basis;
+        if (caseLawCustom) caseLawCustom.classList.add('hidden');
+      } else {
+        // Custom entry
+        caseLawSelect.value = 'custom';
+        if (caseLawCustom) {
+          caseLawCustom.classList.remove('hidden');
+          caseLawCustom.value = v.constitutional_basis;
+        }
       }
     }
   });
   
-  // Try to restore previous selection if still valid
-  if (currentValue) {
-    const options = Array.from(violationBasisType.options);
-    const stillValid = options.some(opt => opt.value === currentValue);
-    if (stillValid) {
-      violationBasisType.value = currentValue;
-    } else {
-      // Reset case law dropdown too
-      populateCaseLawDropdown();
-    }
-  }
+  updateViolationCount();
+}
+
+// Legacy functions - kept for compatibility but mostly no-op now
+function updateViolationSelectStyle(select) {
+  // No longer used - kept for compatibility
+}
+
+function updateViolationBasisVisibility() {
+  // No longer used - kept for compatibility
+}
+
+function populateViolationTypeDropdown() {
+  // No longer used - kept for compatibility
 }
 
 // Populate case law dropdown based on selected violation type
@@ -2312,12 +2463,10 @@ function handleIncidentTypeChange() {
     }
   });
   
-  // Show violations section for relevant types
+  // Show violations section ALWAYS (matches web review page behavior)
+  // The extension is an analyst tool, so violations should always be visible
   if (elements.violationsSection) {
-    const showViolations = ['rights_violation', 'arrest', 'shooting', 'excessive_force', 
-                            'death_in_custody', 'death_during_operation', 'death_at_protest',
-                            'protest_suppression', 'retaliation'].includes(type);
-    elements.violationsSection.classList.toggle('hidden', !showViolations);
+    elements.violationsSection.classList.remove('hidden');
   }
   
   // Show type-specific section
@@ -2405,27 +2554,35 @@ function updateCaseFromForm() {
     agencies.push(checkbox.value);
   });
   
-  // Collect violations
-  // Collect violations by classification (three-tier system)
+  // Collect violations using new checkbox-based system
+  const selectedViolations = getSelectedViolations();
+  
+  // Build legacy arrays for backwards compatibility
   const violations_alleged = [];
   const violations_potential = [];
   const violations_possible = [];
+  const violations = [];
   
-  document.querySelectorAll('.violation-select').forEach(select => {
-    const violation = select.dataset.violation;
-    const classification = select.value;
-    
-    if (classification === 'alleged') {
-      violations_alleged.push(violation);
-    } else if (classification === 'potential') {
-      violations_potential.push(violation);
-    } else if (classification === 'possible') {
-      violations_possible.push(violation);
+  selectedViolations.forEach(v => {
+    violations.push(v.type);
+    if (v.classification === 'alleged') {
+      violations_alleged.push(v.type);
+    } else if (v.classification === 'potential') {
+      violations_potential.push(v.type);
+    } else if (v.classification === 'possible') {
+      violations_possible.push(v.type);
     }
   });
   
-  // Legacy violations array (for backwards compatibility, combine all)
-  const violations = [...violations_alleged, ...violations_potential, ...violations_possible];
+  // Build violation details map
+  const violation_details_map = {};
+  selectedViolations.forEach(v => {
+    violation_details_map[v.type] = {
+      classification: v.classification,
+      description: v.description,
+      constitutional_basis: v.constitutional_basis
+    };
+  });
   
   // Collect force types
   const forceTypes = [];
@@ -2439,9 +2596,11 @@ function updateCaseFromForm() {
     dateOfDeath: elements.caseDod.value,
     age: elements.caseAge.value,
     country: elements.caseCountry.value,
-    occupation: elements.caseOccupation ? elements.caseOccupation.value : '',
+    gender: elements.caseGender ? elements.caseGender.value : '',
+    immigration_status: elements.caseImmigrationStatus ? elements.caseImmigrationStatus.value : '',
     facility: elements.caseFacility.value,
-    location: elements.caseLocation.value,
+    city: elements.caseCity ? elements.caseCity.value : '',
+    state: elements.caseState ? elements.caseState.value : '',
     causeOfDeath: elements.caseCause.value,
     imageUrl: elements.caseImageUrl ? elements.caseImageUrl.value.trim() : '',
     agencies: agencies,
@@ -2449,7 +2608,8 @@ function updateCaseFromForm() {
     violations_alleged: violations_alleged,
     violations_potential: violations_potential,
     violations_possible: violations_possible,
-    violation_details_map: currentCase.violation_details_map || {},
+    violation_details_map: violation_details_map,
+    violations_data: selectedViolations,  // Full violation data for submission
     // Death-specific
     deathCause: elements.deathCause ? elements.deathCause.value : '',
     deathManner: elements.deathManner ? elements.deathManner.value : '',
@@ -2840,9 +3000,11 @@ const fieldToPickerMap = {
   'caseDod': 'date',
   'caseAge': 'age',
   'caseCountry': 'nationality',
-  'caseOccupation': 'occupation',
+  'caseGender': 'gender',
+  'caseImmigrationStatus': 'immigration_status',
   'caseFacility': 'facility',
-  'caseLocation': 'location',
+  'caseCity': 'city',
+  'caseState': 'state',
   'caseCause': 'summary',
   'deathCause': 'death_cause',
   'deathManner': 'death_manner',
@@ -2863,9 +3025,11 @@ function getFieldValueForQuotePicker(pickerField) {
     'date': 'caseDod',
     'age': 'caseAge',
     'nationality': 'caseCountry',
-    'occupation': 'caseOccupation',
+    'gender': 'caseGender',
+    'immigration_status': 'caseImmigrationStatus',
     'facility': 'caseFacility',
-    'location': 'caseLocation',
+    'city': 'caseCity',
+    'state': 'caseState',
     'summary': 'caseCause',
     'death_cause': 'deathCause',
     'death_manner': 'deathManner',
@@ -3068,19 +3232,6 @@ function openLegalRefModal(violationType) {
     
     html += '</div>';
   }
-  
-  // Use for legal basis button
-  html += `
-    <div class="legal-ref-section">
-      <h4>Use in This Case</h4>
-      <p style="font-size: 11px; color: #6b7280; margin-bottom: 8px;">
-        Click below to automatically fill the Legal Framework field with this violation's primary case law.
-      </p>
-      <button class="btn btn-sm" style="background: #3b82f6; color: white;" onclick="useLegalFramework('${violationType}')">
-        Use as Legal Framework
-      </button>
-    </div>
-  `;
   
   // Important notice
   html += `
@@ -5111,9 +5262,11 @@ function getFieldInputElement(fieldName) {
     'date': 'caseDod',
     'age': 'caseAge',
     'nationality': 'caseCountry',
-    'occupation': 'caseOccupation',
+    'gender': 'caseGender',
+    'immigration_status': 'caseImmigrationStatus',
     'facility': 'caseFacility',
-    'location': 'caseLocation',
+    'city': 'caseCity',
+    'state': 'caseState',
     'summary': 'caseCause',
     'incident_type': 'incidentType',
     'death_cause': 'deathCause',
@@ -5284,9 +5437,11 @@ async function submitVerification() {
       'date': 'caseDod',
       'age': 'caseAge',
       'nationality': 'caseCountry',
-      'occupation': 'caseOccupation',
+      'gender': 'caseGender',
+      'immigration_status': 'caseImmigrationStatus',
       'facility': 'caseFacility',
-      'location': 'caseLocation',
+      'city': 'caseCity',
+      'state': 'caseState',
       'summary': 'caseCause',
       'incident_type': 'incidentType',
       'death_cause': 'deathCause',
@@ -5443,6 +5598,99 @@ function newCase() {
   clearCase();
 }
 
+// Check for duplicate cases
+async function checkForDuplicates() {
+  const name = elements.caseName ? elements.caseName.value.trim() : '';
+  const resultsDiv = document.getElementById('duplicateResults');
+  const btn = document.getElementById('checkDuplicatesBtn');
+  
+  if (!resultsDiv) return;
+  
+  if (!name || name.length < 2) {
+    resultsDiv.innerHTML = '<div style="color: #92400e;">Enter at least 2 characters in the name field to check for duplicates.</div>';
+    resultsDiv.classList.remove('hidden', 'has-matches', 'no-matches', 'error');
+    resultsDiv.classList.add('has-matches');
+    return;
+  }
+  
+  // Get API base URL from settings
+  const settings = await chrome.storage.local.get('apiUrl');
+  const apiUrl = settings.apiUrl || 'https://ice-deaths.vercel.app';
+  
+  // Show loading state
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '🔍 Checking...';
+  }
+  resultsDiv.classList.remove('hidden', 'has-matches', 'no-matches', 'error');
+  resultsDiv.innerHTML = '<div style="text-align: center;">Searching...</div>';
+  
+  try {
+    const response = await fetch(`${apiUrl}/api/duplicate-check?name=${encodeURIComponent(name)}`);
+    
+    if (!response.ok) {
+      throw new Error('Search failed');
+    }
+    
+    const data = await response.json();
+    const cases = data.cases || [];
+    
+    if (cases.length === 0) {
+      resultsDiv.classList.add('no-matches');
+      resultsDiv.innerHTML = '<div style="color: #166534;">✓ No existing cases found matching this name.</div>';
+    } else {
+      resultsDiv.classList.add('has-matches');
+      let html = `<div style="color: #92400e; margin-bottom: 8px;"><strong>⚠️ ${cases.length} potential match${cases.length > 1 ? 'es' : ''} found:</strong></div>`;
+      
+      cases.forEach(c => {
+        const statusClass = c.type || 'unverified';
+        const statusLabel = {
+          'verified': 'Verified',
+          'unverified': 'Unverified',
+          'in_review': 'In Review',
+          'guest_report': 'Guest Report'
+        }[statusClass] || 'Unknown';
+        
+        html += `
+          <div class="duplicate-match">
+            <div class="duplicate-match-name">${escapeHtml(c.name)}</div>
+            <div class="duplicate-match-details">
+              ${c.incident_date ? formatDate(c.incident_date) : 'No date'} 
+              ${c.city ? '• ' + escapeHtml(c.city) : ''} 
+              ${c.state ? ', ' + escapeHtml(c.state) : ''}
+            </div>
+            <span class="duplicate-match-status ${statusClass}">${statusLabel}</span>
+            ${c.id ? `<a href="${apiUrl}/incidents/${c.id}" target="_blank" class="duplicate-match-link">View case →</a>` : ''}
+          </div>
+        `;
+      });
+      
+      html += '<div style="margin-top: 8px; font-size: 11px; color: #6b7280;">If this is a new case, proceed with entry. If this matches an existing case, consider adding information to the existing record instead.</div>';
+      resultsDiv.innerHTML = html;
+    }
+  } catch (err) {
+    console.error('Duplicate check error:', err);
+    resultsDiv.classList.add('error');
+    resultsDiv.innerHTML = '<div style="color: #dc2626;">Failed to check for duplicates. Ensure you are connected to the server.</div>';
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '🔍 Check for Duplicates';
+    }
+  }
+}
+
+// Helper function to format date
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  try {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch (e) {
+    return dateStr;
+  }
+}
+
 // Clear current case
 function clearCase() {
   currentCase = {
@@ -5451,12 +5699,19 @@ function clearCase() {
     dateOfDeath: '',
     age: '',
     country: '',
-    occupation: '',
+    gender: '',
+    immigration_status: '',
     facility: '',
-    location: '',
+    city: '',
+    state: '',
     causeOfDeath: '',
     agencies: [],
     violations: [],
+    violations_alleged: [],
+    violations_potential: [],
+    violations_possible: [],
+    violation_details_map: {},
+    violations_data: [],
     deathCause: '',
     deathManner: '',
     deathCustodyDuration: '',
@@ -5489,10 +5744,30 @@ function clearCase() {
     checkbox.checked = false;
   });
   
-  // Clear violation checkboxes
-  document.querySelectorAll('[id^="violation-"]').forEach(checkbox => {
+  // Clear violation checkboxes (new card-based system)
+  document.querySelectorAll('.violation-checkbox').forEach(checkbox => {
     checkbox.checked = false;
+    const card = checkbox.closest('.violation-card');
+    if (card) {
+      card.classList.remove('selected');
+      const details = card.querySelector('.violation-details');
+      if (details) details.classList.add('hidden');
+      
+      // Clear form fields within card
+      const classification = card.querySelector('.violation-classification');
+      if (classification) classification.value = 'alleged';
+      const description = card.querySelector('.violation-description');
+      if (description) description.value = '';
+      const caseLawSelect = card.querySelector('.violation-caselaw-select');
+      if (caseLawSelect) caseLawSelect.value = '';
+      const caseLawCustom = card.querySelector('.violation-caselaw-custom');
+      if (caseLawCustom) {
+        caseLawCustom.value = '';
+        caseLawCustom.classList.add('hidden');
+      }
+    }
   });
+  updateViolationCount();
   
   populateCaseForm();
   renderQuotes();
@@ -5522,6 +5797,8 @@ chrome.runtime.onMessage.addListener((message) => {
     case 'QUOTE_VERIFIED':
       // User-selected quote added directly to verified - add to top and show it
       verifiedQuotes.unshift(message.quote);
+      // Auto-verify the quote since user explicitly selected it
+      verifiedFields[`quote_${message.quote.id}`] = true;
       renderQuotes();
       syncQuotesToBackground();
       // Switch to Case tab to show the new quote
@@ -5939,7 +6216,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
 // ============================================
 
 // Current filter for review queue
-let reviewQueueFilter = 'all';
+let reviewQueueFilter = 'needs_review';
 
 // Load review queue from API (unverified cases needing first verification)
 async function loadReviewQueue(status = 'all') {
@@ -6629,6 +6906,12 @@ function renderReviewQueue() {
 async function loadReviewCaseDetails(incidentId) {
   console.log('loadReviewCaseDetails called with ID:', incidentId);
   
+  // Prevent conflict with validate mode
+  if (validateMode) {
+    alert('You are currently validating a case. Please finish or cancel the validation before reviewing a different case.');
+    return;
+  }
+  
   try {
     const response = await fetch(`${apiUrl}/api/incidents/${incidentId}/verify`, {
       headers: {
@@ -7254,6 +7537,12 @@ function renderValidationQueue() {
 
 // Load a case for validation
 async function loadValidationCase(incidentId) {
+  // Prevent conflict with review mode
+  if (reviewMode) {
+    alert('You are currently reviewing a case. Please finish or cancel the review before validating a different case.');
+    return;
+  }
+  
   try {
     // Show loading state
     const queueView = document.getElementById('validateQueueView');
@@ -7303,7 +7592,7 @@ async function loadValidationCase(incidentId) {
     const displayFields = [
       'subject_name', 'incident_date', 'incident_type', 'city', 'state', 
       'country', 'facility', 'subject_age', 'subject_gender', 
-      'subject_nationality', 'subject_immigration_status', 'subject_occupation', 'summary'
+      'subject_nationality', 'subject_immigration_status', 'summary'
     ];
     
     for (const fieldKey of displayFields) {
@@ -7326,6 +7615,11 @@ async function loadValidationCase(incidentId) {
     // Sources
     for (const source of data.sources || []) {
       validationState[`source_${source.id}`] = { checked: false, reason: '' };
+    }
+    
+    // Violations
+    for (const violation of data.violations || []) {
+      validationState[`violation_${violation.id}`] = { checked: false, reason: '' };
     }
     
     renderValidationCase(data);
@@ -7421,7 +7715,6 @@ function renderValidationCase(data) {
     { key: 'subject_gender', label: 'Gender' },
     { key: 'subject_nationality', label: 'Nationality' },
     { key: 'subject_immigration_status', label: 'Immigration Status' },
-    { key: 'subject_occupation', label: 'Occupation' },
     { key: 'summary', label: 'Summary' }
   ];
   
@@ -7550,6 +7843,56 @@ function renderValidationCase(data) {
                   ${escapeHtml(source.url)}
                 </a>
               </div>
+              ${!state.checked ? `
+                <input type="text" class="validation-reason-input" data-key="${key}" 
+                       placeholder="Reason not validated..." value="${escapeHtml(state.reason)}">
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }
+  
+  // Violations section
+  const violations = data.violations || [];
+  if (violations.length > 0) {
+    // Mapping from violation type to readable label
+    const violationLabels = {
+      '4th_amendment': '4th Amendment',
+      '5th_amendment_due_process': '5th Amendment (Due Process)',
+      '8th_amendment': '8th Amendment',
+      '14th_amendment_equal_protection': '14th Amendment (Equal Protection)',
+      '1st_amendment': '1st Amendment',
+      'medical_neglect': 'Medical Neglect',
+      'excessive_force': 'Excessive Force',
+      'false_imprisonment': 'False Imprisonment',
+      'civil_rights_violation': 'Civil Rights Violation'
+    };
+    
+    const classificationLabels = {
+      'alleged': 'Alleged',
+      'potential': 'Potential',
+      'possible': 'Possible'
+    };
+    
+    html += `<div class="validation-section-header">Constitutional Violations (${violations.length})</div>`;
+    
+    for (const violation of violations) {
+      const key = `violation_${violation.id}`;
+      const state = validationState[key] || { checked: false, reason: '' };
+      const typeLabel = violationLabels[violation.violation_type] || violation.violation_type;
+      const classLabel = classificationLabels[violation.classification] || violation.classification;
+      
+      html += `
+        <div class="validation-item ${state.checked ? 'validated' : ''}" data-key="${key}">
+          <div class="validation-item-header">
+            <input type="checkbox" class="validation-checkbox" data-key="${key}" ${state.checked ? 'checked' : ''}>
+            <div class="validation-content">
+              <div class="validation-label">${escapeHtml(typeLabel)}</div>
+              <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Classification: ${escapeHtml(classLabel)}</div>
+              ${violation.description ? `<div class="validation-value">${escapeHtml(violation.description)}</div>` : ''}
+              ${violation.constitutional_basis ? `<div class="validation-source" style="font-size: 11px; margin-top: 4px;">Case Law: ${escapeHtml(violation.constitutional_basis)}</div>` : ''}
               ${!state.checked ? `
                 <input type="text" class="validation-reason-input" data-key="${key}" 
                        placeholder="Reason not validated..." value="${escapeHtml(state.reason)}">

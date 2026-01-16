@@ -111,14 +111,14 @@ export async function PUT(
   }
 }
 
-// DELETE /api/incidents/[id] - Delete incident
+// DELETE /api/incidents/[id] - Delete incident (admin only)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Require admin role for deletion
-    const authResult = await requireAuth('admin')(request);
+    // Require admin role
+    const authResult = await requireServerAuth(request, 'admin');
     if ('error' in authResult) {
       return NextResponse.json(
         { error: authResult.error },
@@ -136,8 +136,22 @@ export async function DELETE(
       );
     }
 
+    // Check if incident exists
+    const incident = await getIncidentById(numericId, true);
+    if (!incident) {
+      return NextResponse.json(
+        { error: 'Incident not found' },
+        { status: 404 }
+      );
+    }
+
+    // Delete the incident
     await deleteIncident(numericId);
-    return NextResponse.json({ success: true });
+
+    return NextResponse.json({ 
+      success: true,
+      message: `Incident #${numericId} has been permanently deleted`
+    });
   } catch (error) {
     console.error('Error deleting incident:', error);
     return NextResponse.json(

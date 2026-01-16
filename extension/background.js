@@ -24,12 +24,6 @@ chrome.runtime.onInstalled.addListener(() => {
     title: 'Add as Timeline Event',
     contexts: ['selection']
   });
-  
-  chrome.contextMenus.create({
-    id: 'add-quote-official',
-    title: 'Add as Official Statement',
-    contexts: ['selection']
-  });
 });
 
 // Handle extension icon click - open side panel
@@ -40,12 +34,9 @@ chrome.action.onClicked.addListener((tab) => {
 // Handle context menu clicks
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'add-quote' || 
-      info.menuItemId === 'add-quote-timeline' ||
-      info.menuItemId === 'add-quote-official') {
+      info.menuItemId === 'add-quote-timeline') {
     
-    const category = info.menuItemId === 'add-quote-timeline' ? 'timeline' :
-                     info.menuItemId === 'add-quote-official' ? 'official' : 
-                     'uncategorized';
+    const category = info.menuItemId === 'add-quote-timeline' ? 'timeline' : 'uncategorized';
     
     const quote = {
       id: crypto.randomUUID(),

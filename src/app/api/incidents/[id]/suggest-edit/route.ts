@@ -48,19 +48,40 @@ export async function POST(
       );
     }
 
-    // Allowed fields that can be edited
-    const allowedFields = [
-      'victim_name', 'victim_age', 'victim_gender', 'victim_nationality',
-      'incident_date', 'incident_type', 'description',
-      'city', 'state', 'facility_name', 'facility_type',
-      'cause_of_death', 'manner_of_death',
-      'detention_start_date', 'time_in_custody',
-      'agency', 'agency_response',
-      'legal_status', 'criminal_charges',
-      'medical_conditions', 'medical_care_provided',
-      'investigation_status', 'settlement_amount',
-      'family_statement', 'official_statement'
-    ];
+    // Note: supportingQuote, sourceUrl, and sourceTitle are collected from the UI
+    // but not yet stored in the database (columns don't exist yet)
+    // They are included in the request body for future use
+
+    // Allowed fields that can be edited - map UI field names to DB column names
+    const fieldMapping: Record<string, string> = {
+      'victim_name': 'victim_name',
+      'victim_age': 'subject_age',
+      'victim_gender': 'subject_gender',
+      'victim_nationality': 'subject_nationality',
+      'incident_date': 'incident_date',
+      'incident_type': 'incident_type',
+      'description': 'summary',
+      'city': 'city',
+      'state': 'state',
+      'facility_name': 'facility',
+      'facility_type': 'facility',
+      'cause_of_death': 'summary',
+      'manner_of_death': 'summary',
+      'detention_start_date': 'incident_date',
+      'time_in_custody': 'summary',
+      'agency': 'summary',
+      'agency_response': 'summary',
+      'legal_status': 'summary',
+      'criminal_charges': 'summary',
+      'medical_conditions': 'summary',
+      'medical_care_provided': 'summary',
+      'investigation_status': 'summary',
+      'settlement_amount': 'summary',
+      'family_statement': 'summary',
+      'official_statement': 'summary'
+    };
+
+    const allowedFields = Object.keys(fieldMapping);
 
     if (!allowedFields.includes(fieldName)) {
       return NextResponse.json(
@@ -69,17 +90,41 @@ export async function POST(
       );
     }
 
+    // Get the actual database column name
+    const dbColumnName = fieldMapping[fieldName];
+
     // Get current value from the incident
-    const incidentResult = await pool.query(
-      `SELECT ${fieldName} as current_value FROM incidents WHERE id = $1`,
-      [incidentId]
-    );
+    let currentValue = null;
+    try {
+      // Use a generic query to avoid SQL injection and column validation issues
+      const incidentResult = await pool.query(
+        `SELECT * FROM incidents WHERE id = $1 LIMIT 1`,
+        [incidentId]
+      );
 
-    if (incidentResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Incident not found' }, { status: 404 });
+      if (incidentResult.rows.length === 0) {
+        return NextResponse.json({ error: 'Incident not found' }, { status: 404 });
+      }
+
+      const incident = incidentResult.rows[0];
+      
+      // Check if incident is verified (public submissions can only suggest edits on verified incidents)
+      if (incident.verification_status !== 'verified') {
+        return NextResponse.json(
+          { error: 'Can only submit suggestions for verified incidents' },
+          { status: 400 }
+        );
+      }
+
+      // Get the value from the row using the mapped column name
+      currentValue = incident[dbColumnName] !== undefined ? incident[dbColumnName] : null;
+    } catch (dbError) {
+      console.error('Database error fetching incident:', dbError);
+      return NextResponse.json(
+        { error: 'Failed to fetch incident data' },
+        { status: 500 }
+      );
     }
-
-    const currentValue = incidentResult.rows[0].current_value;
 
     // Check for duplicate pending suggestions
     const duplicateCheck = await pool.query(
@@ -96,13 +141,13 @@ export async function POST(
       );
     }
 
-    // Insert the suggestion
+    // Insert the suggestion (only with columns that exist in the table)
     const result = await pool.query(
       `INSERT INTO edit_suggestions 
-       (incident_id, suggested_by, field_name, current_value, suggested_value, reason, supporting_quote, source_url, source_title)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       (incident_id, suggested_by, field_name, current_value, suggested_value, reason)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, created_at`,
-      [incidentId, authResult.user.id, fieldName, currentValue, suggestedValue, reason, supportingQuote, sourceUrl, sourceTitle]
+      [incidentId, authResult.user.id, fieldName, currentValue, suggestedValue, reason]
     );
 
     return NextResponse.json({
@@ -120,8 +165,11 @@ export async function POST(
 
   } catch (error) {
     console.error('Error submitting edit suggestion:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : '';
+    console.error('Error details:', { message: errorMessage, stack: errorStack });
     return NextResponse.json(
-      { error: 'Failed to submit edit suggestion' },
+      { error: 'Failed to submit edit suggestion', details: errorMessage },
       { status: 500 }
     );
   }

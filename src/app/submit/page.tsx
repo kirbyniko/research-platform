@@ -297,9 +297,21 @@ export default function GuestSubmitPage() {
           <div className="bg-white rounded-lg shadow p-4 sm:p-6 md:p-8 text-center">
             <div className="text-5xl mb-4">✓</div>
             <h1 className="text-2xl font-bold mb-4 text-green-600">Submission Received</h1>
-            <p className="text-gray-600 mb-6">
-              Thank you for your report. Our team will review it and, if verified, 
-              it may be added to our database. We may contact you if you provided an email.
+            <p className="text-gray-700 mb-4">
+              Thank you for your report. Your submission has been added to our review queue.
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
+              <h2 className="font-semibold text-blue-900 mb-2">What happens next:</h2>
+              <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
+                <li>Our team will review your submission for accuracy and completeness</li>
+                <li>We will verify the information against available sources</li>
+                <li>If verified, the incident will be added to our public database</li>
+                <li>We may contact you at the email provided if we need additional information</li>
+              </ol>
+            </div>
+            <p className="text-sm text-gray-600 mb-6">
+              <strong>Note:</strong> All submissions must be reviewed and validated by our team before 
+              appearing on the website. This process may take several days to ensure accuracy.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
               <button

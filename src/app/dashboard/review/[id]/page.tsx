@@ -1073,6 +1073,42 @@ export default function ReviewPage() {
     }
   }
 
+  function findAgenciesWithoutQuotes() {
+    const firstWithoutQuote = agencies.find(agency => {
+      const fieldName = `agency_${agency.agency}`;
+      return !fieldQuoteMap[fieldName];
+    });
+    if (firstWithoutQuote) {
+      setSectionsOpen(prev => ({ ...prev, agencies: true }));
+      setTimeout(() => {
+        const element = document.querySelector(`[data-agency="${firstWithoutQuote.agency}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('ring-4', 'ring-red-400', 'bg-red-50');
+          setTimeout(() => element.classList.remove('ring-4', 'ring-red-400', 'bg-red-50'), 4000);
+        }
+      }, 100);
+    }
+  }
+
+  function findViolationsWithoutQuotes() {
+    const firstWithoutQuote = violations.find(violation => {
+      const fieldName = `violation_${violation.violation_type}`;
+      return !fieldQuoteMap[fieldName];
+    });
+    if (firstWithoutQuote) {
+      setSectionsOpen(prev => ({ ...prev, violations: true }));
+      setTimeout(() => {
+        const element = document.querySelector(`[data-violation="${firstWithoutQuote.violation_type}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('ring-4', 'ring-red-400', 'bg-red-50');
+          setTimeout(() => element.classList.remove('ring-4', 'ring-red-400', 'bg-red-50'), 4000);
+        }
+      }, 100);
+    }
+  }
+
   function findUnverifiedFieldCheckbox() {
     const fieldsWithData = INCIDENT_FIELDS.filter(f => {
       const val = editedIncident[f.key];
@@ -1197,12 +1233,18 @@ export default function ReviewPage() {
     const maxOrder = timeline.length > 0 ? Math.max(...timeline.map(t => t.sequence_order || 0)) : 0;
     const payload = { event_date: newTimeline.event_date || null, description: newTimeline.description, sequence_order: maxOrder + 1, quote_id: newTimeline.quote_id ? Number(newTimeline.quote_id) : null };
     const result = await apiCall('timeline', 'POST', payload);
+    
+    // Fetch the updated quote info
+    const quote = quotes.find(q => q.id === Number(newTimeline.quote_id));
+    
     const newEntry: TimelineEntry = {
       id: result.id,
       date: payload.event_date || undefined,
+      event_date: payload.event_date || undefined,
       description: payload.description,
       quote_id: payload.quote_id || undefined,
       sequence_order: payload.sequence_order,
+      quote: quote ? { id: quote.id, quote_text: quote.quote_text, source_id: quote.source_id || undefined } : undefined,
     };
     setTimeline(prev => [...prev, newEntry]);
     setNewTimeline({ event_date: '', description: '', quote_id: '' });
@@ -1212,7 +1254,18 @@ export default function ReviewPage() {
     if (!editingTimeline || !editingTimeline.description) return;
     const payload = { entry_id: editingTimeline.id, event_date: editingTimeline.event_date || null, description: editingTimeline.description, quote_id: editingTimeline.quote_id ? Number(editingTimeline.quote_id) : null };
     await apiCall('timeline', 'PUT', payload);
-    setTimeline(prev => prev.map(t => t.id === editingTimeline.id ? { ...t, event_date: payload.event_date, description: payload.description, quote_id: payload.quote_id } : t));
+    
+    // Fetch the updated quote info
+    const quote = quotes.find(q => q.id === Number(editingTimeline.quote_id));
+    
+    setTimeline(prev => prev.map(t => t.id === editingTimeline.id ? { 
+      ...t, 
+      date: payload.event_date, 
+      event_date: payload.event_date, 
+      description: payload.description, 
+      quote_id: payload.quote_id,
+      quote: quote ? { id: quote.id, quote_text: quote.quote_text, source_id: quote.source_id || undefined } : undefined,
+    } : t));
     setEditingTimeline(null);
   }
 
@@ -1369,7 +1422,33 @@ export default function ReviewPage() {
 
       {/* Header */}
       <div className="mb-6 pb-4 border-b">
-        <Link href="/dashboard" className="text-blue-600 hover:underline text-sm">← Back to Queue</Link>
+        <div className="flex items-center justify-between">
+          <Link href="/dashboard" className="text-blue-600 hover:underline text-sm">← Back to Queue</Link>
+          {!isNewIncident && session?.user && (session.user as { role?: string }).role === 'admin' && (
+            <button
+              onClick={async () => {
+                if (!confirm(`Are you sure you want to PERMANENTLY DELETE this incident?\n\nIncident ID: ${incident?.incident_id}\nName: ${incident?.victim_name || incident?.subject_name}\n\nThis action CANNOT be undone!`)) {
+                  return;
+                }
+                try {
+                  const res = await fetch(`/api/incidents/${incidentId}`, { method: 'DELETE' });
+                  if (res.ok) {
+                    alert('Incident deleted successfully');
+                    router.push('/dashboard');
+                  } else {
+                    const data = await res.json();
+                    alert(`Failed to delete: ${data.error}`);
+                  }
+                } catch (e) {
+                  alert('Failed to delete incident');
+                }
+              }}
+              className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+            >
+              🗑️ Delete Case (Admin)
+            </button>
+          )}
+        </div>
         <h1 className="text-2xl font-bold mt-2">
           {isNewIncident ? 'New Incident Review' : (incident?.victim_name || incident?.subject_name || 'Unknown')}
         </h1>
@@ -1594,7 +1673,7 @@ export default function ReviewPage() {
       <Section title="Incident Details" open={sectionsOpen.details} onToggle={() => toggleSection('details')}>
         {/* Incident Type - Make it prominent */}
         <div className="mb-4 p-4 bg-gray-50 border border-gray-300 rounded" data-field-key="incident_type">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-2">
             <label className={`flex items-center gap-2 text-sm font-medium text-gray-700 transition-all ${editedIncident.incident_type && !verifiedFields['incident_type'] && highlightUnverified ? 'bg-yellow-200 px-2 py-1 rounded animate-pulse' : ''}`}>
               Incident Type *
               {editedIncident.incident_type ? (
@@ -1642,7 +1721,7 @@ export default function ReviewPage() {
             <option value="other">Other</option>
           </select>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {INCIDENT_FIELDS.filter(f => f.key !== 'incident_type').map(f => {
             const showAutoSuggest = ['victim_name', 'facility', 'city', 'summary'].includes(f.key);
             
@@ -1673,7 +1752,7 @@ export default function ReviewPage() {
             const isVerified = verifiedFields[f.key] || false;
             const isUnverified = hasValue && !isVerified;
             return (
-            <div key={f.key} className={f.type === 'textarea' ? 'col-span-2' : ''} data-field-key={f.key}>
+            <div key={f.key} data-field-key={f.key}>
               <label className={`block text-xs text-gray-500 mb-1 flex items-center gap-2 transition-all ${isUnverified && highlightUnverified ? 'bg-yellow-200 px-2 py-1 rounded animate-pulse' : ''}`}>
                 {f.label}
                 {f.tooltip && <Tooltip text={f.tooltip} />}
@@ -1687,17 +1766,17 @@ export default function ReviewPage() {
                   />
                 )}
               </label>
-              <div className="flex gap-2 items-start">
+              <div className="flex flex-col sm:flex-row gap-2 items-start">
                 {f.type === 'textarea' ? (
-                  <textarea className="flex-1 border rounded px-3 py-2 text-sm" rows={3} value={fieldValue}
+                  <textarea className="flex-1 border rounded px-3 py-2 text-sm w-full" rows={3} value={fieldValue}
                     onChange={e => handleFieldChange(f.key, e.target.value)} />
                 ) : f.type === 'select' ? (
-                  <select className="flex-1 border rounded px-3 py-2 text-sm" value={fieldValue}
+                  <select className="flex-1 border rounded px-3 py-2 text-sm w-full" value={fieldValue}
                     onChange={e => handleFieldChange(f.key, e.target.value)}>
                     {f.options?.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                 ) : (
-                  <input type={f.type} className="flex-1 border rounded px-3 py-2 text-sm" value={fieldValue}
+                  <input type={f.type} className="flex-1 border rounded px-3 py-2 text-sm w-full" value={fieldValue}
                     onChange={e => handleFieldChange(f.key, f.type === 'number' ? (Number(e.target.value) || null) : e.target.value)} />
                 )}
                 {LINKABLE_FIELDS.includes(f.key) && <QuotePicker field={f.key} quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />}
@@ -1718,6 +1797,121 @@ export default function ReviewPage() {
             );
           })}
         </div>
+        
+        {/* Tags Section */}
+        <div className="mt-6 p-4 bg-gray-50 rounded border border-gray-200">
+          <h3 className="text-sm font-semibold text-gray-700 mb-2">Tags</h3>
+          <p className="text-xs text-gray-500 mb-3">
+            Tags help categorize incidents by violation type, vulnerable populations, and systemic issues. Auto-suggested tags are based on incident data.
+          </p>
+          
+          {/* Current Tags */}
+          {editedIncident.tags && (editedIncident.tags as string[]).length > 0 && (
+            <div className="mb-3">
+              <label className="block text-xs text-gray-600 mb-1">Current Tags:</label>
+              <div className="flex flex-wrap gap-1">
+                {(editedIncident.tags as string[]).map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 border border-blue-300 rounded text-xs"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newTags = (editedIncident.tags as string[]).filter(t => t !== tag);
+                        setEditedIncident({ ...editedIncident, tags: newTags });
+                      }}
+                      className="hover:text-blue-600"
+                      title="Remove tag"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Add Tag */}
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Add Tag:</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                list="tag-suggestions"
+                placeholder="Type or select a tag..."
+                className="flex-1 border rounded px-2 py-1 text-sm"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const input = e.target as HTMLInputElement;
+                    const newTag = input.value.trim();
+                    if (newTag) {
+                      const currentTags = (editedIncident.tags as string[]) || [];
+                      if (!currentTags.includes(newTag)) {
+                        setEditedIncident({ ...editedIncident, tags: [...currentTags, newTag].sort() });
+                      }
+                      input.value = '';
+                    }
+                  }
+                }}
+                id="tag-input"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const input = document.getElementById('tag-input') as HTMLInputElement;
+                  const newTag = input.value.trim();
+                  if (newTag) {
+                    const currentTags = (editedIncident.tags as string[]) || [];
+                    if (!currentTags.includes(newTag)) {
+                      setEditedIncident({ ...editedIncident, tags: [...currentTags, newTag].sort() });
+                    }
+                    input.value = '';
+                  }
+                }}
+                className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+              >
+                Add
+              </button>
+            </div>
+            
+            {/* Predefined tag suggestions */}
+            <datalist id="tag-suggestions">
+              <option value="Death in Custody" />
+              <option value="Use of Force" />
+              <option value="Shooting" />
+              <option value="Medical Neglect" />
+              <option value="Mental Health Crisis" />
+              <option value="Suicide" />
+              <option value="Asylum Seeker" />
+              <option value="Minor" />
+              <option value="Elderly" />
+              <option value="DACA Recipient" />
+              <option value="Prolonged Detention" />
+              <option value="Family Separation" />
+              <option value="Communication Denied" />
+              <option value="Rapid Deterioration" />
+              <option value="In Transit" />
+              <option value="Bystander Victim" />
+              <option value="Journalist" />
+              <option value="Legal Observer" />
+              <option value="Protest-Related" />
+              <option value="Judicial Finding" />
+              <option value="Fourth Amendment" />
+              <option value="Due Process Violation" />
+              <option value="Cruel & Unusual Punishment" />
+              <option value="COVID-19" />
+              <option value="Cardiac Event" />
+              <option value="Respiratory Illness" />
+              <option value="Permanent Injury" />
+              <option value="Military Veteran" />
+              <option value="Young Adult" />
+            </datalist>
+          </div>
+        </div>
+        
         <div className="mt-4 flex justify-end">
           <button onClick={saveIncidentDetails} disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:bg-gray-400">Save Details</button>
         </div>
@@ -1735,12 +1929,12 @@ export default function ReviewPage() {
         return (
           <Section title={`${typeLabel} Details`} open={sectionsOpen.typeDetails} onToggle={() => toggleSection('typeDetails')}>
             {currentType === 'shooting' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4">
               <div><label className="block text-xs text-gray-500 mb-1">Fatal</label>
                 <input type="checkbox" checked={!!incidentDetails.shooting_fatal} onChange={e => setIncidentDetails({ ...incidentDetails, shooting_fatal: e.target.checked })} className="w-4 h-4" />
               </div>
               <div data-field-key="shots_fired">
-                <div className="flex items-start justify-between mb-1">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                   <label className="block text-xs text-gray-500">Shots Fired</label>
                   <div className="flex items-center gap-1">
                     <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
@@ -1753,7 +1947,7 @@ export default function ReviewPage() {
                 <input type="number" className="w-full border rounded px-3 py-2 text-sm" value={String(incidentDetails.shots_fired || '')} onChange={e => setIncidentDetails({ ...incidentDetails, shots_fired: e.target.value ? Number(e.target.value) : null })} />
               </div>
               <div data-field-key="weapon_type">
-                <div className="flex items-start justify-between mb-1">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                   <label className="block text-xs text-gray-500">Weapon Type</label>
                   <div className="flex items-center gap-1">
                     <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
@@ -1781,8 +1975,8 @@ export default function ReviewPage() {
               <div><label className="block text-xs text-gray-500 mb-1">Bodycam Available</label>
                 <input type="checkbox" checked={!!incidentDetails.bodycam_available} onChange={e => setIncidentDetails({ ...incidentDetails, bodycam_available: e.target.checked })} className="w-4 h-4" />
               </div>
-              <div className="col-span-2" data-field-key="shooting_context">
-                <div className="flex items-start justify-between mb-1">
+              <div data-field-key="shooting_context">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                   <label className="block text-xs text-gray-500">Context</label>
                   <div className="flex items-center gap-1">
                     <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
@@ -1797,9 +1991,9 @@ export default function ReviewPage() {
             </div>
           )}
           {['death_in_custody', 'death_during_operation', 'death_at_protest', 'death', 'detention_death'].includes(currentType) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4">
               <div data-field-key="cause_of_death">
-                <div className="flex items-start justify-between mb-1">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                   <label className="block text-xs text-gray-500">Cause of Death</label>
                   <div className="flex items-center gap-1">
                     <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
@@ -1812,7 +2006,7 @@ export default function ReviewPage() {
                 <input type="text" className="w-full border rounded px-3 py-2 text-sm" value={String(incidentDetails.cause_of_death || '')} onChange={e => setIncidentDetails({ ...incidentDetails, cause_of_death: e.target.value })} />
               </div>
               <div data-field-key="official_cause">
-                <div className="flex items-start justify-between mb-1">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                   <label className="block text-xs text-gray-500">Official Cause</label>
                   <div className="flex items-center gap-1">
                     <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
@@ -1830,8 +2024,8 @@ export default function ReviewPage() {
               <div><label className="block text-xs text-gray-500 mb-1">Medical Neglect Alleged</label>
                 <input type="checkbox" checked={!!incidentDetails.medical_neglect_alleged} onChange={e => setIncidentDetails({ ...incidentDetails, medical_neglect_alleged: e.target.checked })} className="w-4 h-4" />
               </div>
-              <div className="col-span-2" data-field-key="death_circumstances">
-                <div className="flex items-start justify-between mb-1">
+              <div data-field-key="death_circumstances">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                   <label className="block text-xs text-gray-500">Circumstances</label>
                   <div className="flex items-center gap-1">
                     <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
@@ -1846,9 +2040,9 @@ export default function ReviewPage() {
             </div>
           )}
           {currentType === 'arrest' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-              <div className="col-span-2" data-field-key="arrest_reason">
-                <div className="flex items-start justify-between mb-1">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4">
+              <div data-field-key="arrest_reason">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                   <label className="block text-xs text-gray-500">Arrest Reason</label>
                   <div className="flex items-center gap-1">
                     <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
@@ -1860,8 +2054,8 @@ export default function ReviewPage() {
                 </div>
                 <input type="text" className="w-full border rounded px-3 py-2 text-sm" value={String(incidentDetails.arrest_reason || '')} onChange={e => setIncidentDetails({ ...incidentDetails, arrest_reason: e.target.value })} />
               </div>
-              <div className="col-span-2" data-field-key="arrest_charges">
-                <div className="flex items-start justify-between mb-1">
+              <div data-field-key="arrest_charges">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                   <label className="block text-xs text-gray-500">Charges</label>
                   <div className="flex items-center gap-1">
                     <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
@@ -1879,8 +2073,8 @@ export default function ReviewPage() {
               <div><label className="block text-xs text-gray-500 mb-1">Selective Enforcement</label>
                 <input type="checkbox" checked={!!incidentDetails.selective_enforcement} onChange={e => setIncidentDetails({ ...incidentDetails, selective_enforcement: e.target.checked })} className="w-4 h-4" />
               </div>
-              <div className="col-span-2" data-field-key="arrest_context">
-                <div className="flex items-start justify-between mb-1">
+              <div data-field-key="arrest_context">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                   <label className="block text-xs text-gray-500">Context</label>
                   <div className="flex items-center gap-1">
                     <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
@@ -1895,7 +2089,7 @@ export default function ReviewPage() {
             </div>
           )}
           {(currentType === 'excessive_force' || currentType === 'injury') && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4">
               <div className="col-span-2">
                 <label className="block text-xs text-gray-500 mb-2">Force Types Used</label>
                 <div className="flex flex-wrap gap-3">
@@ -1918,8 +2112,8 @@ export default function ReviewPage() {
                   ))}
                 </div>
               </div>
-              <div className="col-span-2" data-field-key="injuries_sustained">
-                <div className="flex items-start justify-between mb-1">
+              <div data-field-key="injuries_sustained">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                   <label className="block text-xs text-gray-500">Injuries Sustained</label>
                   <div className="flex items-center gap-1">
                     <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
@@ -1946,9 +2140,9 @@ export default function ReviewPage() {
             </div>
           )}
           {currentType === 'medical_neglect' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-              <div className="col-span-2" data-field-key="medical_condition">
-                <div className="flex items-start justify-between mb-1">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4">
+              <div data-field-key="medical_condition">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                   <label className="block text-xs text-gray-500">Medical Condition</label>
                   <div className="flex items-center gap-1">
                     <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
@@ -1960,8 +2154,8 @@ export default function ReviewPage() {
                 </div>
                 <input type="text" className="w-full border rounded px-3 py-2 text-sm" value={String(incidentDetails.medical_condition || '')} onChange={e => setIncidentDetails({ ...incidentDetails, medical_condition: e.target.value })} />
               </div>
-              <div className="col-span-2" data-field-key="treatment_denied">
-                <div className="flex items-start justify-between mb-1">
+              <div data-field-key="treatment_denied">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                   <label className="block text-xs text-gray-500">Treatment Denied</label>
                   <div className="flex items-center gap-1">
                     <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
@@ -1982,9 +2176,9 @@ export default function ReviewPage() {
             </div>
           )}
           {currentType === 'protest_suppression' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-              <div className="col-span-2" data-field-key="protest_topic">
-                <div className="flex items-start justify-between mb-1">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4">
+              <div data-field-key="protest_topic">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                   <label className="block text-xs text-gray-500">Protest Topic</label>
                   <div className="flex items-center gap-1">
                     <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
@@ -2003,7 +2197,7 @@ export default function ReviewPage() {
                 <input type="checkbox" checked={!!incidentDetails.permitted} onChange={e => setIncidentDetails({ ...incidentDetails, permitted: e.target.checked })} className="w-4 h-4" />
               </div>
               <div data-field-key="dispersal_method">
-                <div className="flex items-start justify-between mb-1">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                   <label className="block text-xs text-gray-500">Dispersal Method</label>
                   <div className="flex items-center gap-1">
                     <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
@@ -2040,7 +2234,7 @@ export default function ReviewPage() {
       <Section title={`Agencies Involved (${agencies.length})`} open={sectionsOpen.agencies} onToggle={() => toggleSection('agencies')}>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
           {AGENCY_OPTIONS.map(opt => (
-            <div key={opt.value} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+            <div key={opt.value} data-agency={opt.value} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
               <label className="flex items-center gap-2 flex-1 cursor-pointer text-sm">
                 <input type="checkbox" checked={agencies.some(a => a.agency === opt.value)} onChange={() => toggleAgency(opt.value)} className="w-4 h-4" />
                 {opt.label}
@@ -2058,7 +2252,7 @@ export default function ReviewPage() {
             const violation = violations.find(v => v.violation_type === opt.value);
             const isChecked = !!violation;
             return (
-              <div key={opt.value} className="border rounded p-3">
+              <div key={opt.value} data-violation={opt.value} className="border rounded p-3">
                 <div className="flex items-center gap-2 mb-2">
                   <label className="flex items-center gap-2 flex-1 cursor-pointer text-sm font-medium">
                     <input type="checkbox" checked={isChecked} onChange={() => toggleViolation(opt.value)} className="w-4 h-4" />
@@ -2478,6 +2672,34 @@ export default function ReviewPage() {
               </button>
             )}
             {(() => {
+              const agenciesWithoutQuotes = agencies.filter(agency => {
+                const fieldName = `agency_${agency.agency}`;
+                return !fieldQuoteMap[fieldName];
+              });
+              return agenciesWithoutQuotes.length > 0 && (
+                <button
+                  onClick={findAgenciesWithoutQuotes}
+                  className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-red-100 text-red-700 border border-red-300 rounded hover:bg-red-200 whitespace-nowrap"
+                >
+                  🔍 Agencies Missing Quotes ({agenciesWithoutQuotes.length})
+                </button>
+              );
+            })()}
+            {(() => {
+              const violationsWithoutQuotes = violations.filter(violation => {
+                const fieldName = `violation_${violation.violation_type}`;
+                return !fieldQuoteMap[fieldName];
+              });
+              return violationsWithoutQuotes.length > 0 && (
+                <button
+                  onClick={findViolationsWithoutQuotes}
+                  className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-red-100 text-red-700 border border-red-300 rounded hover:bg-red-200 whitespace-nowrap"
+                >
+                  🔍 Violations Missing Quotes ({violationsWithoutQuotes.length})
+                </button>
+              );
+            })()}
+            {(() => {
               const fieldsWithData = INCIDENT_FIELDS.filter(f => {
                 const val = editedIncident[f.key];
                 if (val === null || val === undefined || val === '') return false;
@@ -2657,6 +2879,18 @@ export default function ReviewPage() {
                 return value && !fieldQuoteMap[field];
               });
 
+              // Check agencies for quote links
+              const agenciesWithoutQuotes = agencies.filter(agency => {
+                const fieldName = `agency_${agency.agency}`;
+                return !fieldQuoteMap[fieldName];
+              });
+
+              // Check violations for quote links
+              const violationsWithoutQuotes = violations.filter(violation => {
+                const fieldName = `violation_${violation.violation_type}`;
+                return !fieldQuoteMap[fieldName];
+              });
+
               // Check field verification (same logic as badge)
               const fieldsWithData = INCIDENT_FIELDS.filter(f => {
                 const val = editedIncident[f.key];
@@ -2692,6 +2926,9 @@ export default function ReviewPage() {
               
               const unverifiedFieldsList = allFieldsToCheck.filter(f => !verifiedFields[f.key]);
 
+              // Check timeline events for missing quotes
+              const timelineWithoutQuotes = timeline.filter(t => !t.quote_id);
+              
               // Check sources, quotes, timeline, and media verification (checkboxes)
               const unverifiedSourcesList = sources.filter(s => !verifiedSources[s.id]);
               const unverifiedQuotesList = quotes.filter(q => !verifiedQuotes[q.id]);
@@ -2703,6 +2940,8 @@ export default function ReviewPage() {
               console.log('Unverified quotes (q.verified === false):', unverifiedQuotes);
               console.log('Quotes without sources:', quotesWithoutSources);
               console.log('Unlinked fields:', unlinkedFields);
+              console.log('Agencies without quotes:', agenciesWithoutQuotes);
+              console.log('Violations without quotes:', violationsWithoutQuotes);
               console.log('fieldQuoteMap:', fieldQuoteMap);
               console.log('Unverified fields list:', unverifiedFieldsList.map(f => f.key));
               console.log('verifiedFields:', verifiedFields);
@@ -2718,8 +2957,19 @@ export default function ReviewPage() {
               if (unlinkedFields.length > 0) {
                 blockingErrors.push(`Key fields missing quote links: ${unlinkedFields.join(', ')}`);
               }
+              if (agenciesWithoutQuotes.length > 0) {
+                const agencyLabels = agenciesWithoutQuotes.map(a => a.agency).join(', ');
+                blockingErrors.push(`Agencies missing quote links: ${agencyLabels}`);
+              }
+              if (violationsWithoutQuotes.length > 0) {
+                const violationLabels = violationsWithoutQuotes.map(v => v.violation_type).join(', ');
+                blockingErrors.push(`Violations missing quote links: ${violationLabels}`);
+              }
               if (quotesWithoutSources.length > 0) {
                 blockingErrors.push(`${quotesWithoutSources.length} quote(s) lack source links`);
+              }
+              if (timelineWithoutQuotes.length > 0) {
+                blockingErrors.push(`${timelineWithoutQuotes.length} timeline event(s) lack supporting quotes`);
               }
               if (unverifiedQuotes.length > 0) {
                 blockingErrors.push(`${unverifiedQuotes.length} quote(s) are unverified (verified checkbox in database not checked)`);

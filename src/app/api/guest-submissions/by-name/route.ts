@@ -25,9 +25,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ submissions: [], message: 'Generic name - no related reports' });
     }
     
+    // Check if deleted_at column exists
+    const columnCheck = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'guest_submissions' 
+      AND column_name = 'deleted_at'
+    `);
+    const hasDeletedAt = columnCheck.rows.length > 0;
+    
     // Search for guest submissions with similar names
     // Using ILIKE for case-insensitive matching
-    // Exclude soft-deleted submissions
+    // Exclude soft-deleted submissions if column exists
     const query = `
       SELECT 
         gs.id,
@@ -43,8 +52,7 @@ export async function GET(request: NextRequest) {
         gs.notes
       FROM guest_submissions gs
       WHERE 
-        gs.deleted_at IS NULL
-        AND (
+        ${hasDeletedAt ? 'gs.deleted_at IS NULL AND ' : ''}(
           gs.submission_data->>'victimName' ILIKE $1
           OR gs.submission_data->>'victimName' ILIKE $2
         )

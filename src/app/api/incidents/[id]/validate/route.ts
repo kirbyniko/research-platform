@@ -97,16 +97,24 @@ export async function GET(
       console.error('[validate GET] Error fetching sources:', e);
     }
     
-    // Get timeline
+    // Get timeline with quotes and sources
     console.log('[validate GET] Fetching timeline...');
     let timelineRows: any[] = [];
     try {
       const timelineResult = await pool.query(`
-        SELECT * FROM incident_timeline
-        WHERE incident_id = $1
-        ORDER BY COALESCE(sequence_order, 0), event_date ASC NULLS LAST, id
+        SELECT 
+          it.*,
+          q.quote_text,
+          s.title as quote_source_title,
+          s.url as quote_source_url
+        FROM incident_timeline it
+        LEFT JOIN incident_quotes q ON it.quote_id = q.id
+        LEFT JOIN incident_sources s ON q.source_id = s.id
+        WHERE it.incident_id = $1
+        ORDER BY COALESCE(it.sequence_order, 0), it.event_date ASC NULLS LAST, it.id
       `, [incidentId]);
       timelineRows = timelineResult.rows;
+      console.log('[validate GET] Found', timelineRows.length, 'timeline entries');
     } catch (e) {
       console.error('[validate GET] Error fetching timeline:', e);
     }
@@ -125,18 +133,27 @@ export async function GET(
       console.error('[validate GET] Error fetching media:', e);
     }
     
-    // Get quote-field links (may not exist in all setups)
+    // Get quote-field links with quote text and source info
     console.log('[validate GET] Fetching quote-field links...');
     let linksRows: any[] = [];
     try {
       const linksResult = await pool.query(`
-        SELECT * FROM quote_field_links
-        WHERE incident_id = $1
+        SELECT 
+          qfl.field_name,
+          qfl.quote_id,
+          q.quote_text,
+          s.title as source_title,
+          s.url as source_url
+        FROM quote_field_links qfl
+        LEFT JOIN incident_quotes q ON qfl.quote_id = q.id
+        LEFT JOIN incident_sources s ON q.source_id = s.id
+        WHERE qfl.incident_id = $1
       `, [incidentId]);
       linksRows = linksResult.rows;
+      console.log('[validate GET] Found', linksRows.length, 'quote-field links');
     } catch (e) {
       // Table may not exist
-      console.log('[validate GET] quote_field_links table not available');
+      console.log('[validate GET] quote_field_links table not available:', e);
     }
     
     // Get previous validation issues (unresolved) - table may not exist
@@ -156,6 +173,51 @@ export async function GET(
       console.log('[validate GET] validation_issues table not available');
     }
     
+    // Get agencies
+    console.log('[validate GET] Fetching agencies...');
+    let agenciesRows: any[] = [];
+    try {
+      const agenciesResult = await pool.query(`
+        SELECT * FROM incident_agencies
+        WHERE incident_id = $1
+        ORDER BY id
+      `, [incidentId]);
+      agenciesRows = agenciesResult.rows;
+      console.log('[validate GET] Found', agenciesRows.length, 'agencies');
+    } catch (e) {
+      console.log('[validate GET] Error fetching agencies:', e);
+    }
+    
+    // Get violations
+    console.log('[validate GET] Fetching violations...');
+    let violationsRows: any[] = [];
+    try {
+      const violationsResult = await pool.query(`
+        SELECT * FROM incident_violations
+        WHERE incident_id = $1
+        ORDER BY id
+      `, [incidentId]);
+      violationsRows = violationsResult.rows;
+      console.log('[validate GET] Found', violationsRows.length, 'violations');
+    } catch (e) {
+      console.log('[validate GET] Error fetching violations:', e);
+    }
+    
+    // Get incident details (includes case law, death details, etc.)
+    console.log('[validate GET] Fetching incident details...');
+    let detailsRows: any[] = [];
+    try {
+      const detailsResult = await pool.query(`
+        SELECT * FROM incident_details
+        WHERE incident_id = $1
+        ORDER BY id
+      `, [incidentId]);
+      detailsRows = detailsResult.rows;
+      console.log('[validate GET] Found', detailsRows.length, 'incident detail records');
+    } catch (e) {
+      console.log('[validate GET] Error fetching incident details:', e);
+    }
+    
     console.log('[validate GET] Returning response...');
     return NextResponse.json({
       incident,
@@ -163,6 +225,9 @@ export async function GET(
       sources: sourcesRows,
       timeline: timelineRows,
       media: mediaRows,
+      agencies: agenciesRows,
+      violations: violationsRows,
+      incident_details: detailsRows,
       quote_field_links: linksRows,
       previous_issues: issuesRows
     });
@@ -260,12 +325,14 @@ export async function POST(
           );
         }
         
-        if (currentStatus === 'first_review') {
-          // First validation
+        // Single validation step - first_review goes directly to verified
+        if (currentStatus === 'first_review' || currentStatus === 'first_validation') {
+          // Publish the case directly after single validation
           await client.query(`
             UPDATE incidents 
             SET 
-              verification_status = 'first_validation',
+              verification_status = 'verified',
+              verified = true,
               first_validated_by = $1,
               first_validated_at = NOW(),
               updated_at = NOW()
@@ -276,36 +343,7 @@ export async function POST(
           
           return NextResponse.json({
             success: true,
-            message: 'First validation complete. Case requires one more validation.',
-            verification_status: 'first_validation'
-          });
-          
-        } else if (currentStatus === 'first_validation') {
-          // Second validation - check if same person
-          if (currentCase.first_validated_by === user.id && user.role !== 'admin') {
-            return NextResponse.json(
-              { error: 'Cannot provide both validations. A different analyst must validate.' },
-              { status: 403 }
-            );
-          }
-          
-          // Publish the case
-          await client.query(`
-            UPDATE incidents 
-            SET 
-              verification_status = 'verified',
-              verified = true,
-              second_validated_by = $1,
-              second_validated_at = NOW(),
-              updated_at = NOW()
-            WHERE id = $2
-          `, [user.id, incidentId]);
-          
-          await client.query('COMMIT');
-          
-          return NextResponse.json({
-            success: true,
-            message: 'Second validation complete. Case is now published!',
+            message: 'Validation complete. Case is now published!',
             verification_status: 'verified'
           });
         }

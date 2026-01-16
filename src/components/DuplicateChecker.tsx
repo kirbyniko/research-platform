@@ -185,15 +185,14 @@ export default function DuplicateChecker({
                     
                     {/* Actions */}
                     <div className="flex items-center gap-1 shrink-0">
-                      {showSources && item.sources && item.sources.length > 0 && (
-                        <button
-                          onClick={() => setExpanded(isExpanded ? null : item.id)}
-                          className={`${compact ? 'px-2 py-1 text-xs' : 'px-2 py-1 text-sm'} text-blue-600 hover:bg-blue-50 rounded transition-colors`}
-                          title="View sources"
-                        >
-                          📎 {item.sources.length}
-                        </button>
-                      )}
+                      {/* Always show expand button for details */}
+                      <button
+                        onClick={() => setExpanded(isExpanded ? null : item.id)}
+                        className={`${compact ? 'px-2 py-1 text-xs' : 'px-2 py-1 text-sm'} text-blue-600 hover:bg-blue-50 rounded transition-colors`}
+                        title={isExpanded ? "Hide details" : "View full details"}
+                      >
+                        {isExpanded ? '▼ Less' : '▶ Details'}
+                      </button>
                       
                       {item.type !== 'guest_report' && item.incident_id && (
                         <a
@@ -219,28 +218,73 @@ export default function DuplicateChecker({
                     </div>
                   </div>
 
-                  {/* Expanded Sources */}
-                  {isExpanded && item.sources && item.sources.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-gray-100">
-                      <p className="text-xs font-medium text-gray-700 mb-1">Sources:</p>
-                      <div className="space-y-1">
-                        {item.sources.map((source, idx) => (
-                          <a
-                            key={source.id || idx}
-                            href={source.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block text-xs text-blue-600 hover:underline truncate"
-                          >
-                            {source.title || source.url}
-                          </a>
-                        ))}
+                  {/* Expanded Details */}
+                  {isExpanded && (
+                    <div className="mt-2 pt-2 border-t border-gray-100 space-y-2">
+                      {/* Full Case Details */}
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                        <div>
+                          <span className="text-gray-500">Incident Type:</span>
+                          <span className="ml-1 text-gray-900 capitalize">{item.incident_type?.replace(/_/g, ' ') || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Date:</span>
+                          <span className="ml-1 text-gray-900">{item.incident_date ? new Date(item.incident_date).toLocaleDateString() : 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Location:</span>
+                          <span className="ml-1 text-gray-900">{[item.city, item.state].filter(Boolean).join(', ') || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Facility:</span>
+                          <span className="ml-1 text-gray-900">{item.facility || 'N/A'}</span>
+                        </div>
+                        {item.status && (
+                          <div>
+                            <span className="text-gray-500">Status:</span>
+                            <span className="ml-1 text-gray-900 capitalize">{item.status.replace(/_/g, ' ')}</span>
+                          </div>
+                        )}
+                        {item.incident_id && (
+                          <div>
+                            <span className="text-gray-500">ID:</span>
+                            <span className="ml-1 text-gray-900 font-mono text-xs">{item.incident_id}</span>
+                          </div>
+                        )}
                       </div>
+                      
+                      {/* Summary */}
+                      {item.summary && (
+                        <div>
+                          <p className="text-xs font-medium text-gray-700 mb-0.5">Summary:</p>
+                          <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded">{item.summary}</p>
+                        </div>
+                      )}
+                      
+                      {/* Sources */}
+                      {item.sources && item.sources.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-gray-700 mb-1">Sources ({item.sources.length}):</p>
+                          <div className="space-y-1 max-h-32 overflow-y-auto">
+                            {item.sources.map((source, idx) => (
+                              <a
+                                key={source.id || idx}
+                                href={source.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block text-xs text-blue-600 hover:underline truncate"
+                              >
+                                {source.title || source.url}
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
-                  {/* Summary preview */}
-                  {item.summary && !compact && (
+                  {/* Summary preview when collapsed */}
+                  {item.summary && !compact && !isExpanded && (
                     <p className="text-xs text-gray-500 mt-1 line-clamp-2">
                       {item.summary}
                     </p>

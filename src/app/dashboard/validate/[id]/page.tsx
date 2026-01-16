@@ -23,6 +23,7 @@ interface Incident {
   subject_immigration_status: string | null;
   subject_occupation: string | null;
   summary: string | null;
+  tags?: string[];
   verification_status: string;
   first_reviewer_name?: string | null;
   first_reviewer_email?: string | null;
@@ -69,6 +70,25 @@ interface Media {
   verified?: boolean;
 }
 
+interface Agency {
+  id: number;
+  agency: string;
+  role?: string | null;
+}
+
+interface Violation {
+  id: number;
+  violation_type: string;
+  description?: string | null;
+  constitutional_basis?: string | null;
+}
+
+interface IncidentDetail {
+  id: number;
+  detail_type: string;
+  details: Record<string, unknown>;
+}
+
 interface ValidationIssue {
   id: number;
   field_type: string;
@@ -94,8 +114,9 @@ interface ValidationState {
 }
 
 // Displayable incident fields for validation
+// Note: victim_name is the primary field, subject_name is fallback
 const DISPLAY_FIELDS = [
-  { key: 'subject_name', label: 'Subject Name' },
+  { key: 'victim_name', altKey: 'subject_name', label: 'Subject Name' },
   { key: 'incident_date', label: 'Incident Date' },
   { key: 'incident_type', label: 'Incident Type' },
   { key: 'city', label: 'City' },
@@ -109,6 +130,27 @@ const DISPLAY_FIELDS = [
   { key: 'summary', label: 'Summary' },
 ];
 
+// Agency display names
+const AGENCY_LABELS: Record<string, string> = {
+  ice: 'ICE', ice_ere: 'ICE ERO', cbp: 'CBP', border_patrol: 'Border Patrol',
+  local_police: 'Local Police', state_police: 'State Police', federal_marshals: 'US Marshals',
+  national_guard: 'National Guard', dhs: 'DHS', private_contractor: 'Private Contractor',
+  other: 'Other', unknown: 'Unknown'
+};
+
+// Violation display names  
+const VIOLATION_LABELS: Record<string, string> = {
+  '4th_amendment': '4th Amendment - Unreasonable Search/Seizure',
+  '5th_amendment_due_process': '5th Amendment - Due Process',
+  '8th_amendment': '8th Amendment - Cruel & Unusual Punishment',
+  '14th_amendment_equal_protection': '14th Amendment - Equal Protection',
+  '1st_amendment': '1st Amendment - Free Speech/Assembly',
+  'medical_neglect': 'Medical Neglect',
+  'excessive_force': 'Excessive Force',
+  'false_imprisonment': 'False Imprisonment',
+  'civil_rights_violation': 'Civil Rights Violation'
+};
+
 export default function ValidatePage() {
   const params = useParams();
   const router = useRouter();
@@ -121,6 +163,9 @@ export default function ValidatePage() {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
   const [media, setMedia] = useState<Media[]>([]);
+  const [agencies, setAgencies] = useState<Agency[]>([]);
+  const [violations, setViolations] = useState<Violation[]>([]);
+  const [incidentDetails, setIncidentDetails] = useState<IncidentDetail[]>([]);
   const [quoteFieldLinks, setQuoteFieldLinks] = useState<QuoteFieldLink[]>([]);
   const [previousIssues, setPreviousIssues] = useState<ValidationIssue[]>([]);
 
@@ -146,15 +191,18 @@ export default function ValidatePage() {
         setQuotes(data.quotes || []);
         setTimeline(data.timeline || []);
         setMedia(data.media || []);
+        setAgencies(data.agencies || []);
+        setViolations(data.violations || []);
+        setIncidentDetails(data.incident_details || []);
         setQuoteFieldLinks(data.quote_field_links || []);
         setPreviousIssues(data.previous_issues || []);
 
         // Initialize validation state - all unchecked by default
         const initialState: ValidationState = {};
         
-        // Fields
+        // Fields - handle victim_name/subject_name mapping
         for (const field of DISPLAY_FIELDS) {
-          const value = data.incident[field.key];
+          const value = data.incident[field.key] || (field.altKey ? data.incident[field.altKey] : null);
           if (value !== null && value !== undefined && value !== '') {
             initialState[`field_${field.key}`] = { checked: false, reason: '' };
           }
@@ -178,6 +226,16 @@ export default function ValidatePage() {
         // Media
         for (const item of data.media || []) {
           initialState[`media_${item.id}`] = { checked: false, reason: '' };
+        }
+        
+        // Agencies
+        for (const agency of data.agencies || []) {
+          initialState[`agency_${agency.id}`] = { checked: false, reason: '' };
+        }
+        
+        // Violations
+        for (const violation of data.violations || []) {
+          initialState[`violation_${violation.id}`] = { checked: false, reason: '' };
         }
 
         setValidationState(initialState);
@@ -305,9 +363,17 @@ export default function ValidatePage() {
     }
   };
 
-  // Get linked quote for a field
+  // Get linked quote for a field - handles both victim_name and subject_name
   const getLinkedQuote = (fieldKey: string) => {
-    return quoteFieldLinks.find(link => link.field_name === fieldKey);
+    // First try direct match
+    let link = quoteFieldLinks.find(link => link.field_name === fieldKey);
+    // If looking for victim_name, also check subject_name and vice versa
+    if (!link && fieldKey === 'victim_name') {
+      link = quoteFieldLinks.find(link => link.field_name === 'subject_name');
+    } else if (!link && fieldKey === 'subject_name') {
+      link = quoteFieldLinks.find(link => link.field_name === 'victim_name');
+    }
+    return link;
   };
 
   // Format incident type
@@ -389,14 +455,8 @@ export default function ValidatePage() {
               </h1>
               <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
                 <span>ID: {incident.incident_id}</span>
-                <span className={`px-2 py-0.5 rounded text-xs ${
-                  incident.verification_status === 'first_review' 
-                    ? 'bg-blue-100 text-blue-800' 
-                    : 'bg-purple-100 text-purple-800'
-                }`}>
-                  {incident.verification_status === 'first_review' 
-                    ? 'Awaiting 1st Validation' 
-                    : 'Awaiting 2nd Validation'}
+                <span className="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800">
+                  Awaiting Validation
                 </span>
               </div>
             </div>
@@ -450,7 +510,9 @@ export default function ValidatePage() {
           <h2 className="text-lg font-semibold mb-4 pb-2 border-b">Incident Fields</h2>
           <div className="space-y-3">
             {DISPLAY_FIELDS.map(field => {
-              const value = incident[field.key as keyof Incident];
+              // Handle victim_name/subject_name mapping - check primary key first, then altKey
+              const value = incident[field.key as keyof Incident] || 
+                            (field.altKey ? incident[field.altKey as keyof Incident] : null);
               if (value === null || value === undefined || value === '') return null;
               
               const key = `field_${field.key}`;
@@ -478,17 +540,29 @@ export default function ValidatePage() {
                         <span className="font-medium text-gray-700">{field.label}:</span>
                         <span className="text-gray-900">
                           {field.key === 'incident_type' 
-                            ? formatIncidentType(String(value)) 
+                            ? formatIncidentType(String(value))
+                            : field.key === 'incident_date'
+                            ? new Date(String(value)).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
                             : String(value)}
                         </span>
                       </div>
                       {linkedQuote && (
-                        <div className="mt-2 text-sm text-gray-600 bg-blue-50 p-2 rounded">
-                          <div className="italic">&ldquo;{linkedQuote.quote_text}&rdquo;</div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            Source: {linkedQuote.source_title || linkedQuote.source_url}
-                          </div>
+                        <div className="mt-2 text-sm bg-blue-50 border border-blue-200 p-3 rounded">
+                          <div className="font-medium text-blue-900 mb-1">✓ Verified by quote:</div>
+                          <div className="italic text-gray-700">&ldquo;{linkedQuote.quote_text}&rdquo;</div>
+                          {linkedQuote.source_title || linkedQuote.source_url ? (
+                            <div className="text-xs text-gray-600 mt-2">
+                              Source: <a href={linkedQuote.source_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                {linkedQuote.source_title || linkedQuote.source_url}
+                              </a>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-orange-600 mt-2">⚠️ No source linked to quote</div>
+                          )}
                         </div>
+                      )}
+                      {!linkedQuote && (
+                        <div className="mt-2 text-xs text-orange-600">⚠️ No quote linked to verify this field</div>
                       )}
                       {!state.checked && (
                         <input
@@ -506,6 +580,28 @@ export default function ValidatePage() {
             })}
           </div>
         </section>
+
+        {/* Tags Section */}
+        {incident.tags && incident.tags.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-4 pb-2 border-b">Tags ({incident.tags.length})</h2>
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex flex-wrap gap-2">
+                {incident.tags.map((tag: string) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 border border-blue-300 rounded-full text-sm font-medium"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-3">
+                Tags categorize incidents by violation type, vulnerable populations, and systemic issues. These tags help identify patterns and filter cases for analysis.
+              </p>
+            </div>
+          </section>
+        )}
 
         {/* Quotes Section */}
         {quotes.length > 0 && (
@@ -726,7 +822,11 @@ export default function ValidatePage() {
                                 alt={item.description || 'Media'}
                                 className="max-w-full h-40 object-cover rounded border cursor-pointer hover:opacity-90"
                                 onError={(e) => {
-                                  (e.target as HTMLImageElement).src = '/placeholder-image.png';
+                                  const img = e.target as HTMLImageElement;
+                                  if (!img.dataset.failed) {
+                                    img.dataset.failed = 'true';
+                                    img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="160" viewBox="0 0 200 160"%3E%3Crect fill="%23f3f4f6" width="200" height="160"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="14" fill="%239ca3af"%3EImage unavailable%3C/text%3E%3C/svg%3E';
+                                  }
                                 }}
                               />
                             </a>
@@ -756,6 +856,284 @@ export default function ValidatePage() {
                         {item.description && (
                           <p className="text-sm text-gray-600 mt-1">{item.description}</p>
                         )}
+                        {!state.checked && (
+                          <input
+                            type="text"
+                            placeholder="Reason not validated..."
+                            value={state.reason}
+                            onChange={(e) => updateReason(key, e.target.value)}
+                            className="mt-2 w-full px-3 py-2 text-sm border border-red-200 rounded focus:ring-red-500 focus:border-red-500 bg-red-50"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Timeline Section */}
+        {timeline.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-4 pb-2 border-b">Timeline Events ({timeline.length})</h2>
+            <div className="space-y-3">
+              {timeline.map(entry => {
+                const key = `timeline_${entry.id}`;
+                const state = validationState[key] || { checked: false, reason: '' };
+                
+                return (
+                  <div
+                    key={entry.id}
+                    className={`p-4 rounded-lg border ${
+                      state.checked ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-start gap-4">
+                      <label className="flex items-center mt-1">
+                        <input
+                          type="checkbox"
+                          checked={state.checked}
+                          onChange={() => toggleValidation(key)}
+                          className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                        />
+                      </label>
+                      <div className="flex-1">
+                        <div className="flex items-baseline gap-2 mb-2">
+                          {entry.event_date && (
+                            <span className="font-medium text-gray-700">
+                              {new Date(entry.event_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-gray-900 mb-2">{entry.description}</div>
+                        {entry.quote_text ? (
+                          <div className="mt-2 text-sm bg-blue-50 border border-blue-200 p-3 rounded">
+                            <div className="font-medium text-blue-900 mb-1">✓ Supporting quote:</div>
+                            <div className="italic text-gray-700">&ldquo;{entry.quote_text}&rdquo;</div>
+                            {entry.quote_source_title || entry.quote_source_url ? (
+                              <div className="text-xs text-gray-600 mt-2">
+                                Source: <a href={entry.quote_source_url || '#'} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                  {entry.quote_source_title || entry.quote_source_url}
+                                </a>
+                              </div>
+                            ) : (
+                              <div className="text-xs text-orange-600 mt-2">⚠️ No source linked to quote</div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="mt-2 text-xs text-orange-600">⚠️ No supporting quote linked</div>
+                        )}
+                        {!state.checked && (
+                          <input
+                            type="text"
+                            placeholder="Reason not validated..."
+                            value={state.reason}
+                            onChange={(e) => updateReason(key, e.target.value)}
+                            className="mt-2 w-full px-3 py-2 text-sm border border-red-200 rounded focus:ring-red-500 focus:border-red-500 bg-red-50"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Agencies Section */}
+        {agencies.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-4 pb-2 border-b">Agencies Involved ({agencies.length})</h2>
+            <div className="space-y-3">
+              {agencies.map(agency => {
+                const key = `agency_${agency.id}`;
+                const state = validationState[key] || { checked: false, reason: '' };
+                const linkedQuote = getLinkedQuote(`agency_${agency.agency}`);
+                
+                return (
+                  <div
+                    key={agency.id}
+                    className={`p-4 rounded-lg border ${
+                      state.checked ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-start gap-4">
+                      <label className="flex items-center mt-1">
+                        <input
+                          type="checkbox"
+                          checked={state.checked}
+                          onChange={() => toggleValidation(key)}
+                          className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                        />
+                      </label>
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-800">
+                          {AGENCY_LABELS[agency.agency] || agency.agency}
+                        </div>
+                        {agency.role && (
+                          <div className="text-sm text-gray-500 mt-1">Role: {agency.role}</div>
+                        )}
+                        {linkedQuote && (
+                          <div className="mt-2 text-sm bg-blue-50 border border-blue-200 p-3 rounded">
+                            <div className="font-medium text-blue-900 mb-1">✓ Verified by quote:</div>
+                            <div className="italic text-gray-700">&ldquo;{linkedQuote.quote_text}&rdquo;</div>
+                            {linkedQuote.source_title || linkedQuote.source_url ? (
+                              <div className="text-xs text-gray-600 mt-2">
+                                Source: <a href={linkedQuote.source_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                  {linkedQuote.source_title || linkedQuote.source_url}
+                                </a>
+                              </div>
+                            ) : (
+                              <div className="text-xs text-orange-600 mt-2">⚠️ No source linked to quote</div>
+                            )}
+                          </div>
+                        )}
+                        {!linkedQuote && (
+                          <div className="mt-2 text-xs text-orange-600">⚠️ No quote linked to verify this agency</div>
+                        )}
+                        {!state.checked && (
+                          <input
+                            type="text"
+                            placeholder="Reason not validated..."
+                            value={state.reason}
+                            onChange={(e) => updateReason(key, e.target.value)}
+                            className="mt-2 w-full px-3 py-2 text-sm border border-red-200 rounded focus:ring-red-500 focus:border-red-500 bg-red-50"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Violations Section */}
+        {violations.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-4 pb-2 border-b">Alleged Violations ({violations.length})</h2>
+            <div className="space-y-3">
+              {violations.map(violation => {
+                const key = `violation_${violation.id}`;
+                const state = validationState[key] || { checked: false, reason: '' };
+                const linkedQuote = getLinkedQuote(`violation_${violation.violation_type}`);
+                
+                return (
+                  <div
+                    key={violation.id}
+                    className={`p-4 rounded-lg border ${
+                      state.checked ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-start gap-4">
+                      <label className="flex items-center mt-1">
+                        <input
+                          type="checkbox"
+                          checked={state.checked}
+                          onChange={() => toggleValidation(key)}
+                          className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                        />
+                      </label>
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-800">
+                          {VIOLATION_LABELS[violation.violation_type] || violation.violation_type}
+                        </div>
+                        {violation.description && (
+                          <div className="text-sm text-gray-600 mt-1">{violation.description}</div>
+                        )}
+                        {violation.constitutional_basis && (
+                          <div className="text-sm text-gray-700 mt-2 bg-gray-50 p-2 rounded">
+                            <span className="font-medium">Legal Basis:</span> {violation.constitutional_basis}
+                          </div>
+                        )}
+                        {linkedQuote && (
+                          <div className="mt-2 text-sm bg-blue-50 border border-blue-200 p-3 rounded">
+                            <div className="font-medium text-blue-900 mb-1">✓ Verified by quote:</div>
+                            <div className="italic text-gray-700">&ldquo;{linkedQuote.quote_text}&rdquo;</div>
+                            {linkedQuote.source_title || linkedQuote.source_url ? (
+                              <div className="text-xs text-gray-600 mt-2">
+                                Source: <a href={linkedQuote.source_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                  {linkedQuote.source_title || linkedQuote.source_url}
+                                </a>
+                              </div>
+                            ) : (
+                              <div className="text-xs text-orange-600 mt-2">⚠️ No source linked to quote</div>
+                            )}
+                          </div>
+                        )}
+                        {!linkedQuote && (
+                          <div className="mt-2 text-xs text-orange-600">⚠️ No quote linked to verify this violation</div>
+                        )}
+                        {!state.checked && (
+                          <input
+                            type="text"
+                            placeholder="Reason not validated..."
+                            value={state.reason}
+                            onChange={(e) => updateReason(key, e.target.value)}
+                            className="mt-2 w-full px-3 py-2 text-sm border border-red-200 rounded focus:ring-red-500 focus:border-red-500 bg-red-50"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Incident Details Section (Case Law, etc.) */}
+        {incidentDetails.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-4 pb-2 border-b">Additional Details ({incidentDetails.length})</h2>
+            <div className="space-y-3">
+              {incidentDetails.map((detail, idx) => {
+                const key = `detail_${detail.id || idx}`;
+                const state = validationState[key] || { checked: false, reason: '' };
+                
+                return (
+                  <div
+                    key={key}
+                    className={`p-4 rounded-lg border ${
+                      state.checked ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-start gap-4">
+                      <label className="flex items-center mt-1">
+                        <input
+                          type="checkbox"
+                          checked={state.checked}
+                          onChange={() => toggleValidation(key)}
+                          className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                        />
+                      </label>
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-800 mb-2">
+                          {detail.detail_type === 'violation_legal_basis' ? 'Case Law / Legal Basis' : 
+                           detail.detail_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </div>
+                        <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
+                          {detail.detail_type === 'violation_legal_basis' ? (
+                            <div className="space-y-2">
+                              {Object.entries(detail.details || {}).map(([violation, cases]) => (
+                                <div key={violation}>
+                                  <span className="font-medium">{VIOLATION_LABELS[violation] || violation}:</span>
+                                  <ul className="list-disc ml-4 mt-1">
+                                    {Array.isArray(cases) && cases.map((c: any, i: number) => (
+                                      <li key={i}>{c.name || c.case_name || JSON.stringify(c)}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <pre className="whitespace-pre-wrap text-xs">{JSON.stringify(detail.details, null, 2)}</pre>
+                          )}
+                        </div>
                         {!state.checked && (
                           <input
                             type="text"

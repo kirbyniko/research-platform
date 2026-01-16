@@ -204,17 +204,19 @@ export function IncidentHeader({ incident }: IncidentHeaderProps) {
         {incident.agencies_involved?.map((agency) => (
           <span 
             key={agency} 
-            className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded border border-gray-200"
+            className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded border border-gray-200 inline-flex items-center gap-1"
           >
             {agency.replace(/_/g, ' ').toUpperCase()}
+            <InlineEvidence fieldName={`agency_${agency}`} fieldQuoteMap={incident.field_quote_map} />
           </span>
         ))}
         {incident.violations_alleged?.map((violation) => (
           <span 
             key={violation} 
-            className="text-xs bg-red-50 text-red-700 px-2 py-1 rounded border border-red-200"
+            className="text-xs bg-red-50 text-red-700 px-2 py-1 rounded border border-red-200 inline-flex items-center gap-1"
           >
             {violation.replace(/_/g, ' ')}
+            <InlineEvidence fieldName={`violation_${violation}`} fieldQuoteMap={incident.field_quote_map} />
           </span>
         ))}
       </div>

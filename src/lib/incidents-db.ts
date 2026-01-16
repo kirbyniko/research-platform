@@ -445,11 +445,13 @@ export async function submitIncidentReview(
   try {
     await client.query('BEGIN');
     
+    console.log('[submitIncidentReview] Starting review for incident:', incidentId, 'user:', userId);
+    
     // Get current incident status and check if it's from a guest submission
     const incidentResult = await client.query(`
       SELECT 
         i.verification_status, 
-        i.first_review_by, 
+        i.first_verified_by, 
         i.verified,
         gs.id as guest_submission_id
       FROM incidents i
@@ -461,13 +463,15 @@ export async function submitIncidentReview(
       LIMIT 1
     `, [incidentId]);
     
+    console.log('[submitIncidentReview] Query result rows:', incidentResult.rows.length);
+    
     if (incidentResult.rows.length === 0) {
       return { success: false, error: 'Incident not found' };
     }
     
     const incident = incidentResult.rows[0];
     const currentStatus = incident.verification_status;
-    const firstReviewBy = incident.first_review_by;
+    const firstVerifiedBy = incident.first_verified_by;
     const guestSubmissionId = incident.guest_submission_id;
     const isAdmin = userRole === 'admin';
     
@@ -480,8 +484,8 @@ export async function submitIncidentReview(
         UPDATE incidents
         SET 
           verification_status = 'first_review',
-          first_review_by = $1,
-          first_review_at = CURRENT_TIMESTAMP,
+          first_verified_by = $1,
+          first_verified_at = CURRENT_TIMESTAMP,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
       `, [userId, incidentId]);
@@ -508,8 +512,8 @@ export async function submitIncidentReview(
       await client.query(`
         UPDATE incidents
         SET 
-          first_review_by = $1,
-          first_review_at = CURRENT_TIMESTAMP,
+          first_verified_by = $1,
+          first_verified_at = CURRENT_TIMESTAMP,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
       `, [userId, incidentId]);
@@ -521,13 +525,14 @@ export async function submitIncidentReview(
         message: 'Re-review submitted successfully. Case is in the validation queue.'
       };
       
-    } else {
-      // Already verified or other status - allow update
+    } else if (currentStatus === 'rejected') {
+      // Case was rejected - re-review moves it back to first_review (validation queue)
       await client.query(`
         UPDATE incidents
         SET 
-          first_review_by = $1,
-          first_review_at = CURRENT_TIMESTAMP,
+          verification_status = 'first_review',
+          first_verified_by = $1,
+          first_verified_at = CURRENT_TIMESTAMP,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
       `, [userId, incidentId]);
@@ -535,7 +540,25 @@ export async function submitIncidentReview(
       await client.query('COMMIT');
       return {
         success: true,
-        verification_status: 'verified',
+        verification_status: 'first_review',
+        message: 'Re-review submitted successfully. Case has been moved back to the validation queue.'
+      };
+      
+    } else {
+      // Already verified or other status - allow update
+      await client.query(`
+        UPDATE incidents
+        SET 
+          first_verified_by = $1,
+          first_verified_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `, [userId, incidentId]);
+      
+      await client.query('COMMIT');
+      return {
+        success: true,
+        verification_status: currentStatus,
         message: 'Verification updated'
       };
     }
@@ -809,7 +832,7 @@ export async function addTimelineEntry(incidentId: number, entry: Omit<TimelineE
       RETURNING id
     `, [
       incidentId,
-      entry.date || null,
+      (entry as any).event_date || entry.date || null,
       entry.time || null,
       entry.description,
       entry.source_id || null,
@@ -858,7 +881,7 @@ export async function getIncidentFieldQuoteMappings(incidentId: number): Promise
         s.url as source_url
       FROM quote_field_links qfl
       JOIN incident_quotes q ON qfl.quote_id = q.id
-      JOIN incident_sources s ON q.source_id = s.id
+      LEFT JOIN incident_sources s ON q.source_id = s.id
       WHERE qfl.incident_id = $1
       ORDER BY qfl.field_name, qfl.quote_id
     `, [incidentId]);
