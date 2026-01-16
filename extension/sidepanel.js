@@ -7214,6 +7214,24 @@ async function loadReviewCaseDetails(incidentId) {
     console.log('Incident tags from API:', data.incident?.tags);
     console.log('Type of tags:', typeof data.incident?.tags, 'Is array:', Array.isArray(data.incident?.tags));
     
+    // Also fetch type-specific details
+    let incidentDetails = {};
+    try {
+      const detailsResponse = await fetch(`${apiUrl}/api/incidents/${incidentId}/details`, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'X-API-Key': apiKey
+        }
+      });
+      if (detailsResponse.ok) {
+        const detailsData = await detailsResponse.json();
+        incidentDetails = detailsData.details || {};
+        console.log('Incident details loaded:', incidentDetails);
+      }
+    } catch (detailsErr) {
+      console.warn('Failed to fetch incident details:', detailsErr);
+    }
+    
     // Check if this case is in a status that allows review
     const incidentData = data.incident;
     
@@ -7294,54 +7312,54 @@ async function loadReviewCaseDetails(incidentId) {
       violations: incident.legal_violations || [],
       tags: incident.tags || [],
       
-      // Death-specific fields
-      deathCause: incident.cause_of_death || '',
-      deathManner: incident.manner_of_death || '',
-      deathCustodyDuration: incident.custody_duration || '',
-      deathMedicalDenied: incident.medical_care_denied || false,
+      // Death-specific fields - check incidentDetails first, then incident
+      deathCause: incidentDetails.cause_of_death || incident.cause_of_death || '',
+      deathManner: incidentDetails.manner_of_death || incident.manner_of_death || '',
+      deathCustodyDuration: incidentDetails.custody_duration || incident.custody_duration || '',
+      deathMedicalDenied: incidentDetails.medical_care_denied || incident.medical_care_denied || false,
       
       // Injury-specific fields
-      injuryType: incident.injury_type || '',
-      injurySeverity: incident.injury_severity || '',
-      injuryWeapon: incident.injury_weapon || '',
-      injuryCause: incident.injury_cause || '',
+      injuryType: incidentDetails.injury_type || incident.injury_type || '',
+      injurySeverity: incidentDetails.injury_severity || incident.injury_severity || '',
+      injuryWeapon: incidentDetails.injury_weapon || incident.injury_weapon || '',
+      injuryCause: incidentDetails.injury_cause || incident.injury_cause || '',
       
       // Arrest-specific fields
-      arrestReason: incident.arrest_reason || '',
-      arrestContext: incident.arrest_context || '',
-      arrestCharges: incident.arrest_charges || '',
-      arrestTimingSuspicious: incident.arrest_timing_suspicious || false,
-      arrestPretext: incident.arrest_pretext || false,
-      arrestSelective: incident.arrest_selective || false,
+      arrestReason: incidentDetails.arrest_reason || incident.arrest_reason || '',
+      arrestContext: incidentDetails.arrest_context || incident.arrest_context || '',
+      arrestCharges: incidentDetails.arrest_charges || incident.arrest_charges || '',
+      arrestTimingSuspicious: incidentDetails.arrest_timing_suspicious || incident.arrest_timing_suspicious || false,
+      arrestPretext: incidentDetails.arrest_pretext || incident.arrest_pretext || false,
+      arrestSelective: incidentDetails.arrest_selective || incident.arrest_selective || false,
       
       // Violation-specific fields
-      violationJournalism: incident.violation_journalism || false,
-      violationProtest: incident.violation_protest || false,
-      violationActivism: incident.violation_activism || false,
-      violationSpeech: incident.violation_speech || '',
-      violationRuling: incident.violation_ruling || '',
+      violationJournalism: incidentDetails.violation_journalism || incident.violation_journalism || false,
+      violationProtest: incidentDetails.violation_protest || incident.violation_protest || false,
+      violationActivism: incidentDetails.violation_activism || incident.violation_activism || false,
+      violationSpeech: incidentDetails.violation_speech || incident.violation_speech || '',
+      violationRuling: incidentDetails.violation_ruling || incident.violation_ruling || '',
       
       // Shooting-specific fields
-      shootingFatal: incident.shooting_fatal || false,
-      shotsFired: incident.shots_fired || '',
-      weaponType: incident.weapon_type || '',
-      bodycamAvailable: incident.bodycam_available || false,
-      victimArmed: incident.victim_armed || false,
-      warningGiven: incident.warning_given || false,
-      shootingContext: incident.shooting_context || '',
+      shootingFatal: incidentDetails.shooting_fatal || incident.shooting_fatal || false,
+      shotsFired: incidentDetails.shots_fired || incident.shots_fired || '',
+      weaponType: incidentDetails.weapon_type || incident.weapon_type || '',
+      bodycamAvailable: incidentDetails.bodycam_available || incident.bodycam_available || false,
+      victimArmed: incidentDetails.victim_armed || incident.victim_armed || false,
+      warningGiven: incidentDetails.warning_given || incident.warning_given || false,
+      shootingContext: incidentDetails.shooting_context || incident.shooting_context || '',
       
       // Excessive force-specific fields
-      forceTypes: incident.force_types || [],
-      victimRestrained: incident.victim_restrained || false,
-      victimComplying: incident.victim_complying || false,
-      videoEvidence: incident.video_evidence || false,
+      forceTypes: incidentDetails.force_types || incident.force_types || [],
+      victimRestrained: incidentDetails.victim_restrained || incident.victim_restrained || false,
+      victimComplying: incidentDetails.victim_complying || incident.victim_complying || false,
+      videoEvidence: incidentDetails.video_evidence || incident.video_evidence || false,
       
       // Protest-specific fields
-      protestTopic: incident.protest_topic || '',
-      protestSize: incident.protest_size || '',
-      protestPermitted: incident.protest_permitted || false,
-      dispersalMethod: incident.dispersal_method || '',
-      arrestsMade: incident.arrests_made || '',
+      protestTopic: incidentDetails.protest_topic || incident.protest_topic || '',
+      protestSize: incidentDetails.protest_size || incident.protest_size || '',
+      protestPermitted: incidentDetails.permitted || incidentDetails.protest_permitted || incident.protest_permitted || false,
+      dispersalMethod: incidentDetails.dispersal_method || incident.dispersal_method || '',
+      arrestsMade: incidentDetails.arrests_made || incident.arrests_made || '',
     };
     
     console.log('currentCase.tags after population:', currentCase.tags);
