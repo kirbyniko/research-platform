@@ -342,7 +342,8 @@ export interface Incident {
   // Identity
   id?: number;
   incident_id: string;           // YYYY-MM-DD-identifier
-  incident_type: IncidentType;
+  incident_type: IncidentType;   // Primary type (backward compatibility)
+  incident_types?: IncidentType[]; // Array of all incident types (new multi-type support)
   
   // When
   date: string;                  // YYYY-MM-DD

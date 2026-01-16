@@ -213,6 +213,64 @@
       margin-bottom: 12px;
     }
     
+    /* Incident types multi-select grid */
+    .incident-types-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 8px;
+      background: #f8f9fa;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .incident-type-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    
+    .incident-type-group-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+      padding-bottom: 2px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .incident-type-option {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 3px;
+      transition: background 0.15s;
+    }
+    
+    .incident-type-option:hover {
+      background: #e9ecef;
+    }
+    
+    .incident-type-checkbox {
+      width: 14px;
+      height: 14px;
+      margin: 0;
+      cursor: pointer;
+    }
+    
+    .incident-type-checkbox:checked + span,
+    .incident-type-option:has(.incident-type-checkbox:checked) {
+      font-weight: 500;
+      color: #1d4ed8;
+    }
+    
     .form-label {
       display: block;
       font-size: 11px;
@@ -2184,36 +2242,51 @@
         
         <div class="form-group">
           <label class="form-label" style="display: block; margin-bottom: 4px;">
-            Incident Type
+            Incident Type(s)
+            <span style="font-weight: normal; color: #666; font-size: 11px; margin-left: 4px;">(select all that apply)</span>
             <span class="verification-checkbox-wrapper" style="display: none;" data-field="incident_type">
               <input type="checkbox" class="field-verify-checkbox" data-field="incident_type">
               <span class="checkbox-label">Verified</span>
             </span>
           </label>
-          <select class="form-input" id="incidentType">
-            <optgroup label="Deaths">
-              <option value="death_in_custody">Death in Custody</option>
-              <option value="death_during_operation">Death During Operation</option>
-              <option value="death_at_protest">Death at Protest</option>
-            </optgroup>
-            <optgroup label="Force/Violence">
-              <option value="shooting">Shooting</option>
-              <option value="excessive_force">Excessive Force</option>
-              <option value="injury">Injury</option>
-            </optgroup>
-            <optgroup label="Enforcement">
-              <option value="arrest">Arrest/Detention</option>
-              <option value="deportation">Deportation</option>
-              <option value="workplace_raid">Workplace Raid</option>
-              <option value="family_separation">Family Separation</option>
-            </optgroup>
-            <optgroup label="Rights Issues">
-              <option value="rights_violation">Rights Violation</option>
-              <option value="protest_suppression">Protest Suppression</option>
-              <option value="retaliation">Retaliation</option>
-              <option value="medical_neglect">Medical Neglect</option>
-            </optgroup>
-            <option value="other">Other</option>
+          <div id="incidentTypesContainer" class="incident-types-grid">
+            <div class="incident-type-group">
+              <div class="incident-type-group-label">Deaths</div>
+              <label class="incident-type-option"><input type="checkbox" class="incident-type-checkbox" value="death_in_custody"> Death in Custody</label>
+              <label class="incident-type-option"><input type="checkbox" class="incident-type-checkbox" value="death_during_operation"> Death During Operation</label>
+              <label class="incident-type-option"><input type="checkbox" class="incident-type-checkbox" value="death_at_protest"> Death at Protest</label>
+            </div>
+            <div class="incident-type-group">
+              <div class="incident-type-group-label">Force/Violence</div>
+              <label class="incident-type-option"><input type="checkbox" class="incident-type-checkbox" value="shooting"> Shooting</label>
+              <label class="incident-type-option"><input type="checkbox" class="incident-type-checkbox" value="excessive_force"> Excessive Force</label>
+              <label class="incident-type-option"><input type="checkbox" class="incident-type-checkbox" value="injury"> Injury</label>
+            </div>
+            <div class="incident-type-group">
+              <div class="incident-type-group-label">Enforcement</div>
+              <label class="incident-type-option"><input type="checkbox" class="incident-type-checkbox" value="arrest"> Arrest/Detention</label>
+              <label class="incident-type-option"><input type="checkbox" class="incident-type-checkbox" value="deportation"> Deportation</label>
+              <label class="incident-type-option"><input type="checkbox" class="incident-type-checkbox" value="workplace_raid"> Workplace Raid</label>
+              <label class="incident-type-option"><input type="checkbox" class="incident-type-checkbox" value="family_separation"> Family Separation</label>
+            </div>
+            <div class="incident-type-group">
+              <div class="incident-type-group-label">Rights Issues</div>
+              <label class="incident-type-option"><input type="checkbox" class="incident-type-checkbox" value="rights_violation"> Rights Violation</label>
+              <label class="incident-type-option"><input type="checkbox" class="incident-type-checkbox" value="protest_suppression"> Protest Suppression</label>
+              <label class="incident-type-option"><input type="checkbox" class="incident-type-checkbox" value="retaliation"> Retaliation</label>
+              <label class="incident-type-option"><input type="checkbox" class="incident-type-checkbox" value="medical_neglect"> Medical Neglect</label>
+            </div>
+          </div>
+          <!-- Hidden select kept for backward compatibility with code -->
+          <select class="form-input" id="incidentType" style="display: none;">
+            <option value="death_in_custody">Death in Custody</option>
+            <option value="shooting">Shooting</option>
+            <option value="excessive_force">Excessive Force</option>
+            <option value="arrest">Arrest/Detention</option>
+            <option value="protest_suppression">Protest Suppression</option>
+            <option value="injury">Injury</option>
+            <option value="medical_neglect">Medical Neglect</option>
+            <option value="rights_violation">Rights Violation</option>
           </select>
           <div class="quote-association" style="position: relative;">
             <button type="button" class="quote-picker-trigger" data-field="incident_type">

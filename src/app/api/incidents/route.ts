@@ -141,11 +141,18 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    if (!incident.incident_type) {
+    // Accept either incident_types array or single incident_type
+    const hasTypes = (incident.incident_types && incident.incident_types.length > 0) || false;
+    const hasSingleType = incident.incident_type && incident.incident_type.length > 0;
+    if (!hasTypes && !hasSingleType) {
       return NextResponse.json(
-        { error: 'incident_type is required' },
+        { error: 'incident_type or incident_types is required' },
         { status: 400 }
       );
+    }
+    // Ensure incident_type is set for backward compatibility
+    if (!incident.incident_type && hasTypes) {
+      incident.incident_type = incident.incident_types![0];
     }
 
     const id = await createIncident(incident);

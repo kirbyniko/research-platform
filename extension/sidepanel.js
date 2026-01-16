@@ -2,7 +2,8 @@
 
 // State
 let currentCase = {
-  incidentType: 'death_in_custody',
+  incidentType: 'death_in_custody',  // Primary type (backward compatibility)
+  incidentTypes: [],  // Array of all selected types (multi-type support)
   name: '',
   dateOfDeath: '',
   age: '',
@@ -674,8 +675,15 @@ function setupTabs() {
 
 // Setup event listeners
 function setupEventListeners() {
-  // Incident type selector - show/hide relevant fields
-  elements.incidentType.addEventListener('change', handleIncidentTypeChange);
+  // Incident type checkboxes - show/hide relevant fields (multi-select)
+  document.querySelectorAll('.incident-type-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', handleIncidentTypeChange);
+  });
+  
+  // Keep hidden select listener for backward compatibility
+  if (elements.incidentType) {
+    elements.incidentType.addEventListener('change', handleIncidentTypeChange);
+  }
   
   // Form inputs - save on change
   ['caseName', 'caseDod', 'caseAge', 'caseCountry', 'caseGender', 'caseImmigrationStatus', 'caseFacility', 'caseCity', 'caseState', 'caseCause'].forEach(id => {
@@ -1991,11 +1999,18 @@ function populateCaseForm() {
     console.log('[populateCaseForm] Set arrestsMade to:', elements.arrestsMade.value);
   }
   
-  // NOW set incident type (this calls handleIncidentTypeChange -> updateCaseFromForm)
-  if (elements.incidentType) {
-    elements.incidentType.value = currentCase.incidentType || 'death_in_custody';
-    handleIncidentTypeChange();
+  // NOW set incident types (multi-select support)
+  // Check for incident_types array first, then fall back to single incidentType
+  const typesToSet = currentCase.incident_types || currentCase.incidentTypes || 
+    (currentCase.incidentType ? [currentCase.incidentType] : ['death_in_custody']);
+  setIncidentTypeCheckboxes(typesToSet);
+  console.log('[populateCaseForm] Set incident types:', typesToSet);
+  
+  // Also set hidden select for backward compatibility
+  if (elements.incidentType && typesToSet.length > 0) {
+    elements.incidentType.value = typesToSet[0];
   }
+  handleIncidentTypeChange();
   
   // Populate agencies
   document.querySelectorAll('[id^="agency-"]').forEach(checkbox => {
@@ -2547,36 +2562,29 @@ function saveViolationBasis() {
   showNotification(`Legal basis saved for ${violationsNeedingBasis.length} violation(s)`, 'success');
 }
 
-// Handle incident type change - show/hide relevant sections
-function handleIncidentTypeChange() {
-  const type = elements.incidentType.value;
-  
-  // Hide all type-specific sections and clean up their verifiedFields
-  [elements.deathFields, elements.injuryFields, elements.arrestFields, elements.violationFields,
-   elements.shootingSection, elements.excessiveForceSection, elements.protestSection, elements.medicalNeglectSection].forEach(el => {
-    if (el) {
-      el.classList.add('hidden');
-      
-      // In review mode, remove verifiedFields for fields in this section
-      if (reviewMode) {
-        const fieldsInSection = el.querySelectorAll('[data-field]');
-        fieldsInSection.forEach(wrapper => {
-          const fieldName = wrapper.dataset.field;
-          if (fieldName && verifiedFields[fieldName] !== undefined) {
-            delete verifiedFields[fieldName];
-          }
-        });
-      }
-    }
+// Get all selected incident types from checkboxes
+function getSelectedIncidentTypes() {
+  const checkboxes = document.querySelectorAll('.incident-type-checkbox:checked');
+  return Array.from(checkboxes).map(cb => cb.value);
+}
+
+// Set incident type checkboxes from array
+function setIncidentTypeCheckboxes(types) {
+  // Uncheck all first
+  document.querySelectorAll('.incident-type-checkbox').forEach(cb => {
+    cb.checked = false;
   });
-  
-  // Show violations section ALWAYS (matches web review page behavior)
-  // The extension is an analyst tool, so violations should always be visible
-  if (elements.violationsSection) {
-    elements.violationsSection.classList.remove('hidden');
+  // Check the specified types
+  if (types && types.length > 0) {
+    types.forEach(type => {
+      const checkbox = document.querySelector(`.incident-type-checkbox[value="${type}"]`);
+      if (checkbox) checkbox.checked = true;
+    });
   }
-  
-  // Show type-specific section
+}
+
+// Show sections for a specific incident type
+function showSectionsForType(type) {
   switch (type) {
     case 'death':
     case 'death_in_custody':
@@ -2603,8 +2611,6 @@ function handleIncidentTypeChange() {
       break;
     case 'protest_suppression':
       if (elements.protestSection) elements.protestSection.classList.remove('hidden');
-      // Note: Excessive force fields NOT shown for protest_suppression by default
-      // Future: Multi-type selection will allow combining types
       break;
     case 'arrest':
       if (elements.arrestFields) elements.arrestFields.classList.remove('hidden');
@@ -2613,6 +2619,47 @@ function handleIncidentTypeChange() {
     case 'retaliation':
       if (elements.violationFields) elements.violationFields.classList.remove('hidden');
       break;
+  }
+}
+
+// Handle incident type change - show/hide relevant sections (supports multi-type)
+function handleIncidentTypeChange() {
+  // Get all selected types
+  const selectedTypes = getSelectedIncidentTypes();
+  
+  // Update hidden select for backward compatibility (use first type)
+  if (elements.incidentType && selectedTypes.length > 0) {
+    elements.incidentType.value = selectedTypes[0];
+  }
+  
+  // Hide all type-specific sections and clean up their verifiedFields
+  [elements.deathFields, elements.injuryFields, elements.arrestFields, elements.violationFields,
+   elements.shootingSection, elements.excessiveForceSection, elements.protestSection, elements.medicalNeglectSection].forEach(el => {
+    if (el) {
+      el.classList.add('hidden');
+      
+      // In review mode, remove verifiedFields for fields in this section
+      if (reviewMode) {
+        const fieldsInSection = el.querySelectorAll('[data-field]');
+        fieldsInSection.forEach(wrapper => {
+          const fieldName = wrapper.dataset.field;
+          if (fieldName && verifiedFields[fieldName] !== undefined) {
+            delete verifiedFields[fieldName];
+          }
+        });
+      }
+    }
+  });
+  
+  // Show violations section ALWAYS (matches web review page behavior)
+  // The extension is an analyst tool, so violations should always be visible
+  if (elements.violationsSection) {
+    elements.violationsSection.classList.remove('hidden');
+  }
+  
+  // Show sections for ALL selected types (multi-type support)
+  for (const type of selectedTypes) {
+    showSectionsForType(type);
   }
   
   updateCaseFromForm();
@@ -2705,8 +2752,12 @@ function updateCaseFromForm() {
   // Preserve existing tags (they're managed by their own UI section)
   const existingTags = currentCase.tags || [];
   
+  // Get selected incident types from checkboxes
+  const selectedTypes = getSelectedIncidentTypes();
+  
   currentCase = {
-    incidentType: elements.incidentType ? elements.incidentType.value : 'death_in_custody',
+    incidentType: selectedTypes.length > 0 ? selectedTypes[0] : 'death_in_custody',
+    incidentTypes: selectedTypes,
     name: elements.caseName.value,
     dateOfDeath: elements.caseDod.value,
     age: elements.caseAge.value,
@@ -4794,7 +4845,8 @@ function addCurrentPageAsSource() {
 
 // Build incident object for API
 function buildIncidentObject() {
-  const incidentType = currentCase.incidentType || 'death';
+  const incidentTypes = currentCase.incidentTypes || (currentCase.incidentType ? [currentCase.incidentType] : ['death_in_custody']);
+  const incidentType = incidentTypes[0] || 'death_in_custody'; // First type for backward compatibility
   const date = currentCase.dateOfDeath || new Date().toISOString().split('T')[0];
   const nameSlug = (currentCase.name || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   
@@ -4809,6 +4861,7 @@ function buildIncidentObject() {
   const incident = {
     incident_id: `${date}-${incidentType === 'death' ? nameSlug : incidentType + '-' + (city || 'unknown').toLowerCase()}`,
     incident_type: incidentType,
+    incident_types: incidentTypes,
     date: date,
     date_precision: 'exact',
     location: {
@@ -4835,95 +4888,138 @@ function buildIncidentObject() {
     verified: false
   };
   
-  // Add type-specific details
-  switch (incidentType) {
+  // Add type-specific details for ALL selected types (multi-type support)
+  for (const type of incidentTypes) {
+    addTypeSpecificDetails(incident, type, currentCase);
+  }
+  
+  return incident;
+}
+
+// Add type-specific details to incident object
+function addTypeSpecificDetails(incident, type, caseData) {
+  switch (type) {
     case 'death':
-      incident.death_details = {
-        cause_of_death: currentCase.deathCause || currentCase.causeOfDeath || '',
-        cause_source: 'unknown',
-        manner_of_death: currentCase.deathManner || undefined,
-        custody_duration: currentCase.deathCustodyDuration || undefined,
-        medical_requests_denied: currentCase.deathMedicalDenied || false
-      };
-      break;
-      
-    case 'injury':
-      incident.injury_details = {
-        injury_type: currentCase.injuryType || '',
-        severity: currentCase.injurySeverity || undefined,
-        cause: currentCase.injuryCause || '',
-        weapon_used: currentCase.injuryWeapon || undefined
-      };
-      break;
-      
-    case 'arrest':
-      incident.arrest_details = {
-        stated_reason: currentCase.arrestReason || '',
-        actual_context: currentCase.arrestContext || undefined,
-        charges: currentCase.arrestCharges ? currentCase.arrestCharges.split(',').map(c => c.trim()) : [],
-        timing_suspicious: currentCase.arrestTimingSuspicious || false,
-        pretext_arrest: currentCase.arrestPretext || false,
-        selective_enforcement: currentCase.arrestSelective || false
-      };
-      break;
-      
-    case 'rights_violation':
-      incident.violation_details = {
-        violation_types: currentCase.violations || [],
-        journalism_related: currentCase.violationJournalism || false,
-        protest_related: currentCase.violationProtest || false,
-        activism_related: currentCase.violationActivism || false,
-        speech_content: currentCase.violationSpeech || undefined,
-        court_ruling: currentCase.violationRuling || undefined
-      };
-      break;
-      
-    case 'shooting':
-      incident.shooting_details = {
-        fatal: currentCase.shootingFatal || false,
-        shots_fired: currentCase.shotsFired ? parseInt(currentCase.shotsFired) : undefined,
-        weapon_type: currentCase.weaponType || 'unknown',
-        bodycam_available: currentCase.bodycamAvailable || false,
-        victim_armed: currentCase.victimArmed || false,
-        warning_given: currentCase.warningGiven || false,
-        context: currentCase.shootingContext || 'other'
-      };
-      break;
-      
-    case 'excessive_force':
-      incident.excessive_force_details = {
-        force_type: currentCase.forceTypes || [],
-        victim_restrained_when_force_used: currentCase.victimRestrained || false,
-        victim_complying: currentCase.victimComplying || false,
-        video_evidence: currentCase.videoEvidence || false
-      };
-      break;
-      
     case 'death_in_custody':
     case 'death_during_operation':
     case 'death_at_protest':
     case 'detention_death':
-      incident.death_details = {
-        cause_of_death: currentCase.deathCause || currentCase.causeOfDeath || '',
-        cause_source: 'unknown',
-        manner_of_death: currentCase.deathManner || undefined,
-        custody_duration: currentCase.deathCustodyDuration || undefined,
-        medical_requests_denied: currentCase.deathMedicalDenied || false
-      };
+      if (!incident.death_details) {
+        incident.death_details = {
+          cause_of_death: caseData.deathCause || caseData.causeOfDeath || '',
+          cause_source: 'unknown',
+          manner_of_death: caseData.deathManner || undefined,
+          custody_duration: caseData.deathCustodyDuration || undefined,
+          medical_requests_denied: caseData.deathMedicalDenied || false
+        };
+      }
+      // death_at_protest also gets protest details
+      if (type === 'death_at_protest' && !incident.protest_details) {
+        incident.protest_details = {
+          protest_topic: caseData.protestTopic || '',
+          protest_size: caseData.protestSize || undefined,
+          permitted: caseData.protestPermitted || false,
+          dispersal_method: caseData.dispersalMethod || undefined,
+          arrests_made: caseData.arrestsMade ? parseInt(caseData.arrestsMade) : undefined
+        };
+      }
+      break;
+      
+    case 'injury':
+      if (!incident.injury_details) {
+        incident.injury_details = {
+          injury_type: caseData.injuryType || '',
+          severity: caseData.injurySeverity || undefined,
+          cause: caseData.injuryCause || '',
+          weapon_used: caseData.injuryWeapon || undefined
+        };
+      }
+      break;
+      
+    case 'arrest':
+      if (!incident.arrest_details) {
+        incident.arrest_details = {
+          stated_reason: caseData.arrestReason || '',
+          actual_context: caseData.arrestContext || undefined,
+          charges: caseData.arrestCharges ? caseData.arrestCharges.split(',').map(c => c.trim()) : [],
+          timing_suspicious: caseData.arrestTimingSuspicious || false,
+          pretext_arrest: caseData.arrestPretext || false,
+          selective_enforcement: caseData.arrestSelective || false
+        };
+      }
+      break;
+      
+    case 'rights_violation':
+    case 'retaliation':
+      if (!incident.violation_details) {
+        incident.violation_details = {
+          violation_types: caseData.violations || [],
+          journalism_related: caseData.violationJournalism || false,
+          protest_related: caseData.violationProtest || false,
+          activism_related: caseData.violationActivism || false,
+          speech_content: caseData.violationSpeech || undefined,
+          court_ruling: caseData.violationRuling || undefined
+        };
+      }
+      break;
+      
+    case 'shooting':
+      if (!incident.shooting_details) {
+        incident.shooting_details = {
+          fatal: caseData.shootingFatal || false,
+          shots_fired: caseData.shotsFired ? parseInt(caseData.shotsFired) : undefined,
+          weapon_type: caseData.weaponType || 'unknown',
+          bodycam_available: caseData.bodycamAvailable || false,
+          victim_armed: caseData.victimArmed || false,
+          warning_given: caseData.warningGiven || false,
+          context: caseData.shootingContext || 'other'
+        };
+      }
+      break;
+      
+    case 'excessive_force':
+      if (!incident.excessive_force_details) {
+        incident.excessive_force_details = {
+          force_type: caseData.forceTypes || [],
+          victim_restrained_when_force_used: caseData.victimRestrained || false,
+          victim_complying: caseData.victimComplying || false,
+          video_evidence: caseData.videoEvidence || false
+        };
+      }
+      // Excessive force also includes injury details
+      if (!incident.injury_details) {
+        incident.injury_details = {
+          injury_type: caseData.injuryType || '',
+          severity: caseData.injurySeverity || undefined,
+          cause: caseData.injuryCause || '',
+          weapon_used: caseData.injuryWeapon || undefined
+        };
+      }
+      break;
+      
+    case 'medical_neglect':
+      if (!incident.medical_neglect_details) {
+        incident.medical_neglect_details = {
+          condition_type: caseData.conditionType || '',
+          requests_made: caseData.medicalRequestsMade ? parseInt(caseData.medicalRequestsMade) : undefined,
+          days_without_care: caseData.daysWithoutCare ? parseInt(caseData.daysWithoutCare) : undefined,
+          outcome: caseData.medicalOutcome || ''
+        };
+      }
       break;
       
     case 'protest_suppression':
-      incident.protest_details = {
-        protest_topic: currentCase.protestTopic || '',
-        protest_size: currentCase.protestSize || undefined,
-        permitted: currentCase.protestPermitted || false,
-        dispersal_method: currentCase.dispersalMethod || undefined,
-        arrests_made: currentCase.arrestsMade ? parseInt(currentCase.arrestsMade) : undefined
-      };
+      if (!incident.protest_details) {
+        incident.protest_details = {
+          protest_topic: caseData.protestTopic || '',
+          protest_size: caseData.protestSize || undefined,
+          permitted: caseData.protestPermitted || false,
+          dispersal_method: caseData.dispersalMethod || undefined,
+          arrests_made: caseData.arrestsMade ? parseInt(caseData.arrestsMade) : undefined
+        };
+      }
       break;
   }
-  
-  return incident;
 }
 
 // Save case to API

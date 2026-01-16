@@ -29,23 +29,32 @@ export async function createIncident(incident: Omit<Incident, 'id' | 'created_at
   try {
     await client.query('BEGIN');
 
+    // Handle incident_types array - use provided array or fall back to single type
+    const incidentTypes: string[] = incident.incident_types?.length 
+      ? incident.incident_types 
+      : (incident.incident_type ? [incident.incident_type] : []);
+    
+    // Primary type for backward compatibility
+    const primaryType = incidentTypes[0] || incident.incident_type || 'unknown';
+
     // Insert main incident
     const result = await client.query(`
       INSERT INTO incidents (
-        incident_id, incident_type, incident_date, date_precision, incident_date_end,
+        incident_id, incident_type, incident_types, incident_date, date_precision, incident_date_end,
         city, state, country, facility, address, latitude, longitude,
         subject_name, subject_name_public, subject_age, subject_gender,
         subject_nationality, subject_immigration_status, subject_occupation,
         subject_years_in_us, subject_family_in_us,
         summary, verified, verification_notes, tags, created_by
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
-        $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+        $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27
       )
       RETURNING id
     `, [
       incident.incident_id,
-      incident.incident_type,
+      primaryType,
+      incidentTypes,
       incident.date,
       incident.date_precision || 'exact',
       incident.date_end || null,
@@ -96,7 +105,7 @@ export async function createIncident(incident: Omit<Incident, 'id' | 'created_at
       }
     }
 
-    // Insert type-specific details
+    // Insert type-specific details for EACH selected incident type
     const detailsMap: Record<string, unknown> = {
       death: incident.death_details,
       death_in_custody: incident.death_details,
@@ -115,12 +124,16 @@ export async function createIncident(incident: Omit<Incident, 'id' | 'created_at
       medical_neglect: incident.death_details, // Medical neglect uses death details
     };
 
-    const details = detailsMap[incident.incident_type];
-    if (details) {
-      await client.query(`
-        INSERT INTO incident_details (incident_id, detail_type, details)
-        VALUES ($1, $2, $3)
-      `, [incidentId, incident.incident_type, JSON.stringify(details)]);
+    // Insert details for each incident type (multi-type support)
+    for (const iType of incidentTypes) {
+      const details = detailsMap[iType];
+      if (details) {
+        await client.query(`
+          INSERT INTO incident_details (incident_id, detail_type, details)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (incident_id, detail_type) DO UPDATE SET details = $3
+        `, [incidentId, iType, JSON.stringify(details)]);
+      }
     }
 
     // Insert violation_details_map (case law per violation)

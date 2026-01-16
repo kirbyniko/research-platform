@@ -3,10 +3,38 @@
 ## Overview
 Allow incidents to have multiple types (e.g., "protest_suppression" + "excessive_force" + "arrest").
 
+## Implementation Status
+
+### ✅ COMPLETED
+1. **Database Migration** - `incident_types TEXT[]` column added with GIN index
+2. **API Updates** - `createIncident()` handles array, validation accepts array
+3. **Extension HTML** - Checkbox grid UI replacing dropdown
+4. **Extension JS** - Multi-select support:
+   - `getSelectedIncidentTypes()` - reads all checked types
+   - `setIncidentTypeCheckboxes()` - sets checkboxes from array
+   - `handleIncidentTypeChange()` - shows sections for ALL selected types
+   - `buildIncidentObject()` - sends `incident_types` array
+   - `addTypeSpecificDetails()` - adds details for each type
+
+### ⚠️ MANUAL STEP REQUIRED
+Copy extension files to extension-dist (terminal has issues):
+```
+copy extension\sidepanel.js extension-dist\sidepanel.js
+copy extension\sidepanel.html extension-dist\sidepanel.html
+```
+
+### 🔲 TODO
+- Website UI - replicate checkbox approach in review page
+- Full testing of multi-type flows
+- Commit and push to trigger Vercel deploy
+
+---
+
 ## Current State
 
 ### Database
-- `incidents.incident_type` - single VARCHAR column
+- `incidents.incident_type` - single VARCHAR column (backward compat)
+- `incidents.incident_types` - TEXT[] array column (NEW)
 - `incident_details` - stores type-specific data with `detail_type` and JSONB `details`
   - Already supports multiple rows per incident (one per detail_type)
 
