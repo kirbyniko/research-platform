@@ -1891,78 +1891,67 @@ export default function ReviewPage() {
           <div>
             <label className="block text-xs text-gray-600 mb-1">Add Tag:</label>
             <div className="flex gap-2">
-              <input
-                type="text"
-                list="tag-suggestions"
-                placeholder="Type or select a tag..."
+              <select
                 className="flex-1 border rounded px-2 py-1 text-sm"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const input = e.target as HTMLInputElement;
-                    const newTag = input.value.trim();
-                    if (newTag) {
-                      const currentTags = (editedIncident.tags as string[]) || [];
-                      if (!currentTags.includes(newTag)) {
-                        setEditedIncident({ ...editedIncident, tags: [...currentTags, newTag].sort() });
-                      }
-                      input.value = '';
-                    }
-                  }
-                }}
-                id="tag-input"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  const input = document.getElementById('tag-input') as HTMLInputElement;
-                  const newTag = input.value.trim();
+                id="tag-select"
+                onChange={(e) => {
+                  const newTag = e.target.value;
                   if (newTag) {
                     const currentTags = (editedIncident.tags as string[]) || [];
                     if (!currentTags.includes(newTag)) {
                       setEditedIncident({ ...editedIncident, tags: [...currentTags, newTag].sort() });
                     }
-                    input.value = '';
+                    e.target.value = '';
                   }
                 }}
-                className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
               >
-                Add
-              </button>
+                <option value="">Select a tag to add...</option>
+                <optgroup label="Incident Type">
+                  <option value="Death in Custody">Death in Custody</option>
+                  <option value="Use of Force">Use of Force</option>
+                  <option value="Shooting">Shooting</option>
+                  <option value="Medical Neglect">Medical Neglect</option>
+                </optgroup>
+                <optgroup label="Health/Medical">
+                  <option value="Mental Health Crisis">Mental Health Crisis</option>
+                  <option value="Suicide">Suicide</option>
+                  <option value="COVID-19">COVID-19</option>
+                  <option value="Cardiac Event">Cardiac Event</option>
+                  <option value="Respiratory Illness">Respiratory Illness</option>
+                </optgroup>
+                <optgroup label="Vulnerable Populations">
+                  <option value="Asylum Seeker">Asylum Seeker</option>
+                  <option value="Minor">Minor</option>
+                  <option value="Elderly">Elderly</option>
+                  <option value="DACA Recipient">DACA Recipient</option>
+                  <option value="Military Veteran">Military Veteran</option>
+                  <option value="Young Adult">Young Adult</option>
+                </optgroup>
+                <optgroup label="Circumstances">
+                  <option value="Prolonged Detention">Prolonged Detention</option>
+                  <option value="Family Separation">Family Separation</option>
+                  <option value="Communication Denied">Communication Denied</option>
+                  <option value="Rapid Deterioration">Rapid Deterioration</option>
+                  <option value="In Transit">In Transit</option>
+                  <option value="Permanent Injury">Permanent Injury</option>
+                </optgroup>
+                <optgroup label="Special Cases">
+                  <option value="Bystander Victim">Bystander Victim</option>
+                  <option value="Journalist">Journalist</option>
+                  <option value="Legal Observer">Legal Observer</option>
+                  <option value="Protest-Related">Protest-Related</option>
+                </optgroup>
+                <optgroup label="Legal Issues">
+                  <option value="Judicial Finding">Judicial Finding</option>
+                  <option value="Fourth Amendment">Fourth Amendment</option>
+                  <option value="Due Process Violation">Due Process Violation</option>
+                  <option value="Cruel & Unusual Punishment">Cruel & Unusual Punishment</option>
+                </optgroup>
+                <optgroup label="Testing">
+                  <option value="test">test</option>
+                </optgroup>
+              </select>
             </div>
-            
-            {/* Predefined tag suggestions */}
-            <datalist id="tag-suggestions">
-              <option value="Death in Custody" />
-              <option value="Use of Force" />
-              <option value="Shooting" />
-              <option value="Medical Neglect" />
-              <option value="Mental Health Crisis" />
-              <option value="Suicide" />
-              <option value="Asylum Seeker" />
-              <option value="Minor" />
-              <option value="Elderly" />
-              <option value="DACA Recipient" />
-              <option value="Prolonged Detention" />
-              <option value="Family Separation" />
-              <option value="Communication Denied" />
-              <option value="Rapid Deterioration" />
-              <option value="In Transit" />
-              <option value="Bystander Victim" />
-              <option value="Journalist" />
-              <option value="Legal Observer" />
-              <option value="Protest-Related" />
-              <option value="Judicial Finding" />
-              <option value="Fourth Amendment" />
-              <option value="Due Process Violation" />
-              <option value="Cruel & Unusual Punishment" />
-              <option value="COVID-19" />
-              <option value="Cardiac Event" />
-              <option value="Respiratory Illness" />
-              <option value="Permanent Injury" />
-              <option value="Military Veteran" />
-              <option value="Young Adult" />
-            </datalist>
           </div>
         </div>
         

@@ -13,6 +13,7 @@ let currentCase = {
   causeOfDeath: '',
   agencies: [],
   violations: [],
+  tags: [],  // Tags array
   // Death-specific
   deathCause: '',
   deathManner: '',
@@ -446,6 +447,10 @@ function cacheElements() {
   elements.caseCity = document.getElementById('caseCity');
   elements.caseState = document.getElementById('caseState');
   elements.caseCause = document.getElementById('caseCause');
+  // Tag elements
+  elements.tagSelect = document.getElementById('tagSelect');
+  elements.addTagBtn = document.getElementById('addTagBtn');
+  elements.currentTags = document.getElementById('currentTags');
   // Media elements
   elements.addMediaBtn = document.getElementById('addMediaBtn');
   elements.mediaList = document.getElementById('mediaList');
@@ -958,6 +963,28 @@ function setupEventListeners() {
     elements.addMediaBtn.addEventListener('click', () => {
       media.push({ url: '', media_type: 'image', description: '', addedAt: new Date().toISOString() });
       renderMediaList();
+    });
+  }
+  
+  // Add tag button
+  if (elements.addTagBtn) {
+    elements.addTagBtn.addEventListener('click', () => {
+      const tagSelect = elements.tagSelect;
+      if (tagSelect && tagSelect.value) {
+        addTag(tagSelect.value);
+        tagSelect.value = '';
+      }
+    });
+  }
+  
+  // Tag select on change (also add on select for convenience)
+  if (elements.tagSelect) {
+    elements.tagSelect.addEventListener('change', () => {
+      const tagSelect = elements.tagSelect;
+      if (tagSelect && tagSelect.value) {
+        addTag(tagSelect.value);
+        tagSelect.value = '';
+      }
     });
   }
   
@@ -1992,6 +2019,14 @@ function populateCaseForm() {
   if (elements.protestPermitted) elements.protestPermitted.checked = currentCase.protestPermitted || false;
   if (elements.dispersalMethod) elements.dispersalMethod.value = currentCase.dispersalMethod || '';
   if (elements.arrestsMade) elements.arrestsMade.value = currentCase.arrestsMade || '';
+  
+  // Populate tags
+  if (currentCase.tags && Array.isArray(currentCase.tags)) {
+    renderTags();
+  } else {
+    currentCase.tags = [];
+    renderTags();
+  }
 }
 
 // ============================================
@@ -4495,6 +4530,43 @@ function deleteSource(index) {
 }
 
 // ============================================
+// ============================================
+// TAG MANAGEMENT
+// ============================================
+
+// Add a tag to the current case
+function addTag(tag) {
+  if (!tag || currentCase.tags.includes(tag)) return;
+  currentCase.tags.push(tag);
+  currentCase.tags.sort();
+  renderTags();
+}
+
+// Remove a tag from the current case
+function removeTag(tag) {
+  currentCase.tags = currentCase.tags.filter(t => t !== tag);
+  renderTags();
+}
+
+// Render the tags display
+function renderTags() {
+  const container = elements.currentTags;
+  if (!container) return;
+  
+  if (currentCase.tags.length === 0) {
+    container.innerHTML = '<span style="color: #9ca3af; font-size: 11px;">No tags added</span>';
+    return;
+  }
+  
+  container.innerHTML = currentCase.tags.map(tag => `
+    <span class="tag-item" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; border-radius: 12px; font-size: 11px;">
+      ${escapeHtml(tag)}
+      <button type="button" onclick="removeTag('${escapeHtml(tag)}')" style="background: none; border: none; cursor: pointer; padding: 0; color: #1e40af; font-size: 14px; line-height: 1;">&times;</button>
+    </span>
+  `).join('');
+}
+
+// ============================================
 // MEDIA MANAGEMENT (Images/Videos)
 // ============================================
 
@@ -4704,6 +4776,7 @@ function buildIncidentObject() {
     violations_potential: currentCase.violations_potential || [],
     violations_possible: currentCase.violations_possible || [],
     violation_details_map: currentCase.violation_details_map || {},
+    tags: currentCase.tags || [],
     verified: false
   };
   
@@ -5765,6 +5838,7 @@ function clearCase() {
     violations_possible: [],
     violation_details_map: {},
     violations_data: [],
+    tags: [],
     deathCause: '',
     deathManner: '',
     deathCustodyDuration: '',
@@ -7169,6 +7243,7 @@ async function loadReviewCaseDetails(incidentId) {
       // Related entities
       agencies: incident.agencies_involved || [],
       violations: incident.legal_violations || [],
+      tags: incident.tags || [],
       
       // Death-specific details
       deathCause: incident.cause_of_death || '',
