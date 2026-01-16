@@ -2230,6 +2230,655 @@
       </div>
       
       <!-- Agencies Involved Section -->
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Basic Information</span>
+          <button class="btn btn-sm btn-secondary" id="clearCaseBtn">Clear</button>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Subject Name
+            <span class="verification-checkbox-wrapper" style="display: none;" data-field="name">
+              <input type="checkbox" class="field-verify-checkbox" data-field="name">
+              <span class="checkbox-label">Verified</span>
+            </span>
+          </label>
+          <input type="text" class="form-input" id="caseName" placeholder="Last name, First name (or Anonymous)">
+          <div class="quote-association" style="position: relative;">
+            <button type="button" class="quote-picker-trigger" data-field="name">
+              <span class="selected-quote-preview">[src] Link quote...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="name">
+              <div class="quote-picker-search">
+                <input type="text" placeholder="Search quotes..." data-field="name">
+              </div>
+              <div class="quote-picker-list" data-field="name"></div>
+            </div>
+          </div>
+          
+          <!-- Duplicate Checker -->
+          <div id="duplicateChecker" class="duplicate-checker" style="margin-top: 8px;">
+            <button type="button" id="checkDuplicatesBtn" class="btn btn-sm btn-secondary" style="width: 100%;">
+              🔍 Check for Duplicates
+            </button>
+            <div id="duplicateResults" class="duplicate-results hidden" style="margin-top: 8px; padding: 8px; border-radius: 4px; font-size: 12px;">
+              <!-- Results will be populated here -->
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Incident Date
+              <span class="verification-checkbox-wrapper" style="display: none;" data-field="date">
+                <input type="checkbox" class="field-verify-checkbox" data-field="date">
+                <span class="checkbox-label">Verified</span>
+              </span>
+            </label>
+            <input type="date" class="form-input" id="caseDod">
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="date">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="date">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="date">
+                </div>
+                <div class="quote-picker-list" data-field="date"></div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Age
+              <span class="verification-checkbox-wrapper" style="display: none;" data-field="age">
+                <input type="checkbox" class="field-verify-checkbox" data-field="age">
+                <span class="checkbox-label">Verified</span>
+              </span>
+            </label>
+            <input type="number" class="form-input" id="caseAge" placeholder="Age">
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="age">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="age">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="age">
+                </div>
+                <div class="quote-picker-list" data-field="age"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nationality
+              <span class="verification-checkbox-wrapper" style="display: none;" data-field="nationality">
+                <input type="checkbox" class="field-verify-checkbox" data-field="nationality">
+                <span class="checkbox-label">Verified</span>
+              </span>
+            </label>
+            <input type="text" class="form-input" id="caseCountry" placeholder="Country">
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="nationality">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="nationality">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="nationality">
+                </div>
+                <div class="quote-picker-list" data-field="nationality"></div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Gender
+              <span class="verification-checkbox-wrapper" style="display: none;" data-field="gender">
+                <input type="checkbox" class="field-verify-checkbox" data-field="gender">
+                <span class="checkbox-label">Verified</span>
+              </span>
+            </label>
+            <select class="form-input" id="caseGender">
+              <option value="">Select...</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="gender">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="gender">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="gender">
+                </div>
+                <div class="quote-picker-list" data-field="gender"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Immigration Status
+              <span class="verification-checkbox-wrapper" style="display: none;" data-field="immigration_status">
+                <input type="checkbox" class="field-verify-checkbox" data-field="immigration_status">
+                <span class="checkbox-label">Verified</span>
+              </span>
+            </label>
+            <select class="form-input" id="caseImmigrationStatus">
+              <option value="">Unknown</option>
+              <option value="undocumented">Undocumented</option>
+              <option value="visa_holder">Visa Holder</option>
+              <option value="green_card">Green Card Holder</option>
+              <option value="asylum_seeker">Asylum Seeker</option>
+              <option value="daca">DACA Recipient</option>
+              <option value="tps">TPS Holder</option>
+              <option value="citizen">U.S. Citizen</option>
+              <option value="other">Other</option>
+            </select>
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="immigration_status">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="immigration_status">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="immigration_status">
+                </div>
+                <div class="quote-picker-list" data-field="immigration_status"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Facility (if applicable)
+            <span class="verification-checkbox-wrapper" style="display: none;" data-field="facility">
+              <input type="checkbox" class="field-verify-checkbox" data-field="facility">
+              <span class="checkbox-label">Verified</span>
+            </span>
+          </label>
+          <input type="text" class="form-input" id="caseFacility" placeholder="Detention facility name">
+          <div class="quote-association" style="position: relative;">
+            <button type="button" class="quote-picker-trigger" data-field="facility">
+              <span class="selected-quote-preview">[src] Link quote...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="facility">
+              <div class="quote-picker-search">
+                <input type="text" placeholder="Search quotes..." data-field="facility">
+              </div>
+              <div class="quote-picker-list" data-field="facility"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">City
+              <span class="verification-checkbox-wrapper" style="display: none;" data-field="city">
+                <input type="checkbox" class="field-verify-checkbox" data-field="city">
+                <span class="checkbox-label">Verified</span>
+              </span>
+            </label>
+            <input type="text" class="form-input" id="caseCity" placeholder="City">
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="city">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="city">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="city">
+                </div>
+                <div class="quote-picker-list" data-field="city"></div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">State
+              <span class="verification-checkbox-wrapper" style="display: none;" data-field="state">
+                <input type="checkbox" class="field-verify-checkbox" data-field="state">
+                <span class="checkbox-label">Verified</span>
+              </span>
+            </label>
+            <input type="text" class="form-input" id="caseState" placeholder="State">
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="state">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="state">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="state">
+                </div>
+                <div class="quote-picker-list" data-field="state"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Summary
+            <span class="verification-checkbox-wrapper" style="display: none;" data-field="summary">
+              <input type="checkbox" class="field-verify-checkbox" data-field="summary">
+              <span class="checkbox-label">Verified</span>
+            </span>
+          </label>
+          <textarea class="form-input" id="caseCause" placeholder="Brief factual summary of what happened"></textarea>
+          <div class="quote-association" style="position: relative; margin-top: 4px;">
+            <button type="button" class="quote-picker-trigger" data-field="summary">
+              <span class="selected-quote-preview">[src] Link...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="summary">
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="summary"></div>
+              <div class="quote-picker-list" data-field="summary"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Media Section (Images/Videos) -->
+        <div class="form-group">
+          <label class="form-label">Media (Images &amp; Videos)</label>
+          <div id="mediaList" class="media-list" style="margin-bottom: 8px;"></div>
+          <button type="button" class="btn btn-sm btn-secondary btn-block" id="addMediaBtn">+ Add Image/Video</button>
+          <p class="form-hint">Images must be public domain, Creative Commons, or otherwise free-use. Videos can be YouTube, Vimeo, or direct links.</p>
+        </div>
+      </div>
+      
+      <!-- Death-Specific Fields -->
+
+      <div class="section hidden" id="deathFields">
+        <div class="section-header">
+          <span class="section-title">Death Details</span>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Cause of Death
+            <span class="verification-checkbox-wrapper" style="display: none;" data-field="death_cause">
+              <input type="checkbox" class="field-verify-checkbox" data-field="death_cause">
+              <span class="checkbox-label">Verified</span>
+            </span>
+          </label>
+          <input type="text" class="form-input" id="deathCause" placeholder="As stated in records">
+          <div class="quote-association" style="position: relative; margin-top: 4px;">
+            <button type="button" class="quote-picker-trigger" data-field="death_cause">
+              <span class="selected-quote-preview">[src] Link...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="death_cause">
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_cause"></div>
+              <div class="quote-picker-list" data-field="death_cause"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Manner
+              <span class="verification-checkbox-wrapper" style="display: none;" data-field="death_manner">
+                <input type="checkbox" class="field-verify-checkbox" data-field="death_manner">
+                <span class="checkbox-label">Verified</span>
+              </span>
+            </label>
+            <select class="form-input" id="deathManner">
+              <option value="">Unknown</option>
+              <option value="natural">Natural</option>
+              <option value="accident">Accident</option>
+              <option value="suicide">Suicide</option>
+              <option value="homicide">Homicide</option>
+              <option value="undetermined">Undetermined</option>
+              <option value="pending">Pending</option>
+            </select>
+            <div class="quote-association" style="position: relative; margin-top: 4px;">
+              <button type="button" class="quote-picker-trigger" data-field="death_manner">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="death_manner">
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_manner"></div>
+                <div class="quote-picker-list" data-field="death_manner"></div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Custody Duration
+              <span class="verification-checkbox-wrapper" style="display: none;" data-field="death_custody_duration">
+                <input type="checkbox" class="field-verify-checkbox" data-field="death_custody_duration">
+                <span class="checkbox-label">Verified</span>
+              </span>
+            </label>
+            <input type="text" class="form-input" id="deathCustodyDuration" placeholder="e.g., 6 months">
+            <div class="quote-association" style="position: relative; margin-top: 4px;">
+              <button type="button" class="quote-picker-trigger" data-field="death_custody_duration">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="death_custody_duration">
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_custody_duration"></div>
+                <div class="quote-picker-list" data-field="death_custody_duration"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <label class="checkbox-item" style="margin-top: 8px;">
+          <input type="checkbox" id="deathMedicalDenied"> Medical requests denied
+        </label>
+      </div>
+      
+      <!-- Injury-Specific Fields -->
+
+      <div class="section hidden" id="shootingSection">
+        <div class="collapsible-header open" id="shootingHeader">
+          <span class="section-title">Shooting Details</span>
+        </div>
+        <div class="collapsible-content open" id="shootingContent">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="checkbox-item">
+                <input type="checkbox" id="shootingFatal"> Fatal
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Shots Fired</label>
+              <input type="number" class="form-input" id="shotsFired" placeholder="Number">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Weapon Type</label>
+            <select class="form-input" id="weaponType">
+              <option value="">Select...</option>
+              <option value="handgun">Handgun</option>
+              <option value="rifle">Rifle</option>
+              <option value="taser">Taser</option>
+              <option value="less_lethal">Less-lethal</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="checkbox-grid">
+            <label class="checkbox-item">
+              <input type="checkbox" id="bodycamAvailable"> Bodycam Available
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="victimArmed"> Victim Was Armed
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="warningGiven"> Warning Given
+            </label>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Context</label>
+            <textarea class="form-input" id="shootingContext" rows="2" placeholder="Brief circumstances..."></textarea>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Excessive Force Details Section -->
+
+      <div class="section hidden" id="excessiveForceSection">
+        <div class="collapsible-header open" id="excessiveForceHeader">
+          <span class="section-title">Excessive Force Details</span>
+        </div>
+        <div class="collapsible-content open" id="excessiveForceContent">
+          <div class="form-group">
+            <label class="form-label">Force Type(s)</label>
+            <div class="checkbox-grid">
+              <label class="checkbox-item">
+                <input type="checkbox" id="force-physical" value="physical"> Physical
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" id="force-taser" value="taser"> Taser
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" id="force-pepper_spray" value="pepper_spray"> Pepper Spray
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" id="force-baton" value="baton"> Baton
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" id="force-rubber_bullets" value="rubber_bullets"> Rubber Bullets
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" id="force-firearm" value="firearm"> Firearm
+              </label>
+            </div>
+          </div>
+          <div class="checkbox-grid">
+            <label class="checkbox-item">
+              <input type="checkbox" id="victimRestrained"> Victim Was Restrained
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="victimComplying"> Victim Was Complying
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="videoEvidence"> Video Evidence Exists
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Protest Details Section -->
+
+      <div class="section hidden" id="injuryFields">
+        <div class="section-header">
+          <span class="section-title">Injury Details</span>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Injury Type
+            <span class="verification-checkbox-wrapper" style="display: none;" data-field="injury_type">
+              <input type="checkbox" class="field-verify-checkbox" data-field="injury_type">
+              <span class="checkbox-label">Verified</span>
+            </span>
+          </label>
+          <input type="text" class="form-input" id="injuryType" placeholder="e.g., Broken wrist, taser burns">
+          <div class="quote-association" style="position: relative; margin-top: 4px;">
+            <button type="button" class="quote-picker-trigger" data-field="injury_type">
+              <span class="selected-quote-preview">[src] Link...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="injury_type">
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="injury_type"></div>
+              <div class="quote-picker-list" data-field="injury_type"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Severity
+              <span class="verification-checkbox-wrapper" style="display: none;" data-field="injury_severity">
+                <input type="checkbox" class="field-verify-checkbox" data-field="injury_severity">
+                <span class="checkbox-label">Verified</span>
+              </span>
+            </label>
+            <select class="form-input" id="injurySeverity" data-default-value="">
+              <option value="">Select severity</option>
+              <option value="minor">Minor</option>
+              <option value="moderate">Moderate</option>
+              <option value="severe">Severe</option>
+              <option value="life_threatening">Life Threatening</option>
+            </select>
+            <div class="quote-association" style="position: relative; margin-top: 4px;">
+              <button type="button" class="quote-picker-trigger" data-field="injury_severity">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="injury_severity">
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="injury_severity"></div>
+                <div class="quote-picker-list" data-field="injury_severity"></div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Weapon Used</label>
+            <input type="text" class="form-input" id="injuryWeapon" placeholder="e.g., Taser, baton">
+            <div class="quote-association" style="position: relative; margin-top: 4px;">
+              <button type="button" class="quote-picker-trigger" data-field="injury_weapon">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="injury_weapon">
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="injury_weapon"></div>
+                <div class="quote-picker-list" data-field="injury_weapon"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Cause/Context</label>
+          <input type="text" class="form-input" id="injuryCause" placeholder="e.g., During arrest">
+          <div class="quote-association" style="position: relative; margin-top: 4px;">
+            <button type="button" class="quote-picker-trigger" data-field="injury_cause">
+              <span class="selected-quote-preview">[src] Link...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="injury_cause">
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="injury_cause"></div>
+              <div class="quote-picker-list" data-field="injury_cause"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Arrest-Specific Fields -->
+
+      <div class="section hidden" id="protestSection">
+        <div class="collapsible-header open" id="protestHeader">
+          <span class="section-title">Protest Details</span>
+        </div>
+        <div class="collapsible-content open" id="protestContent">
+          <div class="form-group">
+            <label class="form-label">Protest Topic</label>
+            <input type="text" class="form-input" id="protestTopic" placeholder="e.g., Immigration policy, ICE protest">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Estimated Size</label>
+              <input type="number" class="form-input" id="protestSize" placeholder="Attendees">
+            </div>
+            <div class="form-group">
+              <label class="checkbox-item" style="margin-top: 28px;">
+                <input type="checkbox" id="protestPermitted"> Permitted
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Dispersal Method (if any)</label>
+            <select class="form-input" id="dispersalMethod">
+              <option value="">None/N/A</option>
+              <option value="tear_gas">Tear Gas</option>
+              <option value="rubber_bullets">Rubber Bullets</option>
+              <option value="flashbang">Flashbang</option>
+              <option value="batons">Batons/Physical Force</option>
+              <option value="water_cannon">Water Cannon</option>
+              <option value="mounted_police">Mounted Police</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Arrests Made</label>
+            <input type="number" class="form-input" id="arrestsMade" placeholder="Number">
+          </div>
+        </div>
+      </div>
+      
+      <!-- Case Form Section -->
+
+      <div class="section hidden" id="arrestFields">
+        <div class="section-header">
+          <span class="section-title">Arrest Details</span>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Stated Reason
+            <span class="verification-checkbox-wrapper" style="display: none;" data-field="arrest_reason">
+              <input type="checkbox" class="field-verify-checkbox" data-field="arrest_reason">
+              <span class="checkbox-label">Verified</span>
+            </span>
+          </label>
+          <input type="text" class="form-input" id="arrestReason" placeholder="Official justification">
+          <div class="quote-association" style="position: relative; margin-top: 4px;">
+            <button type="button" class="quote-picker-trigger" data-field="arrest_reason">
+              <span class="selected-quote-preview">[src] Link...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="arrest_reason">
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="arrest_reason"></div>
+              <div class="quote-picker-list" data-field="arrest_reason"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Actual Context
+            <span class="verification-checkbox-wrapper" style="display: none;" data-field="arrest_context">
+              <input type="checkbox" class="field-verify-checkbox" data-field="arrest_context">
+              <span class="checkbox-label">Verified</span>
+            </span>
+          </label>
+          <textarea class="form-input" id="arrestContext" placeholder="What was really happening"></textarea>
+          <div class="quote-association" style="position: relative; margin-top: 4px;">
+            <button type="button" class="quote-picker-trigger" data-field="arrest_context">
+              <span class="selected-quote-preview">[src] Link...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="arrest_context">
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="arrest_context"></div>
+              <div class="quote-picker-list" data-field="arrest_context"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Charges</label>
+          <input type="text" class="form-input" id="arrestCharges" placeholder="Comma-separated charges">
+          <div class="quote-association" style="position: relative; margin-top: 4px;">
+            <button type="button" class="quote-picker-trigger" data-field="arrest_charges">
+              <span class="selected-quote-preview">[src] Link...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="arrest_charges">
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="arrest_charges"></div>
+              <div class="quote-picker-list" data-field="arrest_charges"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="checkbox-grid" style="margin-top: 8px;">
+          <label class="checkbox-item">
+            <input type="checkbox" id="arrestTimingSuspicious"> Timing suspicious
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="arrestPretext"> Pretext arrest
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="arrestSelective"> Selective enforcement
+          </label>
+        </div>
+      </div>
+      
+      <!-- Rights Violation Fields -->
+
+      <div class="section hidden" id="violationFields">
+        <div class="section-header">
+          <span class="section-title">Violation Details</span>
+        </div>
+        
+        <div class="checkbox-grid">
+          <label class="checkbox-item">
+            <input type="checkbox" id="violationJournalism"> Journalism related
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="violationProtest"> Protest related
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="violationActivism"> Activism related
+          </label>
+        </div>
+        
+        <div class="form-group" style="margin-top: 12px;">
+          <label class="form-label">Speech/Activity Content</label>
+          <textarea class="form-input" id="violationSpeech" placeholder="What they said/did (quoted if possible)"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Court Ruling (if any)</label>
+          <input type="text" class="form-input" id="violationRuling" placeholder="Court decision">
+        </div>
+      </div>
+      
+
       <div class="section">
         <div class="collapsible-header open" id="agenciesHeader">
           <span class="section-title">Agencies Involved</span>
@@ -2313,6 +2962,7 @@
       </div>
       
       <!-- Violations Section - Always visible (matches web review page) -->
+
       <div class="section" id="violationsSection">
         <div class="collapsible-header open" id="violationsHeader">
           <span class="section-title">Constitutional Violations</span>
@@ -2660,646 +3310,6 @@
       </div>
       
       <!-- Shooting Details Section (for shooting type) -->
-      <div class="section hidden" id="shootingSection">
-        <div class="collapsible-header open" id="shootingHeader">
-          <span class="section-title">Shooting Details</span>
-        </div>
-        <div class="collapsible-content open" id="shootingContent">
-          <div class="form-row">
-            <div class="form-group">
-              <label class="checkbox-item">
-                <input type="checkbox" id="shootingFatal"> Fatal
-              </label>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Shots Fired</label>
-              <input type="number" class="form-input" id="shotsFired" placeholder="Number">
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Weapon Type</label>
-            <select class="form-input" id="weaponType">
-              <option value="">Select...</option>
-              <option value="handgun">Handgun</option>
-              <option value="rifle">Rifle</option>
-              <option value="taser">Taser</option>
-              <option value="less_lethal">Less-lethal</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div class="checkbox-grid">
-            <label class="checkbox-item">
-              <input type="checkbox" id="bodycamAvailable"> Bodycam Available
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="victimArmed"> Victim Was Armed
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="warningGiven"> Warning Given
-            </label>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Context</label>
-            <textarea class="form-input" id="shootingContext" rows="2" placeholder="Brief circumstances..."></textarea>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Excessive Force Details Section -->
-      <div class="section hidden" id="excessiveForceSection">
-        <div class="collapsible-header open" id="excessiveForceHeader">
-          <span class="section-title">Excessive Force Details</span>
-        </div>
-        <div class="collapsible-content open" id="excessiveForceContent">
-          <div class="form-group">
-            <label class="form-label">Force Type(s)</label>
-            <div class="checkbox-grid">
-              <label class="checkbox-item">
-                <input type="checkbox" id="force-physical" value="physical"> Physical
-              </label>
-              <label class="checkbox-item">
-                <input type="checkbox" id="force-taser" value="taser"> Taser
-              </label>
-              <label class="checkbox-item">
-                <input type="checkbox" id="force-pepper_spray" value="pepper_spray"> Pepper Spray
-              </label>
-              <label class="checkbox-item">
-                <input type="checkbox" id="force-baton" value="baton"> Baton
-              </label>
-              <label class="checkbox-item">
-                <input type="checkbox" id="force-rubber_bullets" value="rubber_bullets"> Rubber Bullets
-              </label>
-              <label class="checkbox-item">
-                <input type="checkbox" id="force-firearm" value="firearm"> Firearm
-              </label>
-            </div>
-          </div>
-          <div class="checkbox-grid">
-            <label class="checkbox-item">
-              <input type="checkbox" id="victimRestrained"> Victim Was Restrained
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="victimComplying"> Victim Was Complying
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="videoEvidence"> Video Evidence Exists
-            </label>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Protest Details Section -->
-      <div class="section hidden" id="protestSection">
-        <div class="collapsible-header open" id="protestHeader">
-          <span class="section-title">Protest Details</span>
-        </div>
-        <div class="collapsible-content open" id="protestContent">
-          <div class="form-group">
-            <label class="form-label">Protest Topic</label>
-            <input type="text" class="form-input" id="protestTopic" placeholder="e.g., Immigration policy, ICE protest">
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Estimated Size</label>
-              <input type="number" class="form-input" id="protestSize" placeholder="Attendees">
-            </div>
-            <div class="form-group">
-              <label class="checkbox-item" style="margin-top: 28px;">
-                <input type="checkbox" id="protestPermitted"> Permitted
-              </label>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Dispersal Method (if any)</label>
-            <select class="form-input" id="dispersalMethod">
-              <option value="">None/N/A</option>
-              <option value="tear_gas">Tear Gas</option>
-              <option value="rubber_bullets">Rubber Bullets</option>
-              <option value="flashbang">Flashbang</option>
-              <option value="batons">Batons/Physical Force</option>
-              <option value="water_cannon">Water Cannon</option>
-              <option value="mounted_police">Mounted Police</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Arrests Made</label>
-            <input type="number" class="form-input" id="arrestsMade" placeholder="Number">
-          </div>
-        </div>
-      </div>
-      
-      <!-- Case Form Section -->
-      <div class="section">
-        <div class="section-header">
-          <span class="section-title">Basic Information</span>
-          <button class="btn btn-sm btn-secondary" id="clearCaseBtn">Clear</button>
-        </div>
-        
-        <div class="form-group">
-          <label class="form-label">Subject Name
-            <span class="verification-checkbox-wrapper" style="display: none;" data-field="name">
-              <input type="checkbox" class="field-verify-checkbox" data-field="name">
-              <span class="checkbox-label">Verified</span>
-            </span>
-          </label>
-          <input type="text" class="form-input" id="caseName" placeholder="Last name, First name (or Anonymous)">
-          <div class="quote-association" style="position: relative;">
-            <button type="button" class="quote-picker-trigger" data-field="name">
-              <span class="selected-quote-preview">[src] Link quote...</span>
-            </button>
-            <div class="quote-picker-dropdown" data-field="name">
-              <div class="quote-picker-search">
-                <input type="text" placeholder="Search quotes..." data-field="name">
-              </div>
-              <div class="quote-picker-list" data-field="name"></div>
-            </div>
-          </div>
-          
-          <!-- Duplicate Checker -->
-          <div id="duplicateChecker" class="duplicate-checker" style="margin-top: 8px;">
-            <button type="button" id="checkDuplicatesBtn" class="btn btn-sm btn-secondary" style="width: 100%;">
-              🔍 Check for Duplicates
-            </button>
-            <div id="duplicateResults" class="duplicate-results hidden" style="margin-top: 8px; padding: 8px; border-radius: 4px; font-size: 12px;">
-              <!-- Results will be populated here -->
-            </div>
-          </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Incident Date
-              <span class="verification-checkbox-wrapper" style="display: none;" data-field="date">
-                <input type="checkbox" class="field-verify-checkbox" data-field="date">
-                <span class="checkbox-label">Verified</span>
-              </span>
-            </label>
-            <input type="date" class="form-input" id="caseDod">
-            <div class="quote-association" style="position: relative;">
-              <button type="button" class="quote-picker-trigger" data-field="date">
-                <span class="selected-quote-preview">[src] Link...</span>
-              </button>
-              <div class="quote-picker-dropdown" data-field="date">
-                <div class="quote-picker-search">
-                  <input type="text" placeholder="Search quotes..." data-field="date">
-                </div>
-                <div class="quote-picker-list" data-field="date"></div>
-              </div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Age
-              <span class="verification-checkbox-wrapper" style="display: none;" data-field="age">
-                <input type="checkbox" class="field-verify-checkbox" data-field="age">
-                <span class="checkbox-label">Verified</span>
-              </span>
-            </label>
-            <input type="number" class="form-input" id="caseAge" placeholder="Age">
-            <div class="quote-association" style="position: relative;">
-              <button type="button" class="quote-picker-trigger" data-field="age">
-                <span class="selected-quote-preview">[src] Link...</span>
-              </button>
-              <div class="quote-picker-dropdown" data-field="age">
-                <div class="quote-picker-search">
-                  <input type="text" placeholder="Search quotes..." data-field="age">
-                </div>
-                <div class="quote-picker-list" data-field="age"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Nationality
-              <span class="verification-checkbox-wrapper" style="display: none;" data-field="nationality">
-                <input type="checkbox" class="field-verify-checkbox" data-field="nationality">
-                <span class="checkbox-label">Verified</span>
-              </span>
-            </label>
-            <input type="text" class="form-input" id="caseCountry" placeholder="Country">
-            <div class="quote-association" style="position: relative;">
-              <button type="button" class="quote-picker-trigger" data-field="nationality">
-                <span class="selected-quote-preview">[src] Link...</span>
-              </button>
-              <div class="quote-picker-dropdown" data-field="nationality">
-                <div class="quote-picker-search">
-                  <input type="text" placeholder="Search quotes..." data-field="nationality">
-                </div>
-                <div class="quote-picker-list" data-field="nationality"></div>
-              </div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Gender
-              <span class="verification-checkbox-wrapper" style="display: none;" data-field="gender">
-                <input type="checkbox" class="field-verify-checkbox" data-field="gender">
-                <span class="checkbox-label">Verified</span>
-              </span>
-            </label>
-            <select class="form-input" id="caseGender">
-              <option value="">Select...</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
-            </select>
-            <div class="quote-association" style="position: relative;">
-              <button type="button" class="quote-picker-trigger" data-field="gender">
-                <span class="selected-quote-preview">[src] Link...</span>
-              </button>
-              <div class="quote-picker-dropdown" data-field="gender">
-                <div class="quote-picker-search">
-                  <input type="text" placeholder="Search quotes..." data-field="gender">
-                </div>
-                <div class="quote-picker-list" data-field="gender"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Immigration Status
-              <span class="verification-checkbox-wrapper" style="display: none;" data-field="immigration_status">
-                <input type="checkbox" class="field-verify-checkbox" data-field="immigration_status">
-                <span class="checkbox-label">Verified</span>
-              </span>
-            </label>
-            <select class="form-input" id="caseImmigrationStatus">
-              <option value="">Unknown</option>
-              <option value="undocumented">Undocumented</option>
-              <option value="visa_holder">Visa Holder</option>
-              <option value="green_card">Green Card Holder</option>
-              <option value="asylum_seeker">Asylum Seeker</option>
-              <option value="daca">DACA Recipient</option>
-              <option value="tps">TPS Holder</option>
-              <option value="citizen">U.S. Citizen</option>
-              <option value="other">Other</option>
-            </select>
-            <div class="quote-association" style="position: relative;">
-              <button type="button" class="quote-picker-trigger" data-field="immigration_status">
-                <span class="selected-quote-preview">[src] Link...</span>
-              </button>
-              <div class="quote-picker-dropdown" data-field="immigration_status">
-                <div class="quote-picker-search">
-                  <input type="text" placeholder="Search quotes..." data-field="immigration_status">
-                </div>
-                <div class="quote-picker-list" data-field="immigration_status"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label class="form-label">Facility (if applicable)
-            <span class="verification-checkbox-wrapper" style="display: none;" data-field="facility">
-              <input type="checkbox" class="field-verify-checkbox" data-field="facility">
-              <span class="checkbox-label">Verified</span>
-            </span>
-          </label>
-          <input type="text" class="form-input" id="caseFacility" placeholder="Detention facility name">
-          <div class="quote-association" style="position: relative;">
-            <button type="button" class="quote-picker-trigger" data-field="facility">
-              <span class="selected-quote-preview">[src] Link quote...</span>
-            </button>
-            <div class="quote-picker-dropdown" data-field="facility">
-              <div class="quote-picker-search">
-                <input type="text" placeholder="Search quotes..." data-field="facility">
-              </div>
-              <div class="quote-picker-list" data-field="facility"></div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">City
-              <span class="verification-checkbox-wrapper" style="display: none;" data-field="city">
-                <input type="checkbox" class="field-verify-checkbox" data-field="city">
-                <span class="checkbox-label">Verified</span>
-              </span>
-            </label>
-            <input type="text" class="form-input" id="caseCity" placeholder="City">
-            <div class="quote-association" style="position: relative;">
-              <button type="button" class="quote-picker-trigger" data-field="city">
-                <span class="selected-quote-preview">[src] Link...</span>
-              </button>
-              <div class="quote-picker-dropdown" data-field="city">
-                <div class="quote-picker-search">
-                  <input type="text" placeholder="Search quotes..." data-field="city">
-                </div>
-                <div class="quote-picker-list" data-field="city"></div>
-              </div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">State
-              <span class="verification-checkbox-wrapper" style="display: none;" data-field="state">
-                <input type="checkbox" class="field-verify-checkbox" data-field="state">
-                <span class="checkbox-label">Verified</span>
-              </span>
-            </label>
-            <input type="text" class="form-input" id="caseState" placeholder="State">
-            <div class="quote-association" style="position: relative;">
-              <button type="button" class="quote-picker-trigger" data-field="state">
-                <span class="selected-quote-preview">[src] Link...</span>
-              </button>
-              <div class="quote-picker-dropdown" data-field="state">
-                <div class="quote-picker-search">
-                  <input type="text" placeholder="Search quotes..." data-field="state">
-                </div>
-                <div class="quote-picker-list" data-field="state"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label class="form-label">Summary
-            <span class="verification-checkbox-wrapper" style="display: none;" data-field="summary">
-              <input type="checkbox" class="field-verify-checkbox" data-field="summary">
-              <span class="checkbox-label">Verified</span>
-            </span>
-          </label>
-          <textarea class="form-input" id="caseCause" placeholder="Brief factual summary of what happened"></textarea>
-          <div class="quote-association" style="position: relative; margin-top: 4px;">
-            <button type="button" class="quote-picker-trigger" data-field="summary">
-              <span class="selected-quote-preview">[src] Link...</span>
-            </button>
-            <div class="quote-picker-dropdown" data-field="summary">
-              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="summary"></div>
-              <div class="quote-picker-list" data-field="summary"></div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Media Section (Images/Videos) -->
-        <div class="form-group">
-          <label class="form-label">Media (Images &amp; Videos)</label>
-          <div id="mediaList" class="media-list" style="margin-bottom: 8px;"></div>
-          <button type="button" class="btn btn-sm btn-secondary btn-block" id="addMediaBtn">+ Add Image/Video</button>
-          <p class="form-hint">Images must be public domain, Creative Commons, or otherwise free-use. Videos can be YouTube, Vimeo, or direct links.</p>
-        </div>
-      </div>
-      
-      <!-- Death-Specific Fields -->
-      <div class="section hidden" id="deathFields">
-        <div class="section-header">
-          <span class="section-title">Death Details</span>
-        </div>
-        
-        <div class="form-group">
-          <label class="form-label">Cause of Death
-            <span class="verification-checkbox-wrapper" style="display: none;" data-field="death_cause">
-              <input type="checkbox" class="field-verify-checkbox" data-field="death_cause">
-              <span class="checkbox-label">Verified</span>
-            </span>
-          </label>
-          <input type="text" class="form-input" id="deathCause" placeholder="As stated in records">
-          <div class="quote-association" style="position: relative; margin-top: 4px;">
-            <button type="button" class="quote-picker-trigger" data-field="death_cause">
-              <span class="selected-quote-preview">[src] Link...</span>
-            </button>
-            <div class="quote-picker-dropdown" data-field="death_cause">
-              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_cause"></div>
-              <div class="quote-picker-list" data-field="death_cause"></div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Manner
-              <span class="verification-checkbox-wrapper" style="display: none;" data-field="death_manner">
-                <input type="checkbox" class="field-verify-checkbox" data-field="death_manner">
-                <span class="checkbox-label">Verified</span>
-              </span>
-            </label>
-            <select class="form-input" id="deathManner">
-              <option value="">Unknown</option>
-              <option value="natural">Natural</option>
-              <option value="accident">Accident</option>
-              <option value="suicide">Suicide</option>
-              <option value="homicide">Homicide</option>
-              <option value="undetermined">Undetermined</option>
-              <option value="pending">Pending</option>
-            </select>
-            <div class="quote-association" style="position: relative; margin-top: 4px;">
-              <button type="button" class="quote-picker-trigger" data-field="death_manner">
-                <span class="selected-quote-preview">[src] Link...</span>
-              </button>
-              <div class="quote-picker-dropdown" data-field="death_manner">
-                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_manner"></div>
-                <div class="quote-picker-list" data-field="death_manner"></div>
-              </div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Custody Duration
-              <span class="verification-checkbox-wrapper" style="display: none;" data-field="death_custody_duration">
-                <input type="checkbox" class="field-verify-checkbox" data-field="death_custody_duration">
-                <span class="checkbox-label">Verified</span>
-              </span>
-            </label>
-            <input type="text" class="form-input" id="deathCustodyDuration" placeholder="e.g., 6 months">
-            <div class="quote-association" style="position: relative; margin-top: 4px;">
-              <button type="button" class="quote-picker-trigger" data-field="death_custody_duration">
-                <span class="selected-quote-preview">[src] Link...</span>
-              </button>
-              <div class="quote-picker-dropdown" data-field="death_custody_duration">
-                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_custody_duration"></div>
-                <div class="quote-picker-list" data-field="death_custody_duration"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <label class="checkbox-item" style="margin-top: 8px;">
-          <input type="checkbox" id="deathMedicalDenied"> Medical requests denied
-        </label>
-      </div>
-      
-      <!-- Injury-Specific Fields -->
-      <div class="section hidden" id="injuryFields">
-        <div class="section-header">
-          <span class="section-title">Injury Details</span>
-        </div>
-        
-        <div class="form-group">
-          <label class="form-label">Injury Type
-            <span class="verification-checkbox-wrapper" style="display: none;" data-field="injury_type">
-              <input type="checkbox" class="field-verify-checkbox" data-field="injury_type">
-              <span class="checkbox-label">Verified</span>
-            </span>
-          </label>
-          <input type="text" class="form-input" id="injuryType" placeholder="e.g., Broken wrist, taser burns">
-          <div class="quote-association" style="position: relative; margin-top: 4px;">
-            <button type="button" class="quote-picker-trigger" data-field="injury_type">
-              <span class="selected-quote-preview">[src] Link...</span>
-            </button>
-            <div class="quote-picker-dropdown" data-field="injury_type">
-              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="injury_type"></div>
-              <div class="quote-picker-list" data-field="injury_type"></div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Severity
-              <span class="verification-checkbox-wrapper" style="display: none;" data-field="injury_severity">
-                <input type="checkbox" class="field-verify-checkbox" data-field="injury_severity">
-                <span class="checkbox-label">Verified</span>
-              </span>
-            </label>
-            <select class="form-input" id="injurySeverity" data-default-value="">
-              <option value="">Select severity</option>
-              <option value="minor">Minor</option>
-              <option value="moderate">Moderate</option>
-              <option value="severe">Severe</option>
-              <option value="life_threatening">Life Threatening</option>
-            </select>
-            <div class="quote-association" style="position: relative; margin-top: 4px;">
-              <button type="button" class="quote-picker-trigger" data-field="injury_severity">
-                <span class="selected-quote-preview">[src] Link...</span>
-              </button>
-              <div class="quote-picker-dropdown" data-field="injury_severity">
-                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="injury_severity"></div>
-                <div class="quote-picker-list" data-field="injury_severity"></div>
-              </div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Weapon Used</label>
-            <input type="text" class="form-input" id="injuryWeapon" placeholder="e.g., Taser, baton">
-            <div class="quote-association" style="position: relative; margin-top: 4px;">
-              <button type="button" class="quote-picker-trigger" data-field="injury_weapon">
-                <span class="selected-quote-preview">[src] Link...</span>
-              </button>
-              <div class="quote-picker-dropdown" data-field="injury_weapon">
-                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="injury_weapon"></div>
-                <div class="quote-picker-list" data-field="injury_weapon"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label class="form-label">Cause/Context</label>
-          <input type="text" class="form-input" id="injuryCause" placeholder="e.g., During arrest">
-          <div class="quote-association" style="position: relative; margin-top: 4px;">
-            <button type="button" class="quote-picker-trigger" data-field="injury_cause">
-              <span class="selected-quote-preview">[src] Link...</span>
-            </button>
-            <div class="quote-picker-dropdown" data-field="injury_cause">
-              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="injury_cause"></div>
-              <div class="quote-picker-list" data-field="injury_cause"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Arrest-Specific Fields -->
-      <div class="section hidden" id="arrestFields">
-        <div class="section-header">
-          <span class="section-title">Arrest Details</span>
-        </div>
-        
-        <div class="form-group">
-          <label class="form-label">Stated Reason
-            <span class="verification-checkbox-wrapper" style="display: none;" data-field="arrest_reason">
-              <input type="checkbox" class="field-verify-checkbox" data-field="arrest_reason">
-              <span class="checkbox-label">Verified</span>
-            </span>
-          </label>
-          <input type="text" class="form-input" id="arrestReason" placeholder="Official justification">
-          <div class="quote-association" style="position: relative; margin-top: 4px;">
-            <button type="button" class="quote-picker-trigger" data-field="arrest_reason">
-              <span class="selected-quote-preview">[src] Link...</span>
-            </button>
-            <div class="quote-picker-dropdown" data-field="arrest_reason">
-              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="arrest_reason"></div>
-              <div class="quote-picker-list" data-field="arrest_reason"></div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label class="form-label">Actual Context
-            <span class="verification-checkbox-wrapper" style="display: none;" data-field="arrest_context">
-              <input type="checkbox" class="field-verify-checkbox" data-field="arrest_context">
-              <span class="checkbox-label">Verified</span>
-            </span>
-          </label>
-          <textarea class="form-input" id="arrestContext" placeholder="What was really happening"></textarea>
-          <div class="quote-association" style="position: relative; margin-top: 4px;">
-            <button type="button" class="quote-picker-trigger" data-field="arrest_context">
-              <span class="selected-quote-preview">[src] Link...</span>
-            </button>
-            <div class="quote-picker-dropdown" data-field="arrest_context">
-              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="arrest_context"></div>
-              <div class="quote-picker-list" data-field="arrest_context"></div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label class="form-label">Charges</label>
-          <input type="text" class="form-input" id="arrestCharges" placeholder="Comma-separated charges">
-          <div class="quote-association" style="position: relative; margin-top: 4px;">
-            <button type="button" class="quote-picker-trigger" data-field="arrest_charges">
-              <span class="selected-quote-preview">[src] Link...</span>
-            </button>
-            <div class="quote-picker-dropdown" data-field="arrest_charges">
-              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="arrest_charges"></div>
-              <div class="quote-picker-list" data-field="arrest_charges"></div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="checkbox-grid" style="margin-top: 8px;">
-          <label class="checkbox-item">
-            <input type="checkbox" id="arrestTimingSuspicious"> Timing suspicious
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" id="arrestPretext"> Pretext arrest
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" id="arrestSelective"> Selective enforcement
-          </label>
-        </div>
-      </div>
-      
-      <!-- Rights Violation Fields -->
-      <div class="section hidden" id="violationFields">
-        <div class="section-header">
-          <span class="section-title">Violation Details</span>
-        </div>
-        
-        <div class="checkbox-grid">
-          <label class="checkbox-item">
-            <input type="checkbox" id="violationJournalism"> Journalism related
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" id="violationProtest"> Protest related
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" id="violationActivism"> Activism related
-          </label>
-        </div>
-        
-        <div class="form-group" style="margin-top: 12px;">
-          <label class="form-label">Speech/Activity Content</label>
-          <textarea class="form-input" id="violationSpeech" placeholder="What they said/did (quoted if possible)"></textarea>
-        </div>
-        
-        <div class="form-group">
-          <label class="form-label">Court Ruling (if any)</label>
-          <input type="text" class="form-input" id="violationRuling" placeholder="Court decision">
-        </div>
-      </div>
-      
       <!-- Quotes Section -->
       <div class="section">
         <div class="section-header">
