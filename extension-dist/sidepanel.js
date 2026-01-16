@@ -2679,6 +2679,9 @@ function updateCaseFromForm() {
     forceTypes.push(checkbox.value);
   });
   
+  // Preserve existing tags (they're managed by their own UI section)
+  const existingTags = currentCase.tags || [];
+  
   currentCase = {
     incidentType: elements.incidentType ? elements.incidentType.value : 'death_in_custody',
     name: elements.caseName.value,
@@ -2740,7 +2743,9 @@ function updateCaseFromForm() {
     protestSize: elements.protestSize ? elements.protestSize.value : '',
     protestPermitted: elements.protestPermitted ? elements.protestPermitted.checked : false,
     dispersalMethod: elements.dispersalMethod ? elements.dispersalMethod.value : '',
-    arrestsMade: elements.arrestsMade ? elements.arrestsMade.value : ''
+    arrestsMade: elements.arrestsMade ? elements.arrestsMade.value : '',
+    // Tags - preserve from before updateCaseFromForm
+    tags: existingTags
   };
   
   // Save to background
