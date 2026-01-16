@@ -2033,11 +2033,30 @@ function populateCaseForm() {
   if (elements.videoEvidence) elements.videoEvidence.checked = currentCase.videoEvidence || false;
   
   // Populate protest fields
-  if (elements.protestTopic) elements.protestTopic.value = currentCase.protestTopic || '';
-  if (elements.protestSize) elements.protestSize.value = currentCase.protestSize || '';
+  console.log('[populateCaseForm] Populating protest fields:', {
+    protestTopic: currentCase.protestTopic,
+    protestSize: currentCase.protestSize,
+    protestPermitted: currentCase.protestPermitted,
+    dispersalMethod: currentCase.dispersalMethod,
+    arrestsMade: currentCase.arrestsMade
+  });
+  if (elements.protestTopic) {
+    elements.protestTopic.value = currentCase.protestTopic || '';
+    console.log('[populateCaseForm] Set protestTopic to:', elements.protestTopic.value);
+  }
+  if (elements.protestSize) {
+    elements.protestSize.value = currentCase.protestSize || '';
+    console.log('[populateCaseForm] Set protestSize to:', elements.protestSize.value);
+  }
   if (elements.protestPermitted) elements.protestPermitted.checked = currentCase.protestPermitted || false;
-  if (elements.dispersalMethod) elements.dispersalMethod.value = currentCase.dispersalMethod || '';
-  if (elements.arrestsMade) elements.arrestsMade.value = currentCase.arrestsMade || '';
+  if (elements.dispersalMethod) {
+    elements.dispersalMethod.value = currentCase.dispersalMethod || '';
+    console.log('[populateCaseForm] Set dispersalMethod to:', elements.dispersalMethod.value);
+  }
+  if (elements.arrestsMade) {
+    elements.arrestsMade.value = currentCase.arrestsMade || '';
+    console.log('[populateCaseForm] Set arrestsMade to:', elements.arrestsMade.value);
+  }
   
   // Populate tags - preserve existing array, just ensure it's always an array
   console.log('Populating tags (before check):', currentCase.tags, 'type:', typeof currentCase.tags, 'isArray:', Array.isArray(currentCase.tags));
@@ -7216,6 +7235,7 @@ async function loadReviewCaseDetails(incidentId) {
     
     // Also fetch type-specific details
     let incidentDetails = {};
+    console.log('[loadReviewCaseDetails] Fetching type-specific details from:', `${apiUrl}/api/incidents/${incidentId}/details`);
     try {
       const detailsResponse = await fetch(`${apiUrl}/api/incidents/${incidentId}/details`, {
         headers: {
@@ -7223,13 +7243,21 @@ async function loadReviewCaseDetails(incidentId) {
           'X-API-Key': apiKey
         }
       });
+      console.log('[loadReviewCaseDetails] Details response status:', detailsResponse.status);
       if (detailsResponse.ok) {
         const detailsData = await detailsResponse.json();
         incidentDetails = detailsData.details || {};
-        console.log('Incident details loaded:', incidentDetails);
+        console.log('[loadReviewCaseDetails] Incident details loaded:', incidentDetails);
+        console.log('[loadReviewCaseDetails] protest_topic:', incidentDetails.protest_topic);
+        console.log('[loadReviewCaseDetails] protest_size:', incidentDetails.protest_size);
+        console.log('[loadReviewCaseDetails] dispersal_method:', incidentDetails.dispersal_method);
+        console.log('[loadReviewCaseDetails] arrests_made:', incidentDetails.arrests_made);
+      } else {
+        const errorText = await detailsResponse.text();
+        console.error('[loadReviewCaseDetails] Details API error:', detailsResponse.status, errorText);
       }
     } catch (detailsErr) {
-      console.warn('Failed to fetch incident details:', detailsErr);
+      console.warn('[loadReviewCaseDetails] Failed to fetch incident details:', detailsErr);
     }
     
     // Check if this case is in a status that allows review
