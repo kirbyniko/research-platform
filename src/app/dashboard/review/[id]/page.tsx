@@ -34,14 +34,27 @@ function Tooltip({ text }: { text: string }) {
 
 // Types
 interface Incident {
-  id: number; incident_id: string; incident_type: string; incident_date: string | null;
-  city: string | null; state: string | null; country: string | null; facility: string | null;
-  victim_name: string | null; subject_name: string | null; subject_age: number | null;
-  subject_gender: string | null; subject_nationality: string | null;
-  subject_immigration_status: string | null; summary: string | null;
-  verified: boolean; verification_status: string;
+  id?: number;
+  incident_id?: string;
+  incident_type?: string;
+  incident_date?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  facility?: string | null;
+  victim_name?: string | null;
+  subject_name?: string | null;
+  subject_age?: number | null;
+  subject_gender?: string | null;
+  subject_nationality?: string | null;
+  subject_immigration_status?: string | null;
+  summary?: string | null;
+  verified?: boolean;
+  verification_status?: string;
+  tags?: string[];
   first_verified_by?: number | null;
   second_verified_by?: number | null;
+  [key: string]: any;
 }
 interface Media { id: number; url: string; media_type: 'image' | 'video'; description: string | null; verified?: boolean; }
 interface Source { id: number; url: string; title: string | null; publication: string | null; source_type: string; source_priority?: string | null; }
@@ -551,7 +564,7 @@ export default function ReviewPage() {
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
   const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
   const [fieldQuoteMap, setFieldQuoteMap] = useState<Record<string, number>>({});
-  const [editedIncident, setEditedIncident] = useState<Record<string, unknown>>({});
+  const [editedIncident, setEditedIncident] = useState<Partial<Incident>>({});
   const [incidentDetails, setIncidentDetails] = useState<IncidentDetails>({});
   const [newMedia, setNewMedia] = useState({ url: '', media_type: 'image' as 'image' | 'video', description: '' });
   const [newSource, setNewSource] = useState({ url: '', title: '', publication: '', source_type: 'news', source_priority: 'secondary' });
@@ -1806,11 +1819,11 @@ export default function ReviewPage() {
           </p>
           
           {/* Current Tags */}
-          {editedIncident.tags && (editedIncident.tags as string[]).length > 0 && (
+          {editedIncident.tags && Array.isArray(editedIncident.tags) && editedIncident.tags.length > 0 && (
             <div className="mb-3">
               <label className="block text-xs text-gray-600 mb-1">Current Tags:</label>
               <div className="flex flex-wrap gap-1">
-                {(editedIncident.tags as string[]).map((tag) => (
+                {editedIncident.tags.map((tag: string) => (
                   <span
                     key={tag}
                     className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 border border-blue-300 rounded text-xs"
@@ -1819,8 +1832,10 @@ export default function ReviewPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        const newTags = (editedIncident.tags as string[]).filter(t => t !== tag);
-                        setEditedIncident({ ...editedIncident, tags: newTags });
+                        if (Array.isArray(editedIncident.tags)) {
+                          const newTags = editedIncident.tags.filter(t => t !== tag);
+                          setEditedIncident({ ...editedIncident, tags: newTags });
+                        }
                       }}
                       className="hover:text-blue-600"
                       title="Remove tag"

@@ -70,24 +70,29 @@ export async function POST(
       [incidentId]
     );
     
-    // Log the unpublish action
-    await pool.query(
-      `INSERT INTO incident_audit_log 
-       (incident_id, action, performed_by, details, created_at)
-       VALUES ($1, $2, $3, $4, NOW())`,
-      [
-        incidentId,
-        'unpublish',
-        user.id,
-        JSON.stringify({
-          reason: reason.trim(),
-          previous_status: 'verified',
-          new_status: 'pending',
-          unpublished_at: new Date().toISOString(),
-          unpublished_by: user.email
-        })
-      ]
-    );
+    // Log the unpublish action (if table exists, otherwise skip gracefully)
+    try {
+      await pool.query(
+        `INSERT INTO incident_audit_log 
+         (incident_id, action, performed_by, details, created_at)
+         VALUES ($1, $2, $3, $4, NOW())`,
+        [
+          incidentId,
+          'unpublish',
+          user.id,
+          JSON.stringify({
+            reason: reason.trim(),
+            previous_status: 'verified',
+            new_status: 'pending',
+            unpublished_at: new Date().toISOString(),
+            unpublished_by: user.email
+          })
+        ]
+      );
+    } catch (auditError) {
+      console.log('Audit log note: could not create audit entry (table may not exist)', auditError);
+      // Don't fail the unpublish if audit logging fails
+    }
     
     return NextResponse.json({
       success: true,
