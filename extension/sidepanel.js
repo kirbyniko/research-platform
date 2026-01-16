@@ -7293,6 +7293,55 @@ async function loadReviewCaseDetails(incidentId) {
       agencies: incident.agencies_involved || [],
       violations: incident.legal_violations || [],
       tags: incident.tags || [],
+      
+      // Death-specific fields
+      deathCause: incident.cause_of_death || '',
+      deathManner: incident.manner_of_death || '',
+      deathCustodyDuration: incident.custody_duration || '',
+      deathMedicalDenied: incident.medical_care_denied || false,
+      
+      // Injury-specific fields
+      injuryType: incident.injury_type || '',
+      injurySeverity: incident.injury_severity || '',
+      injuryWeapon: incident.injury_weapon || '',
+      injuryCause: incident.injury_cause || '',
+      
+      // Arrest-specific fields
+      arrestReason: incident.arrest_reason || '',
+      arrestContext: incident.arrest_context || '',
+      arrestCharges: incident.arrest_charges || '',
+      arrestTimingSuspicious: incident.arrest_timing_suspicious || false,
+      arrestPretext: incident.arrest_pretext || false,
+      arrestSelective: incident.arrest_selective || false,
+      
+      // Violation-specific fields
+      violationJournalism: incident.violation_journalism || false,
+      violationProtest: incident.violation_protest || false,
+      violationActivism: incident.violation_activism || false,
+      violationSpeech: incident.violation_speech || '',
+      violationRuling: incident.violation_ruling || '',
+      
+      // Shooting-specific fields
+      shootingFatal: incident.shooting_fatal || false,
+      shotsFired: incident.shots_fired || '',
+      weaponType: incident.weapon_type || '',
+      bodycamAvailable: incident.bodycam_available || false,
+      victimArmed: incident.victim_armed || false,
+      warningGiven: incident.warning_given || false,
+      shootingContext: incident.shooting_context || '',
+      
+      // Excessive force-specific fields
+      forceTypes: incident.force_types || [],
+      victimRestrained: incident.victim_restrained || false,
+      victimComplying: incident.victim_complying || false,
+      videoEvidence: incident.video_evidence || false,
+      
+      // Protest-specific fields
+      protestTopic: incident.protest_topic || '',
+      protestSize: incident.protest_size || '',
+      protestPermitted: incident.protest_permitted || false,
+      dispersalMethod: incident.dispersal_method || '',
+      arrestsMade: incident.arrests_made || '',
     };
     
     console.log('currentCase.tags after population:', currentCase.tags);
