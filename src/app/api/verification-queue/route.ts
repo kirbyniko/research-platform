@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireServerAuth } from '@/lib/server-auth';
 import pool from '@/lib/db';
 
+// Disable caching for this route
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // GET /api/verification-queue - Get cases needing verification
 export async function GET(request: NextRequest) {
   try {
