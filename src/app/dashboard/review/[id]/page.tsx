@@ -132,6 +132,32 @@ const AGENCY_OPTIONS = [
   { value: 'private_contractor', label: 'Private Contractor' }, { value: 'other', label: 'Other' }, { value: 'unknown', label: 'Unknown' },
 ];
 
+// Incident type groups for multi-select checkboxes
+const INCIDENT_TYPE_GROUPS = [
+  { label: 'Deaths', types: [
+    { value: 'death_in_custody', label: 'Death in Custody' },
+    { value: 'death_during_operation', label: 'Death During Operation' },
+    { value: 'death_at_protest', label: 'Death at Protest' },
+  ]},
+  { label: 'Force/Violence', types: [
+    { value: 'shooting', label: 'Shooting' },
+    { value: 'excessive_force', label: 'Excessive Force' },
+    { value: 'injury', label: 'Injury' },
+  ]},
+  { label: 'Enforcement', types: [
+    { value: 'arrest', label: 'Arrest/Detention' },
+    { value: 'deportation', label: 'Deportation' },
+    { value: 'workplace_raid', label: 'Workplace Raid' },
+    { value: 'family_separation', label: 'Family Separation' },
+  ]},
+  { label: 'Rights Issues', types: [
+    { value: 'rights_violation', label: 'Rights Violation' },
+    { value: 'protest_suppression', label: 'Protest Suppression' },
+    { value: 'retaliation', label: 'Retaliation' },
+    { value: 'medical_neglect', label: 'Medical Neglect' },
+  ]},
+];
+
 const VIOLATION_OPTIONS = [
   { value: '4th_amendment', label: '4th Amendment - Unreasonable Search/Seizure' },
   { value: '5th_amendment_due_process', label: '5th Amendment - Due Process' },
@@ -599,6 +625,7 @@ export default function ReviewPage() {
   const [relatedReportsSummary, setRelatedReportsSummary] = useState<{ total: number; transferred: number; pending: number } | null>(null);
   const [showRelatedReports, setShowRelatedReports] = useState(false);
   const [loadingRelated, setLoadingRelated] = useState(false);
+  const [selectedIncidentTypes, setSelectedIncidentTypes] = useState<string[]>([]);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { 
@@ -672,6 +699,12 @@ export default function ReviewPage() {
         subject_gender: guestData.subject_gender || '',
         subject_nationality: guestData.subject_nationality || '',
       });
+      
+      // Initialize selected incident types
+      const types = guestData.incident_types?.length 
+        ? guestData.incident_types 
+        : (guestData.incident_type ? [guestData.incident_type] : []);
+      setSelectedIncidentTypes(types);
       
       // Convert agencies object {ice: true, cbp: true} to array [{agency: 'ice', role: null}]
       if (guestData.agencies && typeof guestData.agencies === 'object') {
@@ -777,6 +810,11 @@ export default function ReviewPage() {
       setValidationIssues(data.validation_issues || []);
       if (data.incident) {
         setEditedIncident(data.incident);
+        // Initialize selected incident types from incident_types array or fall back to single incident_type
+        const types = data.incident.incident_types?.length 
+          ? data.incident.incident_types 
+          : (data.incident.incident_type ? [data.incident.incident_type] : []);
+        setSelectedIncidentTypes(types);
       }
       
       // Fetch type-specific details
@@ -876,6 +914,21 @@ export default function ReviewPage() {
       await apiCall('quotes', 'PUT', { quote_id: quoteId, linked_fields: newLinks });
       setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, linked_fields: newLinks } : q));
     }
+  }
+
+  function toggleIncidentType(typeValue: string) {
+    setSelectedIncidentTypes(prev => {
+      const newTypes = prev.includes(typeValue) 
+        ? prev.filter(t => t !== typeValue)
+        : [...prev, typeValue];
+      // Update editedIncident with first selected type for backward compatibility
+      setEditedIncident(prevIncident => ({
+        ...prevIncident,
+        incident_type: newTypes[0] || '',
+        incident_types: newTypes
+      }));
+      return newTypes;
+    });
   }
 
   async function saveIncidentDetails() {
@@ -1723,12 +1776,12 @@ export default function ReviewPage() {
 
       {/* Details Section */}
       <Section title="Incident Details" open={sectionsOpen.details} onToggle={() => toggleSection('details')}>
-        {/* Incident Type - Make it prominent */}
+        {/* Incident Type - Multi-select checkboxes */}
         <div className="mb-4 p-4 bg-gray-50 border border-gray-300 rounded" data-field-key="incident_type">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-2">
-            <label className={`flex items-center gap-2 text-sm font-medium text-gray-700 transition-all ${editedIncident.incident_type && !verifiedFields['incident_type'] && highlightUnverified ? 'bg-yellow-200 px-2 py-1 rounded animate-pulse' : ''}`}>
-              Incident Type *
-              {editedIncident.incident_type ? (
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
+            <label className={`flex items-center gap-2 text-sm font-medium text-gray-700 transition-all ${selectedIncidentTypes.length > 0 && !verifiedFields['incident_type'] && highlightUnverified ? 'bg-yellow-200 px-2 py-1 rounded animate-pulse' : ''}`}>
+              Incident Type(s) * <span className="text-xs font-normal text-gray-500">(select all that apply)</span>
+              {selectedIncidentTypes.length > 0 ? (
                 <input 
                   type="checkbox" 
                   checked={verifiedFields['incident_type'] || false}
@@ -1738,40 +1791,36 @@ export default function ReviewPage() {
                 />
               ) : null}
             </label>
-            <QuotePicker field="incident_type" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
           </div>
-          <select 
-            className="w-full border-2 border-blue-500 rounded px-3 py-2 text-sm font-medium"
-            value={String(editedIncident.incident_type || '')}
-            onChange={e => setEditedIncident({ ...editedIncident, incident_type: e.target.value })}
-          >
-            <option value="">Select type...</option>
-            <optgroup label="Deaths">
-              <option value="death_in_custody">Death in Custody</option>
-              <option value="death_during_operation">Death During Operation</option>
-              <option value="death_at_protest">Death at Protest</option>
-              <option value="death">Death (General)</option>
-              <option value="detention_death">Detention Death</option>
-            </optgroup>
-            <optgroup label="Force/Violence">
-              <option value="shooting">Shooting</option>
-              <option value="excessive_force">Excessive Force</option>
-              <option value="injury">Injury</option>
-            </optgroup>
-            <optgroup label="Enforcement">
-              <option value="arrest">Arrest/Detention</option>
-              <option value="deportation">Deportation</option>
-              <option value="workplace_raid">Workplace Raid</option>
-              <option value="family_separation">Family Separation</option>
-            </optgroup>
-            <optgroup label="Rights Issues">
-              <option value="rights_violation">Rights Violation</option>
-              <option value="protest_suppression">Protest Suppression</option>
-              <option value="retaliation">Retaliation</option>
-              <option value="medical_neglect">Medical Neglect</option>
-            </optgroup>
-            <option value="other">Other</option>
-          </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {INCIDENT_TYPE_GROUPS.map(group => (
+              <div key={group.label} className="space-y-1">
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-200 pb-1 mb-1">{group.label}</div>
+                {group.types.map(type => (
+                  <div key={type.value} className="flex items-center justify-between gap-2 py-0.5">
+                    <label className={`flex items-center gap-2 text-sm cursor-pointer flex-1 ${selectedIncidentTypes.includes(type.value) ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
+                      <input 
+                        type="checkbox"
+                        checked={selectedIncidentTypes.includes(type.value)}
+                        onChange={() => toggleIncidentType(type.value)}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      {type.label}
+                    </label>
+                    <QuotePicker 
+                      field={`incident_type_${type.value}`} 
+                      quotes={quotes} 
+                      fieldQuoteMap={fieldQuoteMap} 
+                      onLinkQuote={handleLinkQuote} 
+                      onUnlinkQuote={handleUnlinkQuote} 
+                      onVerifyQuote={verifyQuote} 
+                      showLinkedDetails 
+                    />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
         <div className="grid grid-cols-1 gap-4">
           {INCIDENT_FIELDS.filter(f => f.key !== 'incident_type').map(f => {

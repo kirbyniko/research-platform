@@ -3108,6 +3108,14 @@ function setupQuoteAssociationListeners() {
     });
   });
   
+  // Setup incident type quote link clicks to open modal
+  document.querySelectorAll('.incident-type-quote-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openQuotePickerModal(link.dataset.field);
+    });
+  });
+  
   // Violation info buttons (legal reference)
   const violationInfoBtns = document.querySelectorAll('.violation-info-btn');
   console.log('Found violation info buttons:', violationInfoBtns.length);
@@ -3675,6 +3683,7 @@ function getUnverifiedLinkedQuotes() {
 
 // Update agency quote link text/state
 function updateAgencyQuoteLinks() {
+  // Update agency checkbox quote links
   document.querySelectorAll('.checkbox-quote-link').forEach(link => {
     const field = link.dataset.field;
     const quoteId = fieldQuoteAssociations[field];
@@ -3722,6 +3731,46 @@ function updateAgencyQuoteLinks() {
     } else {
       link.textContent = '[src]';
       link.classList.remove('has-quote', 'has-unverified');
+    }
+  });
+  
+  // Update incident type quote links
+  document.querySelectorAll('.incident-type-quote-link').forEach(link => {
+    const field = link.dataset.field;
+    const quoteId = fieldQuoteAssociations[field];
+    
+    if (quoteId !== undefined && quoteId !== null && quoteId !== '') {
+      // Check in both verified and pending quotes
+      let quote = verifiedQuotes.find(q => String(q.id) === String(quoteId));
+      let isVerified = true;
+      
+      if (!quote) {
+        quote = pendingQuotes.find(q => String(q.id) === String(quoteId));
+        isVerified = false;
+      }
+      
+      if (quote) {
+        const truncated = quote.text.length > 15 ? quote.text.substring(0, 15) + '...' : quote.text;
+        
+        if (isVerified) {
+          link.textContent = `✓`;
+          link.classList.add('has-quote');
+          link.classList.remove('has-unverified');
+          link.title = `Linked: "${quote.text}"`;
+        } else {
+          link.textContent = `!`;
+          link.classList.add('has-quote', 'has-unverified');
+          link.title = `Unverified: "${quote.text}"`;
+        }
+      } else {
+        link.textContent = '[src]';
+        link.classList.remove('has-quote', 'has-unverified');
+        link.title = 'Link a quote';
+      }
+    } else {
+      link.textContent = '[src]';
+      link.classList.remove('has-quote', 'has-unverified');
+      link.title = 'Link a quote';
     }
   });
 }
