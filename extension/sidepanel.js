@@ -21,7 +21,7 @@ let currentCase = {
   // Injury-specific
   injuryType: '',
   injurySeverity: '',
-  injuryWeapon: '',,
+  injuryWeapon: '',
   injuryCause: '',
   // Arrest-specific
   arrestReason: '',
