@@ -5747,7 +5747,7 @@ async function checkForDuplicates() {
   
   // Get API base URL from settings
   const settings = await chrome.storage.local.get('apiUrl');
-  const apiUrl = settings.apiUrl || 'http://localhost:3000';
+  const apiUrl = settings.apiUrl || 'https://ice-deaths.vercel.app';
   
   // Show loading state
   if (btn) {

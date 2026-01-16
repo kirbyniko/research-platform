@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { requireServerAuth } from '@/lib/server-auth';
-import { buildIncidentFromRow } from '@/lib/incidents-db';
 
 // POST - Verify a case (analyst/admin only)
 export async function POST(
@@ -152,7 +151,15 @@ export async function GET(
       return NextResponse.json({ error: 'Incident not found' }, { status: 404 });
     }
 
-    const incident = buildIncidentFromRow(incidentResult.rows[0]);
+    const incidentRow = incidentResult.rows[0];
+    
+    // Format the incident with proper type conversion for arrays
+    const incident = {
+      ...incidentRow,
+      tags: incidentRow.tags as string[] | undefined,
+      agencies_involved: incidentRow.agencies_involved as string[] | undefined,
+      legal_violations: incidentRow.legal_violations as string[] | undefined,
+    };
 
     // Get sources
     const sourcesResult = await pool.query(`
