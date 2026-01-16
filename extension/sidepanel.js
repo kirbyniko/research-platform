@@ -1,6 +1,7 @@
 // ICE Incident Documentation - Sidebar Panel Script
 
 // State
+let isPopulatingForm = false; // Flag to prevent updateCaseFromForm during populateCaseForm
 let currentCase = {
   incidentType: 'death_in_custody',  // Primary type (backward compatibility)
   incidentTypes: [],  // Array of all selected types (multi-type support)
@@ -1898,15 +1899,19 @@ async function testConnection() {
 
 // Populate case form from state
 function populateCaseForm() {
-  elements.caseName.value = currentCase.name || '';
-  elements.caseDod.value = currentCase.dateOfDeath || '';
-  elements.caseAge.value = currentCase.age || '';
-  elements.caseCountry.value = currentCase.country || '';
-  elements.caseFacility.value = currentCase.facility || '';
-  elements.caseCity.value = currentCase.city || '';
-  elements.caseState.value = currentCase.state || '';
-  // Summary field - try summary first, then fall back to causeOfDeath for legacy data
-  elements.caseCause.value = currentCase.summary || currentCase.causeOfDeath || '';
+  // Set flag to prevent updateCaseFromForm from being called during population
+  isPopulatingForm = true;
+  
+  try {
+    elements.caseName.value = currentCase.name || '';
+    elements.caseDod.value = currentCase.dateOfDeath || '';
+    elements.caseAge.value = currentCase.age || '';
+    elements.caseCountry.value = currentCase.country || '';
+    elements.caseFacility.value = currentCase.facility || '';
+    elements.caseCity.value = currentCase.city || '';
+    elements.caseState.value = currentCase.state || '';
+    // Summary field - try summary first, then fall back to causeOfDeath for legacy data
+    elements.caseCause.value = currentCase.summary || currentCase.causeOfDeath || '';
   
   // Populate image URL and show preview if valid
   if (elements.caseImageUrl) {
@@ -2102,6 +2107,11 @@ function populateCaseForm() {
   }
   console.log('Populating tags (after check):', currentCase.tags);
   renderTags();
+  
+  } finally {
+    // Always reset the flag when done
+    isPopulatingForm = false;
+  }
 }
 
 // ============================================
@@ -2725,6 +2735,12 @@ function removeImage() {
 
 // Update case from form
 function updateCaseFromForm() {
+  // Don't update case from form while we're populating the form (causes data loss)
+  if (isPopulatingForm) {
+    console.log('[updateCaseFromForm] Skipped - form is being populated');
+    return;
+  }
+  
   // Collect agencies
   const agencies = [];
   document.querySelectorAll('[id^="agency-"]:checked').forEach(checkbox => {
@@ -3867,6 +3883,7 @@ function renderQuotes() {
         ${quote.sourceUrl ? `<div class="quote-source" style="margin-top: 6px;"><a href="${escapeHtml(quote.sourceUrl)}" target="_blank" class="source-link" title="View source" style="color: #3b82f6; text-decoration: underline; font-size: 11px;">${escapeHtml(quote.sourceTitle || new URL(quote.sourceUrl).hostname)}</a></div>` : ''}
         <div class="quote-actions" style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;">
           <button class="btn btn-sm btn-success" onclick="verifyQuoteFromList('${quote.id}')" title="Mark as verified" style="font-size: 11px; padding: 4px 10px;">✓ Verify</button>
+          <button class="btn btn-sm btn-icon" onclick="editQuoteFromList('${quote.id}')" title="Edit quote" style="font-size: 11px; padding: 4px 10px;">Edit</button>
           <button class="btn btn-sm btn-icon" data-action="copy" data-id="${quote.id}" data-verified="false" title="Copy quote">Copy</button>
           ${!currentPageIsPdf ? `<button class="btn btn-sm btn-icon" data-action="find" data-id="${quote.id}" data-verified="false" title="Find on page">Find</button>
           <button class="btn btn-sm btn-icon pin-btn" data-action="pin" data-id="${quote.id}" data-verified="false" title="Pin highlight">Pin</button>` : ''}
@@ -3901,6 +3918,56 @@ window.verifyQuoteFromList = function(quoteId) {
   verifiedFields[`quote_${quoteId}`] = true;
   updateVerificationCounter();
   renderQuotes();
+};
+
+// Edit a quote from the quotes list
+window.editQuoteFromList = async function(quoteId) {
+  const quote = verifiedQuotes.find(q => q.id === parseInt(quoteId) || q.id === quoteId);
+  if (!quote) {
+    alert('Quote not found');
+    return;
+  }
+  
+  const newText = prompt('Edit quote text:', quote.text || quote.quote);
+  if (newText === null) return; // Cancelled
+  
+  if (!newText.trim()) {
+    alert('Quote text cannot be empty');
+    return;
+  }
+  
+  try {
+    // Update via API
+    const response = await fetch(`${apiUrl}/api/review/quotes`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'X-API-Key': apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        quote_id: parseInt(quoteId),
+        quote_text: newText.trim()
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to update quote');
+    }
+    
+    // Update local state
+    const idx = verifiedQuotes.findIndex(q => q.id === parseInt(quoteId) || q.id === quoteId);
+    if (idx !== -1) {
+      verifiedQuotes[idx].text = newText.trim();
+      verifiedQuotes[idx].quote = newText.trim();
+    }
+    
+    renderQuotes();
+    updateQuoteAssociationDropdowns();
+  } catch (error) {
+    console.error('Error updating quote:', error);
+    alert('Failed to update quote: ' + error.message);
+  }
 };
 
 // Filter cases list by search term

@@ -2941,9 +2941,15 @@ export default function ReviewPage() {
                   <div className="flex-1">
                     <p className="text-sm italic">&ldquo;{q.quote_text}&rdquo;</p>
                     <div className="flex justify-between items-center mt-2">
-                      <div className="flex gap-2 text-xs text-gray-500">
+                      <div className="flex gap-2 text-xs text-gray-500 flex-wrap">
                         {q.source_title && <span>Source: {q.source_title}</span>}
-                        {q.linked_fields?.length ? <span className="text-blue-600">Linked: {q.linked_fields.join(', ')}</span> : null}
+                        {q.linked_fields?.length ? (
+                          <span className="text-blue-600" title={q.linked_fields.join(', ')}>
+                            Linked: {q.linked_fields.length <= 3 
+                              ? q.linked_fields.map(f => f.replace('incident_type_', '').replace(/_/g, ' ')).join(', ')
+                              : `${q.linked_fields.length} fields`}
+                          </span>
+                        ) : null}
                         {q.verified ? <span className="text-green-700 bg-green-100 px-2 py-0.5 rounded">Verified</span> : <span className="text-orange-700 bg-orange-100 px-2 py-0.5 rounded">Unverified</span>}
                       </div>
                       <div className="flex gap-2">
