@@ -118,6 +118,8 @@ const LINKABLE_FIELDS = [
   'cause_of_death', 'official_cause', 'death_circumstances',
   'arrest_reason', 'arrest_charges', 'arrest_context',
   'injuries_sustained',
+  // Injury-specific fields
+  'injury_type', 'injury_severity', 'injury_weapon', 'injury_cause',
   'medical_condition', 'treatment_denied',
   'protest_topic', 'dispersal_method'
 ];
@@ -2189,6 +2191,61 @@ export default function ReviewPage() {
               <div><label className="block text-xs text-gray-500 mb-1">Hospitalization Required</label>
                 <input type="checkbox" checked={!!incidentDetails.hospitalization_required} onChange={e => setIncidentDetails({ ...incidentDetails, hospitalization_required: e.target.checked })} className="w-4 h-4" />
               </div>
+              {/* Injury-specific fields (for injury type) */}
+              {currentType === 'injury' && (
+                <>
+                  <div data-field-key="injury_type">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
+                      <label className="block text-xs text-gray-500">Injury Type</label>
+                      <div className="flex items-center gap-1">
+                        <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                          <input type="checkbox" checked={verifiedFields['injury_type'] || false} onChange={e => handleFieldVerify('injury_type', e.target.checked)} className="w-3 h-3" />
+                          <span>✓</span>
+                        </label>
+                        <QuotePicker field="injury_type" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
+                      </div>
+                    </div>
+                    <input type="text" className="w-full border rounded px-3 py-2 text-sm" placeholder="e.g., Broken wrist, taser burns" value={String(incidentDetails.injury_type || '')} onChange={e => setIncidentDetails({ ...incidentDetails, injury_type: e.target.value })} />
+                  </div>
+                  <div data-field-key="injury_severity">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
+                      <label className="block text-xs text-gray-500">Injury Severity</label>
+                      <div className="flex items-center gap-1">
+                        <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                          <input type="checkbox" checked={verifiedFields['injury_severity'] || false} onChange={e => handleFieldVerify('injury_severity', e.target.checked)} className="w-3 h-3" />
+                          <span>✓</span>
+                        </label>
+                        <QuotePicker field="injury_severity" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
+                      </div>
+                    </div>
+                    <select className="w-full border rounded px-3 py-2 text-sm" value={String(incidentDetails.injury_severity || '')} onChange={e => setIncidentDetails({ ...incidentDetails, injury_severity: e.target.value })}>
+                      <option value="">Select severity</option>
+                      <option value="minor">Minor</option>
+                      <option value="moderate">Moderate</option>
+                      <option value="severe">Severe</option>
+                      <option value="life_threatening">Life Threatening</option>
+                    </select>
+                  </div>
+                  <div data-field-key="injury_weapon">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
+                      <label className="block text-xs text-gray-500">Weapon Used</label>
+                      <div className="flex items-center gap-1">
+                        <QuotePicker field="injury_weapon" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
+                      </div>
+                    </div>
+                    <input type="text" className="w-full border rounded px-3 py-2 text-sm" placeholder="e.g., Taser, baton" value={String(incidentDetails.injury_weapon || '')} onChange={e => setIncidentDetails({ ...incidentDetails, injury_weapon: e.target.value })} />
+                  </div>
+                  <div data-field-key="injury_cause">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
+                      <label className="block text-xs text-gray-500">Cause/Context</label>
+                      <div className="flex items-center gap-1">
+                        <QuotePicker field="injury_cause" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
+                      </div>
+                    </div>
+                    <input type="text" className="w-full border rounded px-3 py-2 text-sm" placeholder="e.g., During arrest" value={String(incidentDetails.injury_cause || '')} onChange={e => setIncidentDetails({ ...incidentDetails, injury_cause: e.target.value })} />
+                  </div>
+                </>
+              )}
             </div>
           )}
           {currentType === 'medical_neglect' && (

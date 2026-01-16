@@ -1833,7 +1833,8 @@ function populateCaseForm() {
   elements.caseFacility.value = currentCase.facility || '';
   elements.caseCity.value = currentCase.city || '';
   elements.caseState.value = currentCase.state || '';
-  elements.caseCause.value = currentCase.causeOfDeath || '';
+  // Summary field - try summary first, then fall back to causeOfDeath for legacy data
+  elements.caseCause.value = currentCase.summary || currentCase.causeOfDeath || '';
   
   // Populate image URL and show preview if valid
   if (elements.caseImageUrl) {
