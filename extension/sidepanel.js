@@ -2603,7 +2603,8 @@ function handleIncidentTypeChange() {
       break;
     case 'protest_suppression':
       if (elements.protestSection) elements.protestSection.classList.remove('hidden');
-      if (elements.excessiveForceSection) elements.excessiveForceSection.classList.remove('hidden');
+      // Note: Excessive force fields NOT shown for protest_suppression by default
+      // Future: Multi-type selection will allow combining types
       break;
     case 'arrest':
       if (elements.arrestFields) elements.arrestFields.classList.remove('hidden');
