@@ -2039,11 +2039,13 @@ function populateCaseForm() {
   if (elements.dispersalMethod) elements.dispersalMethod.value = currentCase.dispersalMethod || '';
   if (elements.arrestsMade) elements.arrestsMade.value = currentCase.arrestsMade || '';
   
-  // Populate tags - ensure it's always an array
-  if (!currentCase.tags || !Array.isArray(currentCase.tags)) {
+  // Populate tags - preserve existing array, just ensure it's always an array
+  console.log('Populating tags (before check):', currentCase.tags, 'type:', typeof currentCase.tags, 'isArray:', Array.isArray(currentCase.tags));
+  if (!Array.isArray(currentCase.tags)) {
+    console.warn('Tags was not an array, initializing to empty array. Was:', currentCase.tags);
     currentCase.tags = [];
   }
-  console.log('Populating tags:', currentCase.tags);
+  console.log('Populating tags (after check):', currentCase.tags);
   renderTags();
 }
 
@@ -7290,6 +7292,8 @@ async function loadReviewCaseDetails(incidentId) {
     
     console.log('currentCase.tags after population:', currentCase.tags);
     console.log('incident.tags was:', incident.tags);
+    
+    console.log('BEFORE populateCaseForm - currentCase.tags:', currentCase.tags);
     
     // Populate verified quotes
     verifiedQuotes = quotes.map(q => ({
