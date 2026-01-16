@@ -2560,6 +2560,50 @@
         <label class="checkbox-item" style="margin-top: 8px;">
           <input type="checkbox" id="deathMedicalDenied"> Medical requests denied
         </label>
+        
+        <div class="form-group" style="margin-top: 12px;">
+          <label class="form-label">Official Cause (if different)
+            <span class="verification-checkbox-wrapper" style="display: none;" data-field="official_cause">
+              <input type="checkbox" class="field-verify-checkbox" data-field="official_cause">
+              <span class="checkbox-label">Verified</span>
+            </span>
+          </label>
+          <input type="text" class="form-input" id="officialCause" placeholder="Official ruling/determination">
+          <div class="quote-association" style="position: relative; margin-top: 4px;">
+            <button type="button" class="quote-picker-trigger" data-field="official_cause">
+              <span class="selected-quote-preview">[src] Link...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="official_cause">
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="official_cause"></div>
+              <div class="quote-picker-list" data-field="official_cause"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="checkbox-grid" style="margin-top: 8px;">
+          <label class="checkbox-item">
+            <input type="checkbox" id="autopsyAvailable"> Autopsy Available
+          </label>
+        </div>
+        
+        <div class="form-group" style="margin-top: 12px;">
+          <label class="form-label">Circumstances
+            <span class="verification-checkbox-wrapper" style="display: none;" data-field="death_circumstances">
+              <input type="checkbox" class="field-verify-checkbox" data-field="death_circumstances">
+              <span class="checkbox-label">Verified</span>
+            </span>
+          </label>
+          <textarea class="form-input" id="deathCircumstances" rows="2" placeholder="Describe the circumstances..."></textarea>
+          <div class="quote-association" style="position: relative; margin-top: 4px;">
+            <button type="button" class="quote-picker-trigger" data-field="death_circumstances">
+              <span class="selected-quote-preview">[src] Link...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="death_circumstances">
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_circumstances"></div>
+              <div class="quote-picker-list" data-field="death_circumstances"></div>
+            </div>
+          </div>
+        </div>
       </div>
       
       <!-- Injury-Specific Fields -->
@@ -2637,6 +2681,12 @@
               <label class="checkbox-item">
                 <input type="checkbox" id="force-firearm" value="firearm"> Firearm
               </label>
+              <label class="checkbox-item">
+                <input type="checkbox" id="force-chokehold" value="chokehold"> Chokehold
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" id="force-knee_on_neck" value="knee_on_neck"> Knee on Neck
+              </label>
             </div>
           </div>
           <div class="checkbox-grid">
@@ -2649,6 +2699,27 @@
             <label class="checkbox-item">
               <input type="checkbox" id="videoEvidence"> Video Evidence Exists
             </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="hospitalizationRequired"> Hospitalization Required
+            </label>
+          </div>
+          <div class="form-group" style="margin-top: 12px;">
+            <label class="form-label">Injuries Sustained
+              <span class="verification-checkbox-wrapper" style="display: none;" data-field="injuries_sustained">
+                <input type="checkbox" class="field-verify-checkbox" data-field="injuries_sustained">
+                <span class="checkbox-label">Verified</span>
+              </span>
+            </label>
+            <input type="text" class="form-input" id="injuriesSustained" placeholder="Describe injuries from force">
+            <div class="quote-association" style="position: relative; margin-top: 4px;">
+              <button type="button" class="quote-picker-trigger" data-field="injuries_sustained">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="injuries_sustained">
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="injuries_sustained"></div>
+                <div class="quote-picker-list" data-field="injuries_sustained"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -2731,6 +2802,60 @@
               <div class="quote-picker-list" data-field="injury_cause"></div>
             </div>
           </div>
+        </div>
+      </div>
+      
+      <!-- Medical Neglect Section -->
+      <div class="section hidden" id="medicalNeglectSection">
+        <div class="section-header">
+          <span class="section-title">Medical Neglect Details</span>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Medical Condition
+            <span class="verification-checkbox-wrapper" style="display: none;" data-field="medical_condition">
+              <input type="checkbox" class="field-verify-checkbox" data-field="medical_condition">
+              <span class="checkbox-label">Verified</span>
+            </span>
+          </label>
+          <input type="text" class="form-input" id="medicalCondition" placeholder="Condition requiring treatment">
+          <div class="quote-association" style="position: relative; margin-top: 4px;">
+            <button type="button" class="quote-picker-trigger" data-field="medical_condition">
+              <span class="selected-quote-preview">[src] Link...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="medical_condition">
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="medical_condition"></div>
+              <div class="quote-picker-list" data-field="medical_condition"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Treatment Denied
+            <span class="verification-checkbox-wrapper" style="display: none;" data-field="treatment_denied">
+              <input type="checkbox" class="field-verify-checkbox" data-field="treatment_denied">
+              <span class="checkbox-label">Verified</span>
+            </span>
+          </label>
+          <textarea class="form-input" id="treatmentDenied" rows="2" placeholder="What treatment was denied/delayed"></textarea>
+          <div class="quote-association" style="position: relative; margin-top: 4px;">
+            <button type="button" class="quote-picker-trigger" data-field="treatment_denied">
+              <span class="selected-quote-preview">[src] Link...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="treatment_denied">
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="treatment_denied"></div>
+              <div class="quote-picker-list" data-field="treatment_denied"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="checkbox-grid" style="margin-top: 8px;">
+          <label class="checkbox-item">
+            <input type="checkbox" id="requestsDocumented"> Requests documented
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="resultedInDeath"> Resulted in death
+          </label>
         </div>
       </div>
       
@@ -2836,6 +2961,9 @@
         </div>
         
         <div class="checkbox-grid" style="margin-top: 8px;">
+          <label class="checkbox-item">
+            <input type="checkbox" id="warrantPresent"> Warrant present
+          </label>
           <label class="checkbox-item">
             <input type="checkbox" id="arrestTimingSuspicious"> Timing suspicious
           </label>

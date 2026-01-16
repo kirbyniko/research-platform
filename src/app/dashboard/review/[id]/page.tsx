@@ -2078,6 +2078,22 @@ export default function ReviewPage() {
               <div><label className="block text-xs text-gray-500 mb-1">Medical Neglect Alleged</label>
                 <input type="checkbox" checked={!!incidentDetails.medical_neglect_alleged} onChange={e => setIncidentDetails({ ...incidentDetails, medical_neglect_alleged: e.target.checked })} className="w-4 h-4" />
               </div>
+              <div data-field-key="manner_of_death">
+                <label className="block text-xs text-gray-500 mb-1">Manner of Death</label>
+                <select className="w-full border rounded px-3 py-2 text-sm" value={String(incidentDetails.manner_of_death || '')} onChange={e => setIncidentDetails({ ...incidentDetails, manner_of_death: e.target.value })}>
+                  <option value="">Select...</option>
+                  <option value="natural">Natural</option>
+                  <option value="accident">Accident</option>
+                  <option value="suicide">Suicide</option>
+                  <option value="homicide">Homicide</option>
+                  <option value="undetermined">Undetermined</option>
+                  <option value="pending">Pending Investigation</option>
+                </select>
+              </div>
+              <div data-field-key="custody_duration">
+                <label className="block text-xs text-gray-500 mb-1">Custody Duration</label>
+                <input type="text" className="w-full border rounded px-3 py-2 text-sm" placeholder="e.g., 6 months, 2 weeks" value={String(incidentDetails.custody_duration || '')} onChange={e => setIncidentDetails({ ...incidentDetails, custody_duration: e.target.value })} />
+              </div>
               <div data-field-key="death_circumstances">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                   <label className="block text-xs text-gray-500">Circumstances</label>
@@ -2127,6 +2143,12 @@ export default function ReviewPage() {
               <div><label className="block text-xs text-gray-500 mb-1">Selective Enforcement</label>
                 <input type="checkbox" checked={!!incidentDetails.selective_enforcement} onChange={e => setIncidentDetails({ ...incidentDetails, selective_enforcement: e.target.checked })} className="w-4 h-4" />
               </div>
+              <div><label className="block text-xs text-gray-500 mb-1">Timing Suspicious</label>
+                <input type="checkbox" checked={!!incidentDetails.timing_suspicious} onChange={e => setIncidentDetails({ ...incidentDetails, timing_suspicious: e.target.checked })} className="w-4 h-4" />
+              </div>
+              <div><label className="block text-xs text-gray-500 mb-1">Pretext Arrest</label>
+                <input type="checkbox" checked={!!incidentDetails.pretext_arrest} onChange={e => setIncidentDetails({ ...incidentDetails, pretext_arrest: e.target.checked })} className="w-4 h-4" />
+              </div>
               <div data-field-key="arrest_context">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
                   <label className="block text-xs text-gray-500">Context</label>
@@ -2147,7 +2169,7 @@ export default function ReviewPage() {
               <div className="col-span-2">
                 <label className="block text-xs text-gray-500 mb-2">Force Types Used</label>
                 <div className="flex flex-wrap gap-3">
-                  {['physical', 'taser', 'pepper_spray', 'baton', 'rubber_bullets', 'chokehold', 'knee_on_neck'].map(ft => (
+                  {['physical', 'taser', 'pepper_spray', 'baton', 'rubber_bullets', 'chokehold', 'knee_on_neck', 'firearm'].map(ft => (
                     <label key={ft} className="flex items-center gap-1 text-sm">
                       <input 
                         type="checkbox" 

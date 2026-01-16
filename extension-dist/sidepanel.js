@@ -561,12 +561,29 @@ function cacheElements() {
   elements.victimRestrained = document.getElementById('victimRestrained');
   elements.victimComplying = document.getElementById('victimComplying');
   elements.videoEvidence = document.getElementById('videoEvidence');
+  elements.hospitalizationRequired = document.getElementById('hospitalizationRequired');
+  elements.injuriesSustained = document.getElementById('injuriesSustained');
+  // Additional force type checkboxes
+  elements.forceChokehold = document.getElementById('force-chokehold');
+  elements.forceKneeOnNeck = document.getElementById('force-knee_on_neck');
   // Protest detail fields
   elements.protestTopic = document.getElementById('protestTopic');
   elements.protestSize = document.getElementById('protestSize');
   elements.protestPermitted = document.getElementById('protestPermitted');
   elements.dispersalMethod = document.getElementById('dispersalMethod');
   elements.arrestsMade = document.getElementById('arrestsMade');
+  // Medical neglect section
+  elements.medicalNeglectSection = document.getElementById('medicalNeglectSection');
+  elements.medicalCondition = document.getElementById('medicalCondition');
+  elements.treatmentDenied = document.getElementById('treatmentDenied');
+  elements.requestsDocumented = document.getElementById('requestsDocumented');
+  elements.resultedInDeath = document.getElementById('resultedInDeath');
+  // Death section additions
+  elements.officialCause = document.getElementById('officialCause');
+  elements.autopsyAvailable = document.getElementById('autopsyAvailable');
+  elements.deathCircumstances = document.getElementById('deathCircumstances');
+  // Arrest section additions
+  elements.warrantPresent = document.getElementById('warrantPresent');
 }
 
 // Load settings from storage
@@ -2459,7 +2476,7 @@ function handleIncidentTypeChange() {
   
   // Hide all type-specific sections and clean up their verifiedFields
   [elements.deathFields, elements.injuryFields, elements.arrestFields, elements.violationFields,
-   elements.shootingSection, elements.excessiveForceSection, elements.protestSection].forEach(el => {
+   elements.shootingSection, elements.excessiveForceSection, elements.protestSection, elements.medicalNeglectSection].forEach(el => {
     if (el) {
       el.classList.add('hidden');
       
@@ -2502,6 +2519,9 @@ function handleIncidentTypeChange() {
     case 'excessive_force':
       if (elements.excessiveForceSection) elements.excessiveForceSection.classList.remove('hidden');
       if (elements.injuryFields) elements.injuryFields.classList.remove('hidden');
+      break;
+    case 'medical_neglect':
+      if (elements.medicalNeglectSection) elements.medicalNeglectSection.classList.remove('hidden');
       break;
     case 'protest_suppression':
       if (elements.protestSection) elements.protestSection.classList.remove('hidden');
