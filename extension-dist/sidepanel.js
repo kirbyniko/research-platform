@@ -1858,7 +1858,7 @@ function populateCaseForm() {
   
   // Populate incident type
   if (elements.incidentType) {
-    elements.incidentType.value = currentCase.incidentType || 'death';
+    elements.incidentType.value = currentCase.incidentType || 'death_in_custody';
     handleIncidentTypeChange();
   }
   
@@ -7104,10 +7104,28 @@ async function loadReviewCaseDetails(incidentId) {
     const incidentSources = data.sources || [];
     reviewTimeline = data.timeline || [];
     
+    // Helper function to normalize incident type values
+    function normalizeIncidentType(type) {
+      if (!type) return 'death_in_custody';
+      
+      // Map legacy/alternate values to valid select options
+      const typeMap = {
+        'detention_death': 'death_in_custody',
+        'death': 'death_in_custody',
+        'use_of_force': 'excessive_force',
+        'force': 'excessive_force',
+        'arrest_detention': 'arrest',
+        'detention': 'arrest'
+      };
+      
+      const normalized = type.toLowerCase();
+      return typeMap[normalized] || type;
+    }
+    
     // Populate currentCase from incident - ensure ALL fields are mapped
     currentCase = {
       // Core identity fields
-      incidentType: incident.incident_type || 'death_in_custody',
+      incidentType: normalizeIncidentType(incident.incident_type),
       name: incident.subject_name || incident.victim_name || '',
       dateOfDeath: incident.incident_date ? incident.incident_date.split('T')[0] : '',
       age: incident.subject_age?.toString() || '',
