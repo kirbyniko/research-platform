@@ -2020,13 +2020,12 @@ function populateCaseForm() {
   if (elements.dispersalMethod) elements.dispersalMethod.value = currentCase.dispersalMethod || '';
   if (elements.arrestsMade) elements.arrestsMade.value = currentCase.arrestsMade || '';
   
-  // Populate tags
-  if (currentCase.tags && Array.isArray(currentCase.tags)) {
-    renderTags();
-  } else {
+  // Populate tags - ensure it's always an array
+  if (!currentCase.tags || !Array.isArray(currentCase.tags)) {
     currentCase.tags = [];
-    renderTags();
   }
+  console.log('Populating tags:', currentCase.tags);
+  renderTags();
 }
 
 // ============================================
@@ -4548,12 +4547,19 @@ function removeTag(tag) {
   renderTags();
 }
 
+// Make removeTag globally accessible for onclick handlers
+window.removeTag = removeTag;
+
 // Render the tags display
 function renderTags() {
   const container = elements.currentTags;
-  if (!container) return;
+  console.log('renderTags called - container:', container, 'tags:', currentCase.tags);
+  if (!container) {
+    console.warn('Tags container not found');
+    return;
+  }
   
-  if (currentCase.tags.length === 0) {
+  if (!currentCase.tags || currentCase.tags.length === 0) {
     container.innerHTML = '<span style="color: #9ca3af; font-size: 11px;">No tags added</span>';
     return;
   }
