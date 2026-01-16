@@ -1920,7 +1920,78 @@ function populateCaseForm() {
     elements.caseImmigrationStatus.value = currentCase.immigration_status || '';
   }
   
-  // Populate incident type
+  // IMPORTANT: Populate ALL type-specific fields BEFORE setting incident type,
+  // because handleIncidentTypeChange() calls updateCaseFromForm() which reads from form fields
+  
+  // Populate type-specific fields (death, injury, arrest, violation, shooting, etc.)
+  if (elements.deathCause) elements.deathCause.value = currentCase.deathCause || '';
+  if (elements.deathManner) elements.deathManner.value = currentCase.deathManner || '';
+  if (elements.deathCustodyDuration) elements.deathCustodyDuration.value = currentCase.deathCustodyDuration || '';
+  if (elements.deathMedicalDenied) elements.deathMedicalDenied.checked = currentCase.deathMedicalDenied || false;
+  
+  if (elements.injuryType) elements.injuryType.value = currentCase.injuryType || '';
+  if (elements.injurySeverity) elements.injurySeverity.value = currentCase.injurySeverity || '';
+  if (elements.injuryWeapon) elements.injuryWeapon.value = currentCase.injuryWeapon || '';
+  if (elements.injuryCause) elements.injuryCause.value = currentCase.injuryCause || '';
+  
+  if (elements.arrestReason) elements.arrestReason.value = currentCase.arrestReason || '';
+  if (elements.arrestContext) elements.arrestContext.value = currentCase.arrestContext || '';
+  if (elements.arrestCharges) elements.arrestCharges.value = currentCase.arrestCharges || '';
+  if (elements.arrestTimingSuspicious) elements.arrestTimingSuspicious.checked = currentCase.arrestTimingSuspicious || false;
+  if (elements.arrestPretext) elements.arrestPretext.checked = currentCase.arrestPretext || false;
+  if (elements.arrestSelective) elements.arrestSelective.checked = currentCase.arrestSelective || false;
+  
+  if (elements.violationJournalism) elements.violationJournalism.checked = currentCase.violationJournalism || false;
+  if (elements.violationProtest) elements.violationProtest.checked = currentCase.violationProtest || false;
+  if (elements.violationActivism) elements.violationActivism.checked = currentCase.violationActivism || false;
+  if (elements.violationSpeech) elements.violationSpeech.value = currentCase.violationSpeech || '';
+  if (elements.violationRuling) elements.violationRuling.value = currentCase.violationRuling || '';
+  
+  // Populate shooting-specific fields
+  if (elements.shootingFatal) elements.shootingFatal.checked = currentCase.shootingFatal || false;
+  if (elements.shotsFired) elements.shotsFired.value = currentCase.shotsFired || '';
+  if (elements.weaponType) elements.weaponType.value = currentCase.weaponType || '';
+  if (elements.bodycamAvailable) elements.bodycamAvailable.checked = currentCase.bodycamAvailable || false;
+  if (elements.victimArmed) elements.victimArmed.checked = currentCase.victimArmed || false;
+  if (elements.warningGiven) elements.warningGiven.checked = currentCase.warningGiven || false;
+  if (elements.shootingContext) elements.shootingContext.value = currentCase.shootingContext || '';
+  
+  // Populate excessive force fields
+  document.querySelectorAll('[id^="force-"]').forEach(checkbox => {
+    const forceType = checkbox.value;
+    checkbox.checked = currentCase.forceTypes && currentCase.forceTypes.includes(forceType);
+  });
+  if (elements.victimRestrained) elements.victimRestrained.checked = currentCase.victimRestrained || false;
+  if (elements.victimComplying) elements.victimComplying.checked = currentCase.victimComplying || false;
+  if (elements.videoEvidence) elements.videoEvidence.checked = currentCase.videoEvidence || false;
+  
+  // Populate protest fields (MUST be before incident type is set)
+  console.log('[populateCaseForm] Populating protest fields:', {
+    protestTopic: currentCase.protestTopic,
+    protestSize: currentCase.protestSize,
+    protestPermitted: currentCase.protestPermitted,
+    dispersalMethod: currentCase.dispersalMethod,
+    arrestsMade: currentCase.arrestsMade
+  });
+  if (elements.protestTopic) {
+    elements.protestTopic.value = currentCase.protestTopic || '';
+    console.log('[populateCaseForm] Set protestTopic to:', elements.protestTopic.value);
+  }
+  if (elements.protestSize) {
+    elements.protestSize.value = currentCase.protestSize || '';
+    console.log('[populateCaseForm] Set protestSize to:', elements.protestSize.value);
+  }
+  if (elements.protestPermitted) elements.protestPermitted.checked = currentCase.protestPermitted || false;
+  if (elements.dispersalMethod) {
+    elements.dispersalMethod.value = currentCase.dispersalMethod || '';
+    console.log('[populateCaseForm] Set dispersalMethod to:', elements.dispersalMethod.value);
+  }
+  if (elements.arrestsMade) {
+    elements.arrestsMade.value = currentCase.arrestsMade || '';
+    console.log('[populateCaseForm] Set arrestsMade to:', elements.arrestsMade.value);
+  }
+  
+  // NOW set incident type (this calls handleIncidentTypeChange -> updateCaseFromForm)
   if (elements.incidentType) {
     elements.incidentType.value = currentCase.incidentType || 'death_in_custody';
     handleIncidentTypeChange();
@@ -1988,74 +2059,6 @@ function populateCaseForm() {
     }
     
     populateViolationsFromData(legacyViolations);
-  }
-  
-  // Populate type-specific fields
-  if (elements.deathCause) elements.deathCause.value = currentCase.deathCause || '';
-  if (elements.deathManner) elements.deathManner.value = currentCase.deathManner || '';
-  if (elements.deathCustodyDuration) elements.deathCustodyDuration.value = currentCase.deathCustodyDuration || '';
-  if (elements.deathMedicalDenied) elements.deathMedicalDenied.checked = currentCase.deathMedicalDenied || false;
-  
-  if (elements.injuryType) elements.injuryType.value = currentCase.injuryType || '';
-  if (elements.injurySeverity) elements.injurySeverity.value = currentCase.injurySeverity || '';
-  if (elements.injuryWeapon) elements.injuryWeapon.value = currentCase.injuryWeapon || '';
-  if (elements.injuryCause) elements.injuryCause.value = currentCase.injuryCause || '';
-  
-  if (elements.arrestReason) elements.arrestReason.value = currentCase.arrestReason || '';
-  if (elements.arrestContext) elements.arrestContext.value = currentCase.arrestContext || '';
-  if (elements.arrestCharges) elements.arrestCharges.value = currentCase.arrestCharges || '';
-  if (elements.arrestTimingSuspicious) elements.arrestTimingSuspicious.checked = currentCase.arrestTimingSuspicious || false;
-  if (elements.arrestPretext) elements.arrestPretext.checked = currentCase.arrestPretext || false;
-  if (elements.arrestSelective) elements.arrestSelective.checked = currentCase.arrestSelective || false;
-  
-  if (elements.violationJournalism) elements.violationJournalism.checked = currentCase.violationJournalism || false;
-  if (elements.violationProtest) elements.violationProtest.checked = currentCase.violationProtest || false;
-  if (elements.violationActivism) elements.violationActivism.checked = currentCase.violationActivism || false;
-  if (elements.violationSpeech) elements.violationSpeech.value = currentCase.violationSpeech || '';
-  if (elements.violationRuling) elements.violationRuling.value = currentCase.violationRuling || '';
-  
-  // Populate shooting-specific fields
-  if (elements.shootingFatal) elements.shootingFatal.checked = currentCase.shootingFatal || false;
-  if (elements.shotsFired) elements.shotsFired.value = currentCase.shotsFired || '';
-  if (elements.weaponType) elements.weaponType.value = currentCase.weaponType || '';
-  if (elements.bodycamAvailable) elements.bodycamAvailable.checked = currentCase.bodycamAvailable || false;
-  if (elements.victimArmed) elements.victimArmed.checked = currentCase.victimArmed || false;
-  if (elements.warningGiven) elements.warningGiven.checked = currentCase.warningGiven || false;
-  if (elements.shootingContext) elements.shootingContext.value = currentCase.shootingContext || '';
-  
-  // Populate excessive force fields
-  document.querySelectorAll('[id^="force-"]').forEach(checkbox => {
-    const forceType = checkbox.value;
-    checkbox.checked = currentCase.forceTypes && currentCase.forceTypes.includes(forceType);
-  });
-  if (elements.victimRestrained) elements.victimRestrained.checked = currentCase.victimRestrained || false;
-  if (elements.victimComplying) elements.victimComplying.checked = currentCase.victimComplying || false;
-  if (elements.videoEvidence) elements.videoEvidence.checked = currentCase.videoEvidence || false;
-  
-  // Populate protest fields
-  console.log('[populateCaseForm] Populating protest fields:', {
-    protestTopic: currentCase.protestTopic,
-    protestSize: currentCase.protestSize,
-    protestPermitted: currentCase.protestPermitted,
-    dispersalMethod: currentCase.dispersalMethod,
-    arrestsMade: currentCase.arrestsMade
-  });
-  if (elements.protestTopic) {
-    elements.protestTopic.value = currentCase.protestTopic || '';
-    console.log('[populateCaseForm] Set protestTopic to:', elements.protestTopic.value);
-  }
-  if (elements.protestSize) {
-    elements.protestSize.value = currentCase.protestSize || '';
-    console.log('[populateCaseForm] Set protestSize to:', elements.protestSize.value);
-  }
-  if (elements.protestPermitted) elements.protestPermitted.checked = currentCase.protestPermitted || false;
-  if (elements.dispersalMethod) {
-    elements.dispersalMethod.value = currentCase.dispersalMethod || '';
-    console.log('[populateCaseForm] Set dispersalMethod to:', elements.dispersalMethod.value);
-  }
-  if (elements.arrestsMade) {
-    elements.arrestsMade.value = currentCase.arrestsMade || '';
-    console.log('[populateCaseForm] Set arrestsMade to:', elements.arrestsMade.value);
   }
   
   // Populate tags - preserve existing array, just ensure it's always an array
