@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     const user = authResult.user;
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || 'all';
+    const tagFilter = searchParams.get('tag') || '';
 
     let query = `
       SELECT 
@@ -90,8 +91,8 @@ export async function GET(request: NextRequest) {
     
     // ANALYST FILTERING: Don't show cases the current analyst already worked on
     // This prevents analysts from reviewing their own submissions or verifications
-    // Apply to all users including admins for consistency with dashboard
-    {
+    // Admins are exempt and can see all cases
+    if (user.role !== 'admin') {
       let paramIndex = params.length + 1;
       
       // For 'all' status or review statuses: exclude cases user submitted or verified
@@ -106,6 +107,13 @@ export async function GET(request: NextRequest) {
         params.push(user.id);
       }
       // For verified/rejected: no analyst filtering needed (anyone can view)
+    }
+    
+    // Tag filtering - add condition if tag filter is provided
+    if (tagFilter) {
+      const paramIndex = params.length + 1;
+      conditions.push(`$${paramIndex} = ANY(i.tags)`);
+      params.push(tagFilter);
     }
     
     if (conditions.length > 0) {
@@ -134,8 +142,8 @@ export async function GET(request: NextRequest) {
     const statsConditions: string[] = [];
     const statsParams: (string | number)[] = [];
     
-    // Apply analyst filtering to stats (for all users including admin)
-    {
+    // Apply analyst filtering to stats (admins exempt)
+    if (user.role !== 'admin') {
       statsConditions.push(`(i.submitted_by IS NULL OR i.submitted_by != $1)`);
       statsConditions.push(`(i.first_verified_by IS NULL OR i.first_verified_by != $1)`);
       statsParams.push(user.id);

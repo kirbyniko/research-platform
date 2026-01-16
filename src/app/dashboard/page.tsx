@@ -13,6 +13,7 @@ interface Incident {
   state: string;
   facility_name: string;
   description: string;
+  tags?: string[];
   verification_status: 'pending' | 'first_review' | 'first_validation' | 'verified' | 'rejected';
   submitted_by_email: string | null;
   first_verified_by_email: string | null;
@@ -88,10 +89,17 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<'needs_review' | 'pending' | 'first_review' | 'needs_validation' | 'returned_for_review' | 'revalidation' | 'verified' | 'rejected' | 'all'>('needs_review');
+  const [tagFilter, setTagFilter] = useState<string>('');
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [verifyingId, setVerifyingId] = useState<number | null>(null);
   const [verifyNotes, setVerifyNotes] = useState('');
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  
+  // Unpublish state
+  const [unpublishingId, setUnpublishingId] = useState<number | null>(null);
+  const [unpublishReason, setUnpublishReason] = useState('');
+  const [showUnpublishModal, setShowUnpublishModal] = useState(false);
   
   // Edit suggestions state
   const [editSuggestions, setEditSuggestions] = useState<EditSuggestion[]>([]);
@@ -131,7 +139,7 @@ export default function DashboardPage() {
       fetchEditSuggestions();
       fetchGuestSubmissions();
     }
-  }, [user, filter, editFilter, guestFilter]);
+  }, [user, filter, tagFilter, editFilter, guestFilter]);
   
   // Refetch when active tab changes
   useEffect(() => {
@@ -167,11 +175,26 @@ export default function DashboardPage() {
   async function fetchQueue() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/verification-queue?status=${filter}`);
+      const url = new URL('/api/verification-queue', window.location.origin);
+      url.searchParams.set('status', filter);
+      if (tagFilter) {
+        url.searchParams.set('tag', tagFilter);
+      }
+      
+      const res = await fetch(url.toString());
       if (res.ok) {
         const data = await res.json();
         setIncidents(data.incidents);
         setStats(data.stats);
+        
+        // Extract unique tags from incidents for the filter dropdown
+        const tagsSet = new Set<string>();
+        data.incidents.forEach((inc: Incident) => {
+          if (inc.tags && Array.isArray(inc.tags)) {
+            inc.tags.forEach(tag => tagsSet.add(tag));
+          }
+        });
+        setAvailableTags(Array.from(tagsSet).sort());
       } else {
         setError('Failed to fetch verification queue');
       }
@@ -247,6 +270,43 @@ export default function DashboardPage() {
       setError('Verification failed');
     } finally {
       setVerifyingId(null);
+    }
+  }
+
+  async function handleUnpublish(incident: Incident) {
+    if (!unpublishReason.trim()) {
+      alert('Please provide a reason for unpublishing');
+      return;
+    }
+    
+    if (!confirm(`Are you sure you want to unpublish "${incident.victim_name || 'this case'}"? It will be returned to the review queue.`)) {
+      return;
+    }
+    
+    setUnpublishingId(incident.id);
+    try {
+      const res = await fetch(`/api/incidents/${incident.id}/unpublish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: unpublishReason }),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        alert(data.message);
+        setShowUnpublishModal(false);
+        setUnpublishReason('');
+        setSelectedIncident(null);
+        fetchQueue();
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Unpublish failed');
+      }
+    } catch (err) {
+      setError('Unpublish failed');
+      console.error(err);
+    } finally {
+      setUnpublishingId(null);
     }
   }
 
@@ -705,13 +765,15 @@ export default function DashboardPage() {
           )}
 
       {/* Filters */}
-      <div className="mb-6 flex flex-wrap gap-2">
-        <button
-          onClick={() => setFilter('needs_review')}
-          className={`px-4 py-2 rounded-lg text-sm ${filter === 'needs_review' ? 'bg-yellow-600 text-white' : 'bg-yellow-50 text-yellow-800 hover:bg-yellow-100 border border-yellow-200'}`}
-        >
-          Needs Review ({stats ? Number(stats.pending) : 0})
-        </button>
+      <div className="mb-6 space-y-3">
+        {/* Status Filters */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setFilter('needs_review')}
+            className={`px-4 py-2 rounded-lg text-sm ${filter === 'needs_review' ? 'bg-yellow-600 text-white' : 'bg-yellow-50 text-yellow-800 hover:bg-yellow-100 border border-yellow-200'}`}
+          >
+            Needs Review ({stats ? Number(stats.pending) : 0})
+          </button>
         <button
           onClick={() => setFilter('needs_validation')}
           className={`px-4 py-2 rounded-lg text-sm ${filter === 'needs_validation' ? 'bg-purple-600 text-white' : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200'}`}
@@ -743,6 +805,35 @@ export default function DashboardPage() {
         >
           All ({stats?.total || 0})
         </button>
+        </div>
+        
+        {/* Tag Filter */}
+        {availableTags.length > 0 && (
+          <div className="flex items-center gap-2">
+            <label htmlFor="tagFilter" className="text-sm font-medium text-gray-700">
+              🏷️ Filter by Tag:
+            </label>
+            <select
+              id="tagFilter"
+              value={tagFilter}
+              onChange={(e) => setTagFilter(e.target.value)}
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Tags</option>
+              {availableTags.map(tag => (
+                <option key={tag} value={tag}>{tag}</option>
+              ))}
+            </select>
+            {tagFilter && (
+              <button
+                onClick={() => setTagFilter('')}
+                className="px-2 py-1 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {error && (
@@ -848,6 +939,26 @@ export default function DashboardPage() {
                     )}
                   </div>
                   
+                  {/* Tags */}
+                  {incident.tags && incident.tags.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {incident.tags.slice(0, 4).map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-xs"
+                          title={tag}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                      {incident.tags.length > 4 && (
+                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
+                          +{incident.tags.length - 4} more
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  
                   <div className="mt-3 text-xs text-gray-400 space-y-0.5">
                     <p>Submitted: {formatDate(incident.created_at)}{incident.submitted_by_email && ` by ${incident.submitted_by_email}`}</p>
                     {incident.first_verified_by_email && (
@@ -895,6 +1006,20 @@ export default function DashboardPage() {
                     >
                       Review Fields
                     </Link>
+                  )}
+                  
+                  {/* Unpublish button (admin only, verified cases) */}
+                  {user?.role === 'admin' && incident.verification_status === 'verified' && (
+                    <button
+                      onClick={() => {
+                        setSelectedIncident(incident);
+                        setShowUnpublishModal(true);
+                      }}
+                      className="px-3 py-2 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 text-center"
+                      title="Send case back to review"
+                    >
+                      ↩ Unpublish
+                    </button>
                   )}
                   
                   <Link
@@ -967,6 +1092,61 @@ export default function DashboardPage() {
                   This case will need a second verification from another analyst after your approval.
                 </p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Unpublish Modal (Admin Only) */}
+      {showUnpublishModal && selectedIncident && user?.role === 'admin' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-xl font-bold mb-4 text-orange-600">↩ Unpublish Case</h2>
+              
+              <div className="bg-orange-50 border border-orange-200 p-4 rounded mb-4">
+                <p className="font-medium text-orange-900">{selectedIncident.victim_name || 'Name Unknown'}</p>
+                <p className="text-sm text-orange-700">
+                  {formatDate(selectedIncident.incident_date)} • {selectedIncident.incident_type.replace('_', ' ')}
+                </p>
+                <p className="text-sm text-orange-600 mt-2">
+                  ⚠️ This will remove the case from public view and return it to the review queue.
+                </p>
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2 text-red-600">
+                  Reason for Unpublishing (required) *
+                </label>
+                <textarea
+                  value={unpublishReason}
+                  onChange={(e) => setUnpublishReason(e.target.value)}
+                  className="w-full border border-orange-300 rounded p-3 h-32 text-sm focus:ring-orange-500 focus:border-orange-500"
+                  placeholder="Explain why this case needs to be unpublished and returned to review (e.g., factual error discovered, new information available, needs additional verification)..."
+                  required
+                />
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleUnpublish(selectedIncident)}
+                  disabled={unpublishingId !== null || !unpublishReason.trim()}
+                  className="flex-1 bg-orange-600 text-white py-2 rounded hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {unpublishingId ? 'Processing...' : '↩ Unpublish & Return to Review'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowUnpublishModal(false);
+                    setUnpublishReason('');
+                    setSelectedIncident(null);
+                  }}
+                  disabled={unpublishingId !== null}
+                  className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>
