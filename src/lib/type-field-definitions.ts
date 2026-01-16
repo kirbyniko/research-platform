@@ -98,6 +98,7 @@ export const TYPE_SECTIONS: TypeSection[] = [
       { key: 'official_cause', label: 'Official Cause', type: 'text', quotable: true, verifiable: true },
       { key: 'autopsy_available', label: 'Autopsy Available', type: 'checkbox' },
       { key: 'medical_neglect_alleged', label: 'Medical Neglect Alleged', type: 'checkbox' },
+      { key: 'medical_requests_denied', label: 'Medical Requests Denied', type: 'checkbox' },
       { key: 'manner_of_death', label: 'Manner of Death', type: 'select', options: MANNER_OF_DEATH_OPTIONS },
       { key: 'custody_duration', label: 'Custody Duration', type: 'text', placeholder: 'e.g., 6 months, 2 weeks' },
       { key: 'circumstances', label: 'Circumstances', type: 'textarea', quotable: true, verifiable: true },
@@ -157,6 +158,17 @@ export const TYPE_SECTIONS: TypeSection[] = [
       { key: 'permitted', label: 'Permit Obtained', type: 'checkbox' },
       { key: 'dispersal_method', label: 'Dispersal Method', type: 'select', options: DISPERSAL_METHOD_OPTIONS, quotable: true, verifiable: true },
       { key: 'arrests_made', label: 'Arrests Made', type: 'number' },
+    ],
+  },
+  {
+    title: 'Violation Details',
+    types: ['rights_violation', 'retaliation'],
+    fields: [
+      { key: 'journalism_related', label: 'Journalism Related', type: 'checkbox' },
+      { key: 'protest_related', label: 'Protest Related', type: 'checkbox' },
+      { key: 'activism_related', label: 'Activism Related', type: 'checkbox' },
+      { key: 'speech_content', label: 'Speech/Activity Content', type: 'textarea', quotable: true, verifiable: true, placeholder: 'What they said/did (quoted if possible)' },
+      { key: 'court_ruling', label: 'Court Ruling', type: 'text', quotable: true, verifiable: true, placeholder: 'Court decision (if any)' },
     ],
   },
 ];

@@ -466,6 +466,7 @@ function cacheElements() {
   elements.deathManner = document.getElementById('deathManner');
   elements.deathCustodyDuration = document.getElementById('deathCustodyDuration');
   elements.deathMedicalDenied = document.getElementById('deathMedicalDenied');
+  elements.medicalNeglectAlleged = document.getElementById('medicalNeglectAlleged');
   // Injury-specific fields
   elements.injuryType = document.getElementById('injuryType');
   elements.injurySeverity = document.getElementById('injurySeverity');
@@ -1936,6 +1937,7 @@ function populateCaseForm() {
   if (elements.deathManner) elements.deathManner.value = currentCase.deathManner || '';
   if (elements.deathCustodyDuration) elements.deathCustodyDuration.value = currentCase.deathCustodyDuration || '';
   if (elements.deathMedicalDenied) elements.deathMedicalDenied.checked = currentCase.deathMedicalDenied || false;
+  if (elements.medicalNeglectAlleged) elements.medicalNeglectAlleged.checked = currentCase.medicalNeglectAlleged || false;
   // ADDED: Official cause, autopsy, and circumstances
   if (elements.officialCause) elements.officialCause.value = currentCase.officialCause || '';
   if (elements.autopsyAvailable) elements.autopsyAvailable.checked = currentCase.autopsyAvailable || false;
@@ -2790,6 +2792,7 @@ function updateCaseFromForm() {
     deathManner: elements.deathManner ? elements.deathManner.value : '',
     deathCustodyDuration: elements.deathCustodyDuration ? elements.deathCustodyDuration.value : '',
     deathMedicalDenied: elements.deathMedicalDenied ? elements.deathMedicalDenied.checked : false,
+    medicalNeglectAlleged: elements.medicalNeglectAlleged ? elements.medicalNeglectAlleged.checked : false,
     // Injury-specific
     injuryType: elements.injuryType ? elements.injuryType.value : '',
     injurySeverity: elements.injurySeverity ? elements.injurySeverity.value : '',
@@ -4968,6 +4971,7 @@ function addTypeSpecificDetails(incident, type, caseData) {
           cause_source: 'unknown',
           manner_of_death: caseData.deathManner || undefined,
           custody_duration: caseData.deathCustodyDuration || undefined,
+          medical_neglect_alleged: caseData.medicalNeglectAlleged || false,
           medical_requests_denied: caseData.deathMedicalDenied || false
         };
       }
@@ -7535,6 +7539,7 @@ async function loadReviewCaseDetails(incidentId) {
       deathManner: getField('manner_of_death') || '',
       deathCustodyDuration: getField('custody_duration') || '',
       deathMedicalDenied: getFieldBool('medical_requests_denied') || getFieldBool('medical_care_denied'),
+      medicalNeglectAlleged: getFieldBool('medical_neglect_alleged'),
       officialCause: getField('official_cause') || '',
       autopsyAvailable: getFieldBool('autopsy_available'),
       deathCircumstances: getField('circumstances') || '',
