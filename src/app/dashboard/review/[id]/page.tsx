@@ -590,6 +590,9 @@ export default function ReviewPage() {
   const [showDeleteGuestModal, setShowDeleteGuestModal] = useState(false);
   const [deleteGuestId, setDeleteGuestId] = useState<number | null>(null);
   const [deleteGuestReason, setDeleteGuestReason] = useState('');
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejecting, setRejecting] = useState(false);
   const [relatedReports, setRelatedReports] = useState<any[]>([]);
   const [relatedReportsSummary, setRelatedReportsSummary] = useState<{ total: number; transferred: number; pending: number } | null>(null);
   const [showRelatedReports, setShowRelatedReports] = useState(false);
@@ -815,6 +818,40 @@ export default function ReviewPage() {
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Failed'); }
       return await res.json();
     } finally { setSaving(false); }
+  }
+
+  async function handleRejectCase() {
+    if (!rejectReason.trim()) {
+      alert('Please provide a rejection reason');
+      return;
+    }
+    
+    setRejecting(true);
+    try {
+      const res = await fetch(`/api/incidents/${incidentId}/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'reject',
+          rejection_reason: rejectReason.trim()
+        })
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to reject case');
+      }
+      
+      alert('Case rejected successfully.');
+      setShowRejectModal(false);
+      setRejectReason('');
+      router.push('/dashboard');
+    } catch (err) {
+      alert('Failed to reject case: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      console.error(err);
+    } finally {
+      setRejecting(false);
+    }
   }
 
   async function handleLinkQuote(field: string, quoteId: number) {
@@ -3095,8 +3132,55 @@ export default function ReviewPage() {
              incident?.verification_status === 'pending' ? 'Submit Review' :
              'Update Verification'}
           </button>
+          
+          {/* Reject Case Button - only show for existing incidents that aren't new */}
+          {!isNewIncident && incident && (
+            <button
+              onClick={() => setShowRejectModal(true)}
+              disabled={rejecting}
+              className="px-4 sm:px-6 py-2 sm:py-3 bg-red-600 text-white text-sm sm:text-base rounded-lg font-medium hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              {rejecting ? 'Rejecting...' : '✗ Reject Case'}
+            </button>
+          )}
         </div>
       </div>
+      
+      {/* Reject Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4 text-red-600">Reject Case</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              This action will mark the case as rejected. Please provide a reason for rejection.
+            </p>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Enter rejection reason (required)..."
+              className="w-full border rounded-lg p-3 text-sm min-h-[100px] mb-4"
+            />
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectReason('');
+                }}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRejectCase}
+                disabled={rejecting || !rejectReason.trim()}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {rejecting ? 'Rejecting...' : 'Reject Case'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </>
       )}
     </div>

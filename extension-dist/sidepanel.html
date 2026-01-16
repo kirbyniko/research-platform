@@ -3785,7 +3785,11 @@
     
     <div class="footer">
       <span id="verificationCounter" style="margin-right: 12px; font-size: 13px; font-weight: 500;"></span>
-      <button class="btn btn-primary" id="saveCaseBtn">Save Incident</button>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-secondary" id="cancelReviewBtn" style="display: none;">← Back</button>
+        <button class="btn btn-danger" id="rejectCaseBtn" style="display: none;">✗ Reject</button>
+        <button class="btn btn-primary" id="saveCaseBtn">Save Incident</button>
+      </div>
     </div>
   </div>
   

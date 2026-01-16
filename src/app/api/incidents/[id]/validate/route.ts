@@ -294,16 +294,27 @@ export async function POST(
     const currentCase = caseResult.rows[0];
     const currentStatus = currentCase.verification_status;
     
-    // Only allow validation on cases that have completed review
-    // Simplified flow: first_review now goes directly to validation
-    if (!['first_review', 'first_validation'].includes(currentStatus)) {
-      return NextResponse.json(
-        { error: `Cannot validate case with status '${currentStatus}'. Case must complete review first.` },
-        { status: 400 }
-      );
+    // For rejection, allow from any pre-verified status (pending, first_review, first_validation)
+    // For validation, only allow from first_review or first_validation
+    if (action === 'reject') {
+      if (!['pending', 'first_review', 'first_validation'].includes(currentStatus)) {
+        return NextResponse.json(
+          { error: `Cannot reject case with status '${currentStatus}'. Only pending/in-review cases can be rejected.` },
+          { status: 400 }
+        );
+      }
+    } else {
+      // Only allow validation on cases that have completed review
+      // Simplified flow: first_review now goes directly to validation
+      if (!['first_review', 'first_validation'].includes(currentStatus)) {
+        return NextResponse.json(
+          { error: `Cannot validate case with status '${currentStatus}'. Case must complete review first.` },
+          { status: 400 }
+        );
+      }
     }
     
-    // Can't validate your own case
+    // Can't validate your own case (but can reject)
     if (currentCase.submitted_by === user.id && user.role !== 'admin') {
       return NextResponse.json(
         { error: 'Cannot validate your own submission' },

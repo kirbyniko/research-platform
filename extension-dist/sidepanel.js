@@ -7002,7 +7002,8 @@ async function rejectCase() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sessionToken}`
+        'Authorization': `Bearer ${apiKey}`,
+        'X-API-Key': apiKey
       },
       body: JSON.stringify({
         action: 'reject',
@@ -7103,24 +7104,51 @@ async function loadReviewCaseDetails(incidentId) {
     const incidentSources = data.sources || [];
     reviewTimeline = data.timeline || [];
     
-    // Populate currentCase from incident
+    // Populate currentCase from incident - ensure ALL fields are mapped
     currentCase = {
+      // Core identity fields
       incidentType: incident.incident_type || 'death_in_custody',
       name: incident.subject_name || incident.victim_name || '',
       dateOfDeath: incident.incident_date ? incident.incident_date.split('T')[0] : '',
       age: incident.subject_age?.toString() || '',
       country: incident.subject_nationality || '',
+      gender: incident.subject_gender || '',
+      immigration_status: incident.subject_immigration_status || '',
       occupation: incident.subject_occupation || '',
+      
+      // Location fields - set BOTH individual fields AND combined location
+      city: incident.city || '',
+      state: incident.state || '',
       facility: incident.facility || '',
       location: `${incident.city || ''}, ${incident.state || ''}`.trim(),
+      
+      // Summary and cause
+      summary: incident.summary || '',
       causeOfDeath: incident.cause_of_death || '',
+      
+      // Related entities
       agencies: incident.agencies_involved || [],
       violations: incident.legal_violations || [],
+      
+      // Death-specific details
       deathCause: incident.cause_of_death || '',
       deathManner: incident.manner_of_death || '',
       deathCustodyDuration: incident.custody_duration || '',
       deathMedicalDenied: incident.medical_care_denied || false,
-      summary: incident.summary || ''
+      
+      // Injury-specific details
+      injuryType: incident.injury_type || '',
+      injurySeverity: incident.injury_severity || '',
+      injuryWeapon: incident.injury_weapon || '',
+      injuryCause: incident.injury_cause || '',
+      
+      // Arrest-specific details  
+      arrestReason: incident.arrest_reason || '',
+      arrestContext: incident.arrest_context || '',
+      arrestCharges: incident.arrest_charges || '',
+      arrestTimingSuspicious: incident.arrest_timing_suspicious || false,
+      arrestPretext: incident.arrest_pretext || false,
+      arrestSelective: incident.arrest_selective || false
     };
     
     // Populate verified quotes
