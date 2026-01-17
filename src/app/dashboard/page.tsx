@@ -897,16 +897,35 @@ export default function DashboardPage() {
               
               {/* Lock Badge */}
               {incident.locked_by && incident.lock_expires_at && new Date(incident.lock_expires_at) > new Date() && (
-                <div className={`absolute ${isReturned ? 'top-12' : 'top-2'} right-2 px-3 py-1 rounded-full text-xs font-semibold shadow-md z-10 ${
-                  incident.locked_by === user?.id
-                    ? 'bg-green-100 text-green-800 border border-green-300'
-                    : 'bg-red-100 text-red-800 border border-red-300'
-                }`}>
-                  {incident.locked_by === user?.id ? '🔓 Your Lock' : `🔒 ${incident.locked_by_name || incident.locked_by_email || 'Locked'}`}
-                </div>
+                incident.locked_by === user?.id ? (
+                  <button
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      if (confirm('Release lock on this case?')) {
+                        try {
+                          const res = await fetch(`/api/incidents/${incident.id}/lock`, { method: 'DELETE' });
+                          if (res.ok) {
+                            await fetchQueue();
+                          } else {
+                            alert('Failed to release lock');
+                          }
+                        } catch (err) {
+                          alert('Error releasing lock');
+                        }
+                      }
+                    }}
+                    className="absolute top-2 left-2 px-3 py-1 rounded-full text-xs font-semibold shadow-md z-10 bg-green-100 text-green-800 border border-green-300 hover:bg-green-200 transition-colors cursor-pointer"
+                  >
+                    🔓 Your Lock (click to release)
+                  </button>
+                ) : (
+                  <div className="absolute top-2 left-2 px-3 py-1 rounded-full text-xs font-semibold shadow-md z-10 bg-red-100 text-red-800 border border-red-300">
+                    🔒 {incident.locked_by_name || incident.locked_by_email || 'Locked'}
+                  </div>
+                )
               )}
               
-              <div className={`flex items-start justify-between gap-4 ${isReturned ? 'pr-32' : ''}`}>
+              <div className="flex items-start justify-between gap-4 pl-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
                     {statusBadge(incident.verification_status, incident.review_cycle)}
