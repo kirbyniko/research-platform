@@ -55,10 +55,6 @@ export async function GET(request: NextRequest) {
         i.subject_name,
         i.incident_type,
         i.verification_status,
-        i.first_verified_at,
-        i.first_validated_at,
-        i.second_validated_at,
-        i.verified_at,
         CASE 
           WHEN i.first_verified_by = $1 THEN 'first_review'
           WHEN i.first_validated_by = $1 THEN 'first_validation'
@@ -67,8 +63,8 @@ export async function GET(request: NextRequest) {
         END as my_role,
         CASE 
           WHEN i.first_verified_by = $1 THEN i.first_verified_at
-          WHEN i.first_validated_by = $1 THEN i.first_validated_at
-          WHEN i.second_validated_by = $1 THEN i.second_validated_at
+          WHEN i.first_validated_by = $1 THEN i.updated_at
+          WHEN i.second_validated_by = $1 THEN i.updated_at
           ELSE i.updated_at
         END as my_action_date
       FROM incidents i
@@ -78,8 +74,8 @@ export async function GET(request: NextRequest) {
       ORDER BY 
         CASE 
           WHEN i.first_verified_by = $1 THEN i.first_verified_at
-          WHEN i.first_validated_by = $1 THEN i.first_validated_at
-          WHEN i.second_validated_by = $1 THEN i.second_validated_at
+          WHEN i.first_validated_by = $1 THEN i.updated_at
+          WHEN i.second_validated_by = $1 THEN i.updated_at
           ELSE i.updated_at
         END DESC
       LIMIT 50
