@@ -51,7 +51,7 @@ export async function POST(
     
     // Get current field value from incident
     const fieldQuery = await pool.query(
-      `SELECT COALESCE(victim_name, subject_name) as victim_name, 
+      `SELECT COALESCE(subject_name, victim_name) as victim_name, 
               incident_date, city, state, facility, summary, incident_type
        FROM incidents WHERE id = $1`,
       [incidentId]
@@ -172,6 +172,7 @@ export async function GET(
     const incidentResult = await pool.query(`
       SELECT 
         i.*,
+        COALESCE(i.subject_name, i.victim_name) as victim_name,
         u1.name as submitter_name,
         u1.email as submitter_email,
         u2.name as first_verifier_name,

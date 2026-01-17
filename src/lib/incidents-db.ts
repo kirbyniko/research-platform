@@ -932,7 +932,10 @@ export async function getIncidentFieldQuoteMappings(incidentId: number): Promise
 
 async function buildIncidentFromRow(client: PoolClient, row: Record<string, unknown>): Promise<Incident> {
   const id = row.id as number;
+  // Prioritize subject_name (correct format) over victim_name (legacy "Last, First" format)
+  const subjectName = (row as any).subject_name as string | undefined;
   const victimName = (row as any).victim_name as string | undefined;
+  const displayName = subjectName || victimName;
 
   // Get agencies
   const agenciesResult = await client.query(`
@@ -980,7 +983,7 @@ async function buildIncidentFromRow(client: PoolClient, row: Record<string, unkn
       } : undefined,
     },
     subject: {
-      name: (row.subject_name as string | undefined) || victimName,
+      name: subjectName || displayName,
       name_public: (row.subject_name_public as boolean) ?? false,
       age: row.subject_age as number | undefined,
       gender: row.subject_gender as string | undefined,
@@ -990,7 +993,7 @@ async function buildIncidentFromRow(client: PoolClient, row: Record<string, unkn
       years_in_us: row.subject_years_in_us as number | undefined,
       family_in_us: row.subject_family_in_us as string | undefined,
     },
-    victim_name: victimName || (row.subject_name as string | undefined),
+    victim_name: displayName,
     summary: (row.summary as string) || '',
     agencies_involved: agenciesResult.rows.map((r: { agency: string }) => r.agency as AgencyType),
     violations_alleged: violationsResult.rows.map((r: { violation_type: string }) => r.violation_type as ViolationType),

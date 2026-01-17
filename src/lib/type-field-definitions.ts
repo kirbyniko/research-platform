@@ -95,7 +95,6 @@ export const TYPE_SECTIONS: TypeSection[] = [
     types: ['death_in_custody', 'death_during_operation', 'death_at_protest', 'death', 'detention_death'],
     fields: [
       { key: 'cause_of_death', label: 'Cause of Death', type: 'text', quotable: true, verifiable: true },
-      { key: 'official_cause', label: 'Official Cause', type: 'text', quotable: true, verifiable: true },
       { key: 'autopsy_available', label: 'Autopsy Available', type: 'checkbox' },
       { key: 'medical_neglect_alleged', label: 'Medical Neglect Alleged', type: 'checkbox' },
       { key: 'medical_requests_denied', label: 'Medical Requests Denied', type: 'checkbox' },

@@ -615,8 +615,18 @@ export default function DashboardPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold mb-2">Analyst Dashboard</h1>
-        <p className="text-gray-600">Review and verify submitted incidents and edit suggestions</p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl font-bold mb-2">Analyst Dashboard</h1>
+            <p className="text-gray-600">Review and verify submitted incidents and edit suggestions</p>
+          </div>
+          <Link 
+            href="/activity"
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+          >
+            📋 My Activity
+          </Link>
+        </div>
       </div>
 
       {/* Tab Navigation */}

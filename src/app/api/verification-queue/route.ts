@@ -26,18 +26,22 @@ export async function GET(request: NextRequest) {
     let query = `
       SELECT 
         i.*,
+        COALESCE(i.subject_name, i.victim_name) as victim_name,
         u1.email as submitted_by_email,
         u2.email as first_verified_by_email,
         u3.email as second_verified_by_email,
         u4.email as first_validated_by_email,
         u5.email as second_validated_by_email,
         u6.email as rejected_by_email,
+        u7.email as locked_by_email,
+        u7.name as locked_by_name,
+        CASE WHEN i.lock_expires_at > NOW() THEN true ELSE false END as is_locked,
         (SELECT COUNT(*) FROM incident_sources WHERE incident_id = i.id) as source_count,
         (SELECT COUNT(*) FROM incident_quotes WHERE incident_id = i.id) as quote_count,
         (SELECT COUNT(*) FROM incident_media WHERE incident_id = i.id) as media_count,
         (SELECT COUNT(*) FROM incident_timeline WHERE incident_id = i.id) as timeline_count,
         -- Count filled fields (non-null key fields)
-        (CASE WHEN i.victim_name IS NOT NULL AND i.victim_name != '' THEN 1 ELSE 0 END +
+        (CASE WHEN COALESCE(i.subject_name, i.victim_name) IS NOT NULL AND COALESCE(i.subject_name, i.victim_name) != '' THEN 1 ELSE 0 END +
          CASE WHEN i.incident_date IS NOT NULL THEN 1 ELSE 0 END +
          CASE WHEN i.city IS NOT NULL AND i.city != '' THEN 1 ELSE 0 END +
          CASE WHEN i.state IS NOT NULL AND i.state != '' THEN 1 ELSE 0 END +
@@ -54,6 +58,7 @@ export async function GET(request: NextRequest) {
       LEFT JOIN users u4 ON i.first_validated_by = u4.id
       LEFT JOIN users u5 ON i.second_validated_by = u5.id
       LEFT JOIN users u6 ON i.rejected_by = u6.id
+      LEFT JOIN users u7 ON i.locked_by = u7.id
     `;
     
     const conditions: string[] = [];
@@ -165,8 +170,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching verification queue:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to fetch verification queue' },
+      { error: 'Failed to fetch verification queue', details: errorMessage },
       { status: 500 }
     );
   }

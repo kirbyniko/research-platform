@@ -542,7 +542,12 @@ export default function ValidatePage() {
                           {field.key === 'incident_type' 
                             ? formatIncidentType(String(value))
                             : field.key === 'incident_date'
-                            ? new Date(String(value)).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                            ? (() => {
+                                // Parse as UTC to avoid timezone shift
+                                const dateStr = String(value).split('T')[0];
+                                const [year, month, day] = dateStr.split('-').map(Number);
+                                return new Date(year, month - 1, day).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                              })()
                             : String(value)}
                         </span>
                       </div>
@@ -692,7 +697,11 @@ export default function ValidatePage() {
                         <div className="flex items-baseline gap-2">
                           <span className="font-medium text-gray-700">
                             {entry.event_date 
-                              ? new Date(entry.event_date).toLocaleDateString() 
+                              ? (() => {
+                                  const dateStr = String(entry.event_date).split('T')[0];
+                                  const [year, month, day] = dateStr.split('-').map(Number);
+                                  return new Date(year, month - 1, day).toLocaleDateString();
+                                })()
                               : 'No date'}:
                           </span>
                           <span className="text-gray-900">{entry.description}</span>

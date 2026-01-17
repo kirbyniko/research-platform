@@ -181,10 +181,10 @@ const VIOLATION_OPTIONS = [
   { value: 'false_imprisonment', label: 'False Imprisonment' }, { value: 'civil_rights_violation', label: 'Civil Rights Violation' },
 ];
 
-// Quote Picker Component - renders inline with each field
+// Quote Picker Component - renders inline with each field (supports multiple quotes)
 function QuotePicker({ field, quotes, fieldQuoteMap, onLinkQuote, onUnlinkQuote, onVerifyQuote, showLinkedDetails = false }: {
-  field: string; quotes: Quote[]; fieldQuoteMap: Record<string, number>;
-  onLinkQuote: (f: string, qid: number) => void; onUnlinkQuote: (f: string) => void;
+  field: string; quotes: Quote[]; fieldQuoteMap: Record<string, number[]>;
+  onLinkQuote: (f: string, qid: number) => void; onUnlinkQuote: (f: string, qid?: number) => void;
   onVerifyQuote?: (quoteId: number) => void;
   showLinkedDetails?: boolean;
 }) {
@@ -192,8 +192,9 @@ function QuotePicker({ field, quotes, fieldQuoteMap, onLinkQuote, onUnlinkQuote,
   const [showDetails, setShowDetails] = useState(false);
   const [search, setSearch] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const linkedQuoteId = fieldQuoteMap[field];
-  const linkedQuote = linkedQuoteId ? quotes.find(q => q.id === linkedQuoteId) : null;
+  const linkedQuoteIds = fieldQuoteMap[field] || [];
+  const linkedQuotes = linkedQuoteIds.map(id => quotes.find(q => q.id === id)).filter(Boolean) as Quote[];
+  const hasUnverified = linkedQuotes.some(q => !q.verified);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -212,25 +213,30 @@ function QuotePicker({ field, quotes, fieldQuoteMap, onLinkQuote, onUnlinkQuote,
     <div className="relative" ref={dropdownRef}>
       <div className="flex items-center gap-1">
         <button type="button" onClick={() => setOpen(!open)}
-          className={`flex items-center gap-1 px-2 py-1 text-xs rounded border ${linkedQuote ? 'bg-blue-100 border-blue-400 text-blue-700' : 'bg-gray-100 border-gray-300 text-gray-600'}`}>
-          {linkedQuote ? (
+          className={`flex items-center gap-1 px-2 py-1 text-xs rounded border ${linkedQuotes.length > 0 ? 'bg-blue-100 border-blue-400 text-blue-700' : 'bg-gray-100 border-gray-300 text-gray-600'}`}>
+          {linkedQuotes.length > 0 ? (
             <>
-              <span className="max-w-[150px] truncate">[linked] &ldquo;{linkedQuote.quote_text.substring(0, 25)}...&rdquo;</span>
-              {linkedQuote.verified ? (
+              <span className="max-w-[150px] truncate">&ldquo;{linkedQuotes[0].quote_text.substring(0, 20)}...&rdquo;</span>
+              {linkedQuotes.length > 1 && (
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${hasUnverified ? 'bg-yellow-500 text-white' : 'bg-blue-500 text-white'}`}>
+                  +{linkedQuotes.length - 1}
+                </span>
+              )}
+              {linkedQuotes.length === 1 && (linkedQuotes[0].verified ? (
                 <span className="text-green-600" title="Verified">✓</span>
               ) : (
                 <span className="text-yellow-600" title="Unverified - click ⓘ to verify">!</span>
-              )}
+              ))}
             </>
           ) : <span>[src] Link...</span>}
         </button>
-        {linkedQuote && (
+        {linkedQuotes.length > 0 && (
           <>
             <button 
               type="button" 
               onClick={() => setShowDetails(!showDetails)}
               className="px-1.5 py-1 text-xs rounded border bg-gray-100 border-gray-300 text-gray-600 hover:bg-gray-200"
-              title="View quote details"
+              title="View linked quotes"
             >
               ⓘ
             </button>
@@ -238,7 +244,7 @@ function QuotePicker({ field, quotes, fieldQuoteMap, onLinkQuote, onUnlinkQuote,
               type="button" 
               onClick={() => onUnlinkQuote(field)}
               className="px-1.5 py-1 text-xs rounded border bg-red-50 border-red-200 text-red-600 hover:bg-red-100"
-              title="Unlink quote"
+              title="Unlink all quotes"
             >
               ✕
             </button>
@@ -246,46 +252,53 @@ function QuotePicker({ field, quotes, fieldQuoteMap, onLinkQuote, onUnlinkQuote,
         )}
       </div>
       
-      {/* Show linked quote details card */}
-      {linkedQuote && showLinkedDetails && showDetails && !open && (
-        <div className="absolute top-full right-0 z-40 w-80 mt-1 bg-white border rounded-lg shadow-lg overflow-hidden">
-          <div className="px-3 py-2 bg-gray-50 border-b flex justify-between items-center">
-            <span className="text-xs font-medium text-gray-600">Linked Quote</span>
+      {/* Show linked quotes details card */}
+      {linkedQuotes.length > 0 && showLinkedDetails && showDetails && !open && (
+        <div className="absolute top-full right-0 z-40 w-96 mt-1 bg-white border rounded-lg shadow-lg overflow-hidden max-h-80 overflow-y-auto">
+          <div className="px-3 py-2 bg-gray-50 border-b flex justify-between items-center sticky top-0">
+            <span className="text-xs font-medium text-gray-600">Linked Quotes ({linkedQuotes.length})</span>
             <button onClick={() => setShowDetails(false)} className="text-gray-400 hover:text-gray-600">✕</button>
           </div>
-          <div className="p-3">
-            <div className="flex items-start gap-2">
-              <p className="text-sm flex-1">&ldquo;{linkedQuote.quote_text}&rdquo;</p>
-            </div>
-            <div className="flex gap-2 mt-2 text-xs items-center flex-wrap">
-              {linkedQuote.verified === false && (
-                <span className="bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded">Unverified</span>
-              )}
-              {linkedQuote.verified === true && (
-                <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Verified ✓</span>
-              )}
-              {linkedQuote.category && <span className="bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">{linkedQuote.category}</span>}
-            </div>
-            <div className="flex gap-2 mt-2 text-xs text-gray-500 items-center flex-wrap">
-              {linkedQuote.source_title && <span>{linkedQuote.source_title}</span>}
-            </div>
-            <div className="flex gap-2 mt-2 border-t pt-2">
-              {linkedQuote.source_url && (
-                <a href={linkedQuote.source_url} target="_blank" rel="noopener noreferrer" 
-                  className="text-xs text-blue-600 hover:underline">
-                  View Source →
-                </a>
-              )}
-              {linkedQuote.verified === false && onVerifyQuote && (
+          {linkedQuotes.map((linkedQuote, idx) => (
+            <div key={linkedQuote.id} className={`p-3 ${idx > 0 ? 'border-t' : ''}`}>
+              <div className="flex items-start gap-2">
+                <p className="text-sm flex-1">&ldquo;{linkedQuote.quote_text}&rdquo;</p>
                 <button 
-                  onClick={() => { onVerifyQuote(linkedQuote.id); }}
-                  className="text-xs text-green-600 hover:text-green-800 font-medium ml-auto bg-green-50 px-2 py-1 rounded"
-                >
-                  ✓ Mark as Verified
-                </button>
-              )}
+                  onClick={() => onUnlinkQuote(field, linkedQuote.id)}
+                  className="text-red-400 hover:text-red-600 text-xs shrink-0"
+                  title="Unlink this quote"
+                >✕</button>
+              </div>
+              <div className="flex gap-2 mt-2 text-xs items-center flex-wrap">
+                {linkedQuote.verified === false && (
+                  <span className="bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded">Unverified</span>
+                )}
+                {linkedQuote.verified === true && (
+                  <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Verified ✓</span>
+                )}
+                {linkedQuote.category && <span className="bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">{linkedQuote.category}</span>}
+              </div>
+              <div className="flex gap-2 mt-2 text-xs text-gray-500 items-center flex-wrap">
+                {linkedQuote.source_title && <span>{linkedQuote.source_title}</span>}
+              </div>
+              <div className="flex gap-2 mt-2 border-t pt-2">
+                {linkedQuote.source_url && (
+                  <a href={linkedQuote.source_url} target="_blank" rel="noopener noreferrer" 
+                    className="text-xs text-blue-600 hover:underline">
+                    View Source →
+                  </a>
+                )}
+                {linkedQuote.verified === false && onVerifyQuote && (
+                  <button 
+                    onClick={() => { onVerifyQuote(linkedQuote.id); }}
+                    className="text-xs text-green-600 hover:text-green-800 font-medium ml-auto bg-green-50 px-2 py-1 rounded"
+                  >
+                    ✓ Mark as Verified
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          ))}
         </div>
       )}
       
@@ -295,10 +308,13 @@ function QuotePicker({ field, quotes, fieldQuoteMap, onLinkQuote, onUnlinkQuote,
             className="w-full px-3 py-2 border-b text-sm" />
           <div className="max-h-56 overflow-y-auto">
             {filteredQuotes.length === 0 ? <p className="p-4 text-gray-500 text-sm text-center">No quotes yet</p> :
-              filteredQuotes.map(q => (
-                <div key={q.id} onClick={() => { onLinkQuote(field, q.id); setOpen(false); }}
-                  className={`p-3 cursor-pointer border-b hover:bg-gray-50 ${linkedQuoteId === q.id ? 'bg-blue-50' : ''}`}>
+              filteredQuotes.map(q => {
+                const isLinked = linkedQuoteIds.includes(q.id);
+                return (
+                <div key={q.id} onClick={() => { onLinkQuote(field, q.id); }}
+                  className={`p-3 cursor-pointer border-b hover:bg-gray-50 ${isLinked ? 'bg-blue-50' : ''}`}>
                   <div className="flex items-start gap-2">
+                    <span className={`text-sm ${isLinked ? 'text-blue-600' : 'text-gray-400'}`}>{isLinked ? '☑' : '☐'}</span>
                     <p className="text-sm flex-1">&ldquo;{q.quote_text}&rdquo;</p>
                     {q.verified === false && (
                       <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded shrink-0">Unverified</span>
@@ -307,7 +323,7 @@ function QuotePicker({ field, quotes, fieldQuoteMap, onLinkQuote, onUnlinkQuote,
                       <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded shrink-0">✓</span>
                     )}
                   </div>
-                  <div className="flex gap-2 mt-1 text-xs text-gray-500 items-center">
+                  <div className="flex gap-2 mt-1 text-xs text-gray-500 items-center pl-5">
                     {q.category && <span className="bg-gray-200 px-1 rounded">{q.category}</span>}
                     {q.source_title && <span>{q.source_title}</span>}
                     {q.source_url && (
@@ -319,7 +335,8 @@ function QuotePicker({ field, quotes, fieldQuoteMap, onLinkQuote, onUnlinkQuote,
                     )}
                   </div>
                 </div>
-              ))}
+              );
+              })}
           </div>
         </div>
       )}
@@ -494,23 +511,25 @@ function QuoteAutoSuggest({
   searchValue: string;
   quotes: Quote[];
   onSelect: (quoteId: number) => void;
-  fieldQuoteMap: Record<string, number>;
+  fieldQuoteMap: Record<string, number[]>;
   currentField: string;
   isTyping: boolean;
   onVerifyQuote?: (quoteId: number) => void;
 }) {
-  const isLinked = fieldQuoteMap[currentField];
-  const linkedQuote = isLinked ? quotes.find(q => q.id === fieldQuoteMap[currentField]) : null;
+  const linkedQuoteIds = fieldQuoteMap[currentField] || [];
+  const linkedQuotes = linkedQuoteIds.map(id => quotes.find(q => q.id === id)).filter(Boolean) as Quote[];
   
-  // Show if actively typing with 2+ chars OR if there's a linked quote
-  if (!isTyping && !linkedQuote) return null;
+  // Show if actively typing with 2+ chars OR if there are linked quotes
+  if (!isTyping && linkedQuotes.length === 0) return null;
   if (isTyping && (!searchValue || searchValue.length < 2)) return null;
   
   const matchingQuotes = isTyping 
     ? quotes.filter(q => q.quote_text.toLowerCase().includes(searchValue.toLowerCase()))
-    : linkedQuote ? [linkedQuote] : [];
+    : linkedQuotes;
   
   if (matchingQuotes.length === 0) return null;
+  
+  const isLinked = linkedQuoteIds.length > 0;
   
   return (
     <div className="mt-2 border rounded-lg bg-white shadow-sm">
@@ -518,7 +537,7 @@ function QuoteAutoSuggest({
         <span className="text-xs font-medium text-gray-600">
           {isTyping 
             ? `${matchingQuotes.length} quote${matchingQuotes.length !== 1 ? 's' : ''} match "${searchValue.substring(0, 20)}${searchValue.length > 20 ? '...' : ''}"`
-            : 'Linked quote'}
+            : `${linkedQuoteIds.length} linked quote${linkedQuoteIds.length !== 1 ? 's' : ''}`}
         </span>
         {isLinked && <span className="text-xs text-blue-600">✓ Linked</span>}
       </div>
@@ -526,7 +545,7 @@ function QuoteAutoSuggest({
         {matchingQuotes.slice(0, 5).map(q => (
           <div 
             key={q.id}
-            className={`p-3 border-b last:border-b-0 transition-colors ${fieldQuoteMap[currentField] === q.id ? 'bg-blue-100' : ''}`}
+            className={`p-3 border-b last:border-b-0 transition-colors ${linkedQuoteIds.includes(q.id) ? 'bg-blue-100' : ''}`}
           >
             <div className="flex items-start gap-2">
               <div className="flex-1 cursor-pointer hover:bg-blue-50 -m-1 p-1 rounded" onClick={() => onSelect(q.id)}>
@@ -579,9 +598,9 @@ interface TypeFieldRendererProps {
   verifiedFields: Record<string, boolean>;
   onVerify: (key: string, checked: boolean) => void;
   quotes: Quote[];
-  fieldQuoteMap: Record<string, number>;
+  fieldQuoteMap: Record<string, number[]>;
   onLinkQuote: (field: string, quoteId: number) => void;
-  onUnlinkQuote: (field: string) => void;
+  onUnlinkQuote: (field: string, quoteId?: number) => void;
   onVerifyQuote: (quoteId: number) => void;
 }
 
@@ -742,9 +761,9 @@ interface TypeSectionRendererProps {
   verifiedFields: Record<string, boolean>;
   onVerify: (key: string, checked: boolean) => void;
   quotes: Quote[];
-  fieldQuoteMap: Record<string, number>;
+  fieldQuoteMap: Record<string, number[]>;
   onLinkQuote: (field: string, quoteId: number) => void;
-  onUnlinkQuote: (field: string) => void;
+  onUnlinkQuote: (field: string, quoteId?: number) => void;
   onVerifyQuote: (quoteId: number) => void;
 }
 
@@ -819,7 +838,7 @@ export default function ReviewPage() {
   const [violations, setViolations] = useState<Violation[]>([]);
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
   const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
-  const [fieldQuoteMap, setFieldQuoteMap] = useState<Record<string, number>>({});
+  const [fieldQuoteMap, setFieldQuoteMap] = useState<Record<string, number[]>>({});
   const [editedIncident, setEditedIncident] = useState<Partial<Incident>>({});
   const [incidentDetails, setIncidentDetails] = useState<IncidentDetails>({});
   const [newMedia, setNewMedia] = useState({ url: '', media_type: 'image' as 'image' | 'video', description: '' });
@@ -870,8 +889,16 @@ export default function ReviewPage() {
   }, [incidentId, isNewIncident, fromGuest, guestDataParam]);
 
   useEffect(() => {
-    const map: Record<string, number> = {};
-    quotes.forEach(q => { if (q.linked_fields) q.linked_fields.forEach(f => { map[f] = q.id; }); });
+    // Build map: field -> [quoteId1, quoteId2, ...] (supports multiple quotes per field)
+    const map: Record<string, number[]> = {};
+    quotes.forEach(q => { 
+      if (q.linked_fields) {
+        q.linked_fields.forEach(f => { 
+          if (!map[f]) map[f] = [];
+          if (!map[f].includes(q.id)) map[f].push(q.id);
+        }); 
+      }
+    });
     setFieldQuoteMap(map);
   }, [quotes]);
 
@@ -1124,25 +1151,79 @@ export default function ReviewPage() {
     }
   }
 
+  // Toggle quote link for a field (supports multiple quotes per field)
   async function handleLinkQuote(field: string, quoteId: number) {
-    setFieldQuoteMap(prev => ({ ...prev, [field]: quoteId }));
-    const quote = quotes.find(q => q.id === quoteId);
-    if (quote) {
-      const newLinks = [...new Set([...(quote.linked_fields || []), field])];
-      await apiCall('quotes', 'PUT', { quote_id: quoteId, linked_fields: newLinks });
-      setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, linked_fields: newLinks } : q));
+    const currentLinks: number[] = fieldQuoteMap[field] || [];
+    const isLinked = currentLinks.includes(quoteId);
+    
+    if (isLinked) {
+      // Remove quote from field
+      const newFieldLinks = currentLinks.filter((id: number) => id !== quoteId);
+      setFieldQuoteMap(prev => {
+        if (newFieldLinks.length === 0) {
+          const next = { ...prev };
+          delete next[field];
+          return next;
+        }
+        return { ...prev, [field]: newFieldLinks };
+      });
+      
+      // Update quote's linked_fields
+      const quote = quotes.find(q => q.id === quoteId);
+      if (quote) {
+        const newLinks = (quote.linked_fields || []).filter(f => f !== field);
+        await apiCall('quotes', 'PUT', { quote_id: quoteId, linked_fields: newLinks });
+        setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, linked_fields: newLinks } : q));
+      }
+    } else {
+      // Add quote to field
+      setFieldQuoteMap(prev => ({ ...prev, [field]: [...currentLinks, quoteId] }));
+      
+      // Update quote's linked_fields
+      const quote = quotes.find(q => q.id === quoteId);
+      if (quote) {
+        const newLinks = [...new Set([...(quote.linked_fields || []), field])];
+        await apiCall('quotes', 'PUT', { quote_id: quoteId, linked_fields: newLinks });
+        setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, linked_fields: newLinks } : q));
+      }
     }
   }
 
-  async function handleUnlinkQuote(field: string) {
-    const quoteId = fieldQuoteMap[field];
-    if (!quoteId) return;
-    setFieldQuoteMap(prev => { const next = { ...prev }; delete next[field]; return next; });
-    const quote = quotes.find(q => q.id === quoteId);
-    if (quote) {
-      const newLinks = (quote.linked_fields || []).filter(f => f !== field);
-      await apiCall('quotes', 'PUT', { quote_id: quoteId, linked_fields: newLinks });
-      setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, linked_fields: newLinks } : q));
+  // Unlink quote(s) from a field - if specificQuoteId provided, unlink just that one
+  async function handleUnlinkQuote(field: string, specificQuoteId?: number) {
+    const currentLinks: number[] = fieldQuoteMap[field] || [];
+    if (currentLinks.length === 0) return;
+    
+    if (specificQuoteId) {
+      // Unlink specific quote
+      const newFieldLinks = currentLinks.filter((id: number) => id !== specificQuoteId);
+      setFieldQuoteMap(prev => {
+        if (newFieldLinks.length === 0) {
+          const next = { ...prev };
+          delete next[field];
+          return next;
+        }
+        return { ...prev, [field]: newFieldLinks };
+      });
+      
+      const quote = quotes.find(q => q.id === specificQuoteId);
+      if (quote) {
+        const newLinks = (quote.linked_fields || []).filter(f => f !== field);
+        await apiCall('quotes', 'PUT', { quote_id: specificQuoteId, linked_fields: newLinks });
+        setQuotes(prev => prev.map(q => q.id === specificQuoteId ? { ...q, linked_fields: newLinks } : q));
+      }
+    } else {
+      // Unlink all quotes from this field
+      setFieldQuoteMap(prev => { const next = { ...prev }; delete next[field]; return next; });
+      
+      for (const quoteId of currentLinks) {
+        const quote = quotes.find(q => q.id === quoteId);
+        if (quote) {
+          const newLinks = (quote.linked_fields || []).filter(f => f !== field);
+          await apiCall('quotes', 'PUT', { quote_id: quoteId, linked_fields: newLinks });
+          setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, linked_fields: newLinks } : q));
+        }
+      }
     }
   }
 
@@ -1273,7 +1354,15 @@ export default function ReviewPage() {
     if (!confirm('Delete this quote?')) return;
     await apiCall('quotes', 'DELETE', { quote_id: id });
     setQuotes(prev => prev.filter(q => q.id !== id));
-    setFieldQuoteMap(prev => { const next = { ...prev }; Object.keys(next).forEach(k => { if (next[k] === id) delete next[k]; }); return next; });
+    // Remove deleted quote from all field mappings
+    setFieldQuoteMap(prev => { 
+      const next: Record<string, number[]> = {}; 
+      Object.entries(prev).forEach(([k, ids]) => { 
+        const filtered = ids.filter((qid: number) => qid !== id);
+        if (filtered.length > 0) next[k] = filtered;
+      }); 
+      return next; 
+    });
   }
 
   async function updateQuote(id: number, updates: any) {
@@ -2065,6 +2154,10 @@ export default function ReviewPage() {
               } catch (e) {
                 fieldValue = String(editedIncident[f.key] || '');
               }
+            } else if (f.key === 'victim_name') {
+              // For victim_name, prioritize subject_name which is in normal "FirstName LastName" format
+              // victim_name may be in "LastName, FirstName" format from legacy data
+              fieldValue = String(editedIncident.subject_name || editedIncident[f.key] || '');
             } else {
               fieldValue = String(editedIncident[f.key] || '');
             }
@@ -3410,9 +3503,9 @@ export default function ReviewPage() {
                 blockingErrors.push(`${unverifiedMediaList.length} media item(s) not checked`);
               }
 
-              // Block if critical errors exist
+              // Warn about issues but allow submission with confirmation
               if (blockingErrors.length > 0) {
-                let errorMsg = '❌ CANNOT VERIFY - Critical Issues:\n\n';
+                let errorMsg = '⚠️ WARNING - Issues Found:\n\n';
                 blockingErrors.forEach(e => {
                   errorMsg += '• ' + e + '\n';
                 });
@@ -3428,10 +3521,11 @@ export default function ReviewPage() {
                 if (unverifiedQuotes.length > 0) {
                   errorMsg += '💡 Use the "Find Unverified Quotes" button to locate quotes with unchecked verified boxes.\n';
                 }
-                errorMsg += '\nFix these issues before verifying.';
+                errorMsg += '\nDo you want to submit anyway?';
                 
-                alert(errorMsg);
-                return; // Block submission
+                if (!confirm(errorMsg)) {
+                  return; // User declined
+                }
               }
 
               // Guard against null incident
