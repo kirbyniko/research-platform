@@ -31,6 +31,12 @@ interface Incident {
   media_count: number;
   timeline_count: number;
   filled_fields: number;
+  // Lock fields
+  locked_by?: number | null;
+  locked_by_email?: string | null;
+  locked_by_name?: string | null;
+  locked_at?: string | null;
+  lock_expires_at?: string | null;
 }
 
 interface EditSuggestion {
@@ -886,6 +892,17 @@ export default function DashboardPage() {
                     : 'bg-orange-600 text-white'
                 }`}>
                   {isHighPriority ? '⚠️ HIGH PRIORITY' : '⚡ PRIORITY'}
+                </div>
+              )}
+              
+              {/* Lock Badge */}
+              {incident.locked_by && incident.lock_expires_at && new Date(incident.lock_expires_at) > new Date() && (
+                <div className={`absolute ${isReturned ? 'top-12' : 'top-2'} right-2 px-3 py-1 rounded-full text-xs font-semibold shadow-md z-10 ${
+                  incident.locked_by === user?.id
+                    ? 'bg-green-100 text-green-800 border border-green-300'
+                    : 'bg-red-100 text-red-800 border border-red-300'
+                }`}>
+                  {incident.locked_by === user?.id ? '🔓 Your Lock' : `🔒 ${incident.locked_by_name || incident.locked_by_email || 'Locked'}`}
                 </div>
               )}
               
