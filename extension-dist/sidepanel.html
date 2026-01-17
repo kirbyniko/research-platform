@@ -2697,115 +2697,9 @@
       </div>
       
       <!-- Death-Specific Fields -->
+      <!-- Moved shooting section above death section -->
 
-      <div class="section hidden" id="deathFields">
-        <div class="section-header">
-          <span class="section-title">Death Details</span>
-        </div>
-        
-        <div class="form-group">
-          <label class="form-label">Cause of Death
-            <span class="verification-checkbox-wrapper" style="display: none;" data-field="death_cause">
-              <input type="checkbox" class="field-verify-checkbox" data-field="death_cause">
-              <span class="checkbox-label">Verified</span>
-            </span>
-          </label>
-          <input type="text" class="form-input" id="deathCause" placeholder="As stated in records">
-          <div class="quote-association" style="position: relative; margin-top: 4px;">
-            <button type="button" class="quote-picker-trigger" data-field="death_cause">
-              <span class="selected-quote-preview">[src] Link...</span>
-            </button>
-            <div class="quote-picker-dropdown" data-field="death_cause">
-              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_cause"></div>
-              <div class="quote-picker-list" data-field="death_cause"></div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Manner
-              <span class="verification-checkbox-wrapper" style="display: none;" data-field="death_manner">
-                <input type="checkbox" class="field-verify-checkbox" data-field="death_manner">
-                <span class="checkbox-label">Verified</span>
-              </span>
-            </label>
-            <select class="form-input" id="deathManner">
-              <option value="">Unknown</option>
-              <option value="natural">Natural</option>
-              <option value="accident">Accident</option>
-              <option value="suicide">Suicide</option>
-              <option value="homicide">Homicide</option>
-              <option value="undetermined">Undetermined</option>
-              <option value="pending">Pending</option>
-            </select>
-            <div class="quote-association" style="position: relative; margin-top: 4px;">
-              <button type="button" class="quote-picker-trigger" data-field="death_manner">
-                <span class="selected-quote-preview">[src] Link...</span>
-              </button>
-              <div class="quote-picker-dropdown" data-field="death_manner">
-                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_manner"></div>
-                <div class="quote-picker-list" data-field="death_manner"></div>
-              </div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Custody Duration
-              <span class="verification-checkbox-wrapper" style="display: none;" data-field="death_custody_duration">
-                <input type="checkbox" class="field-verify-checkbox" data-field="death_custody_duration">
-                <span class="checkbox-label">Verified</span>
-              </span>
-            </label>
-            <input type="text" class="form-input" id="deathCustodyDuration" placeholder="e.g., 6 months">
-            <div class="quote-association" style="position: relative; margin-top: 4px;">
-              <button type="button" class="quote-picker-trigger" data-field="death_custody_duration">
-                <span class="selected-quote-preview">[src] Link...</span>
-              </button>
-              <div class="quote-picker-dropdown" data-field="death_custody_duration">
-                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_custody_duration"></div>
-                <div class="quote-picker-list" data-field="death_custody_duration"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="checkbox-grid" style="margin-top: 8px;">
-          <label class="checkbox-item">
-            <input type="checkbox" id="medicalNeglectAlleged"> Medical neglect alleged
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" id="deathMedicalDenied"> Medical requests denied
-          </label>
-        </div>
-        
-        <div class="checkbox-grid" style="margin-top: 8px;">
-          <label class="checkbox-item">
-            <input type="checkbox" id="autopsyAvailable"> Autopsy Available
-          </label>
-        </div>
-        
-        <div class="form-group" style="margin-top: 12px;">
-          <label class="form-label">Circumstances
-            <span class="verification-checkbox-wrapper" style="display: none;" data-field="death_circumstances">
-              <input type="checkbox" class="field-verify-checkbox" data-field="death_circumstances">
-              <span class="checkbox-label">Verified</span>
-            </span>
-          </label>
-          <textarea class="form-input" id="deathCircumstances" rows="2" placeholder="Describe the circumstances..."></textarea>
-          <div class="quote-association" style="position: relative; margin-top: 4px;">
-            <button type="button" class="quote-picker-trigger" data-field="death_circumstances">
-              <span class="selected-quote-preview">[src] Link...</span>
-            </button>
-            <div class="quote-picker-dropdown" data-field="death_circumstances">
-              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_circumstances"></div>
-              <div class="quote-picker-list" data-field="death_circumstances"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Injury-Specific Fields -->
-
+      <!-- Shooting Details Section -->
       <div class="section hidden" id="shootingSection">
         <div class="collapsible-header open" id="shootingHeader">
           <span class="section-title">Shooting Details</span>
@@ -2888,6 +2782,107 @@
                 <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="shooting_context"></div>
                 <div class="quote-picker-list" data-field="shooting_context"></div>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Death Details Section -->
+      <div class="section hidden" id="deathFields">
+        <div class="section-header">
+          <span class="section-title">Death Details</span>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Cause of Death
+            <span class="verification-checkbox-wrapper" style="display: none;" data-field="death_cause">
+              <input type="checkbox" class="field-verify-checkbox" data-field="death_cause">
+              <span class="checkbox-label">Verified</span>
+            </span>
+          </label>
+          <input type="text" class="form-input" id="deathCause" placeholder="As stated in records">
+          <div class="quote-association" style="position: relative; margin-top: 4px;">
+            <button type="button" class="quote-picker-trigger" data-field="death_cause">
+              <span class="selected-quote-preview">[src] Link...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="death_cause">
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_cause"></div>
+              <div class="quote-picker-list" data-field="death_cause"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Manner
+              <span class="verification-checkbox-wrapper" style="display: none;" data-field="death_manner">
+                <input type="checkbox" class="field-verify-checkbox" data-field="death_manner">
+                <span class="checkbox-label">Verified</span>
+              </span>
+            </label>
+            <select class="form-input" id="deathManner">
+              <option value="">Unknown</option>
+              <option value="natural">Natural</option>
+              <option value="accident">Accident</option>
+              <option value="suicide">Suicide</option>
+              <option value="homicide">Homicide</option>
+              <option value="undetermined">Undetermined</option>
+              <option value="pending">Pending</option>
+            </select>
+            <div class="quote-association" style="position: relative; margin-top: 4px;">
+              <button type="button" class="quote-picker-trigger" data-field="death_manner">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="death_manner">
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_manner"></div>
+                <div class="quote-picker-list" data-field="death_manner"></div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Custody Duration
+              <span class="verification-checkbox-wrapper" style="display: none;" data-field="death_custody_duration">
+                <input type="checkbox" class="field-verify-checkbox" data-field="death_custody_duration">
+                <span class="checkbox-label">Verified</span>
+              </span>
+            </label>
+            <input type="text" class="form-input" id="deathCustodyDuration" placeholder="e.g., 6 months">
+            <div class="quote-association" style="position: relative; margin-top: 4px;">
+              <button type="button" class="quote-picker-trigger" data-field="death_custody_duration">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="death_custody_duration">
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_custody_duration"></div>
+                <div class="quote-picker-list" data-field="death_custody_duration"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="checkbox-grid" style="margin-top: 8px;">
+          <label class="checkbox-item">
+            <input type="checkbox" id="medicalNeglectAlleged"> Medical neglect alleged
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="autopsyAvailable"> Autopsy Available
+          </label>
+        </div>
+        
+        <div class="form-group" style="margin-top: 12px;">
+          <label class="form-label">Circumstances
+            <span class="verification-checkbox-wrapper" style="display: none;" data-field="death_circumstances">
+              <input type="checkbox" class="field-verify-checkbox" data-field="death_circumstances">
+              <span class="checkbox-label">Verified</span>
+            </span>
+          </label>
+          <textarea class="form-input" id="deathCircumstances" rows="2" placeholder="Describe the circumstances..."></textarea>
+          <div class="quote-association" style="position: relative; margin-top: 4px;">
+            <button type="button" class="quote-picker-trigger" data-field="death_circumstances">
+              <span class="selected-quote-preview">[src] Link...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="death_circumstances">
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_circumstances"></div>
+              <div class="quote-picker-list" data-field="death_circumstances"></div>
             </div>
           </div>
         </div>
@@ -4073,6 +4068,7 @@
       <div class="quote-picker-modal-content">
         <div class="quote-picker-modal-header">
           <span id="quotePickerModalTitle">Select Quote</span>
+          <span id="quotePickerCount" style="font-size: 11px; color: #666; margin-left: 8px;"></span>
           <button class="quote-picker-modal-close" id="closeQuotePickerModal">X</button>
         </div>
         <div class="quote-picker-search">

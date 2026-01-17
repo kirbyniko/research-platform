@@ -3718,15 +3718,32 @@ function renderModalQuoteList(searchTerm) {
   const search = searchTerm.toLowerCase();
   const linkedQuotes = getFieldQuotes(currentModalField);
   
+  console.log('[renderModalQuoteList] Field:', currentModalField);
+  console.log('[renderModalQuoteList] Linked quotes:', linkedQuotes);
+  console.log('[renderModalQuoteList] Verified quotes count:', verifiedQuotes.length);
+  console.log('[renderModalQuoteList] Pending quotes count:', pendingQuotes.length);
+  
   // Combine verified and pending quotes
   const allQuotes = [
     ...verifiedQuotes.map(q => ({ ...q, isVerified: true })),
     ...pendingQuotes.map(q => ({ ...q, isVerified: false }))
   ];
   
+  console.log('[renderModalQuoteList] All quotes combined:', allQuotes.length);
+  
   const filteredQuotes = allQuotes.filter(q => 
     !search || q.text.toLowerCase().includes(search) || q.category.toLowerCase().includes(search)
   );
+  
+  console.log('[renderModalQuoteList] Filtered quotes:', filteredQuotes.length);
+  
+  // Update count display
+  const linkedQuotesStr = linkedQuotes.map(id => String(id));
+  const selectedCount = linkedQuotesStr.length;
+  const countEl = document.getElementById('quotePickerCount');
+  if (countEl) {
+    countEl.textContent = `(${selectedCount} selected, ${filteredQuotes.length} total)`;
+  }
   
   if (filteredQuotes.length === 0) {
     list.innerHTML = `
@@ -3737,21 +3754,27 @@ function renderModalQuoteList(searchTerm) {
     return;
   }
   
-  list.innerHTML = filteredQuotes.map(quote => `
-    <div class="quote-picker-item ${linkedQuotes.includes(quote.id) ? 'selected' : ''} ${!quote.isVerified ? 'unverified' : ''}" data-id="${quote.id}">
-      <div class="quote-picker-item-header">
-        <span class="quote-picker-item-status ${quote.isVerified ? 'verified' : 'unverified'}">
-          ${quote.isVerified ? 'Verified' : 'Unverified'}
-        </span>
-        ${!quote.isVerified ? `<button class="quote-picker-verify-btn" data-id="${quote.id}" title="Verify this quote">Verify</button>` : ''}
+  // Normalize linkedQuotes to strings for comparison
+  
+  list.innerHTML = filteredQuotes.map(quote => {
+    const isLinked = linkedQuotesStr.includes(String(quote.id));
+    console.log(`[renderModalQuoteList] Quote ${quote.id}: linked=${isLinked}`);
+    return `
+      <div class="quote-picker-item ${isLinked ? 'selected' : ''} ${!quote.isVerified ? 'unverified' : ''}" data-id="${quote.id}">
+        <div class="quote-picker-item-header">
+          <span class="quote-picker-item-status ${quote.isVerified ? 'verified' : 'unverified'}">
+            ${quote.isVerified ? 'Verified' : 'Unverified'}
+          </span>
+          ${!quote.isVerified ? `<button class="quote-picker-verify-btn" data-id="${quote.id}" title="Verify this quote">Verify</button>` : ''}
+        </div>
+        <div class="quote-picker-item-text">"${escapeHtml(quote.text)}"</div>
+        <div class="quote-picker-item-meta">
+          <span class="quote-picker-item-category quote-category ${quote.category}">${quote.category}</span>
+          ${quote.sourceTitle ? `<span>${escapeHtml(quote.sourceTitle.substring(0, 30))}...</span>` : ''}
+        </div>
       </div>
-      <div class="quote-picker-item-text">"${escapeHtml(quote.text)}"</div>
-      <div class="quote-picker-item-meta">
-        <span class="quote-picker-item-category quote-category ${quote.category}">${quote.category}</span>
-        ${quote.sourceTitle ? `<span>${escapeHtml(quote.sourceTitle.substring(0, 30))}...</span>` : ''}
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
   
   // Add verify button handlers
   list.querySelectorAll('.quote-picker-verify-btn').forEach(btn => {
@@ -7910,9 +7933,13 @@ function renderReviewQueue() {
       ` : ''}
       
       ${isLockedByMe ? `
-        <div class="lock-badge" style="position: absolute; top: 8px; ${isReturned ? 'right: 100px;' : 'right: 8px;'} font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #dcfce7; color: #166534; font-weight: 600; border: 1px solid #bbf7d0;">
+        <button 
+          class="lock-badge" 
+          style="position: absolute; top: 8px; ${isReturned ? 'right: 100px;' : 'right: 8px;'} font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #dcfce7; color: #166534; font-weight: 600; border: 1px solid #bbf7d0; cursor: pointer;"
+          title="Click to release lock"
+        >
           🔓 Your Lock
-        </div>
+        </button>
       ` : ''}
       
       <div class="queue-item-header" style="${isReturned || isLocked || isLockedByMe ? 'padding-right: 100px;' : ''}">
@@ -8042,6 +8069,20 @@ function renderReviewQueue() {
       const cycle = parseInt(card.dataset.reviewCycle || '1');
       card.style.borderColor = cycle >= 3 ? '#fecaca' : (cycle >= 2 ? '#fed7aa' : '#e5e7eb');
     });
+    
+    // Lock badge click handler
+    const lockBtn = card.querySelector('.lock-badge');
+    if (lockBtn) {
+      lockBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const incidentId = parseInt(card.dataset.incidentId);
+        if (confirm('Release lock on this case?')) {
+          releaseLock(incidentId).then(() => {
+            loadReviewQueue(reviewQueueFilter);
+          });
+        }
+      });
+    }
   });
 }
 
@@ -8219,10 +8260,9 @@ async function loadReviewCaseDetails(incidentId) {
     const incidentData = data.incident;
     
     // Cases that have completed review (first_review is now validation, first_validation, verified) cannot be reviewed in extension
-    if (['first_review', 'first_validation', 'verified', 'rejected'].includes(incidentData.verification_status)) {
-      if (incidentData.verification_status === 'rejected') {
-        alert('This case has been rejected and cannot be reviewed.');
-      } else if (incidentData.verification_status === 'verified') {
+    // Note: rejected cases CAN be reviewed (for corrections/resubmission)
+    if (['first_review', 'first_validation', 'verified'].includes(incidentData.verification_status)) {
+      if (incidentData.verification_status === 'verified') {
         alert('This case has already been published.');
       } else {
         alert('This case has completed review and is now in validation.\n\nValidation can be done in the Validate tab or in the web browser at:\n' + apiUrl + '/dashboard/validate/' + incidentId);
@@ -8463,6 +8503,31 @@ async function loadReviewCaseDetails(incidentId) {
     // Clear pending quotes in review mode
     pendingQuotes = [];
     
+    // Load quote-field associations from API
+    const quoteFieldLinks = data.quote_field_links || [];
+    console.log('[loadReviewCaseDetails] Quote field links from API:', quoteFieldLinks);
+    
+    // Transform quote_field_links into fieldQuoteAssociations format
+    // API format: { incident_id, field_name, quote_id }
+    // Extension format: { field_name: [quote_id1, quote_id2, ...] }
+    fieldQuoteAssociations = {};
+    quoteFieldLinks.forEach(link => {
+      const field = link.field_name;
+      const quoteId = String(link.quote_id);
+      if (!fieldQuoteAssociations[field]) {
+        fieldQuoteAssociations[field] = [];
+      }
+      if (!fieldQuoteAssociations[field].includes(quoteId)) {
+        fieldQuoteAssociations[field].push(quoteId);
+      }
+    });
+    console.log('[loadReviewCaseDetails] Transformed fieldQuoteAssociations:', fieldQuoteAssociations);
+    
+    // Save to chrome storage for persistence
+    chrome.storage.local.set({ fieldQuoteAssociations }, () => {
+      console.log('[loadReviewCaseDetails] Quote associations saved to storage');
+    });
+    
     // Update the UI
     populateCaseForm();
     updateAgencyQuoteLinks(); // Update agency quote link display after form is populated
@@ -8652,7 +8717,9 @@ window.verifyField = verifyField;
 function setupReviewTabListeners() {
   const refreshBtn = document.getElementById('refreshReviewQueue');
   if (refreshBtn) {
-    refreshBtn.addEventListener('click', loadReviewQueue);
+    refreshBtn.addEventListener('click', () => {
+      loadReviewQueue(reviewQueueFilter);
+    });
   }
   
   const closeBtn = document.getElementById('closeReviewDetails');
@@ -8917,9 +8984,13 @@ function renderValidationQueue() {
       ` : ''}
       
       ${isLockedByMe ? `
-        <div class="lock-badge" style="position: absolute; top: ${isReturned ? '32' : '8'}px; right: 8px; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #dcfce7; color: #166534; font-weight: 600; border: 1px solid #bbf7d0;">
+        <button 
+          class="lock-badge" 
+          style="position: absolute; top: ${isReturned ? '32' : '8'}px; right: 8px; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #dcfce7; color: #166534; font-weight: 600; border: 1px solid #bbf7d0; cursor: pointer;"
+          title="Click to release lock"
+        >
           🔓 Your Lock
-        </div>
+        </button>
       ` : ''}
       
       <div class="queue-item-header" style="${isReturned || isLocked || isLockedByMe ? 'padding-right: 100px;' : ''}">
@@ -8983,6 +9054,20 @@ function renderValidationQueue() {
         status: incident.verification_status || 'validation'
       } : null;
       loadValidationCase(incidentId, caseInfo);
+    });
+  });
+  
+  // Lock badge click handlers for validation queue
+  queueList.querySelectorAll('.lock-badge').forEach(lockBtn => {
+    lockBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const card = lockBtn.closest('.queue-item');
+      const incidentId = parseInt(card.dataset.id);
+      if (confirm('Release lock on this case?')) {
+        releaseLock(incidentId).then(() => {
+          loadValidationQueue();
+        });
+      }
     });
   });
 }

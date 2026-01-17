@@ -2429,19 +2429,6 @@ export default function ReviewPage() {
                 </div>
                 <input type="text" className="w-full border rounded px-3 py-2 text-sm" value={String(incidentDetails.cause_of_death || '')} onChange={e => setIncidentDetails({ ...incidentDetails, cause_of_death: e.target.value })} />
               </div>
-              <div data-field-key="official_cause">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1">
-                  <label className="block text-xs text-gray-500">Official Cause</label>
-                  <div className="flex items-center gap-1">
-                    <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
-                      <input type="checkbox" checked={verifiedFields['official_cause'] || false} onChange={e => handleFieldVerify('official_cause', e.target.checked)} className="w-3 h-3" />
-                      <span>✓</span>
-                    </label>
-                    <QuotePicker field="official_cause" quotes={quotes} fieldQuoteMap={fieldQuoteMap} onLinkQuote={handleLinkQuote} onUnlinkQuote={handleUnlinkQuote} onVerifyQuote={verifyQuote} showLinkedDetails />
-                  </div>
-                </div>
-                <input type="text" className="w-full border rounded px-3 py-2 text-sm" value={String(incidentDetails.official_cause || '')} onChange={e => setIncidentDetails({ ...incidentDetails, official_cause: e.target.value })} />
-              </div>
               <div><label className="block text-xs text-gray-500 mb-1">Autopsy Available</label>
                 <input type="checkbox" checked={!!incidentDetails.autopsy_available} onChange={e => setIncidentDetails({ ...incidentDetails, autopsy_available: e.target.checked })} className="w-4 h-4" />
               </div>
