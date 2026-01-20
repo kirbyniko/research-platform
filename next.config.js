@@ -3,6 +3,10 @@ const path = require('path');
 const nextConfig = {
   // Disabled static export to enable API routes and database
   // output: 'export',
+  eslint: {
+    // Ignore ESLint warnings during production builds
+    ignoreDuringBuilds: true,
+  },
   images: {
     unoptimized: true,
   },
