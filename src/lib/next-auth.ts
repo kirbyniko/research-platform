@@ -122,10 +122,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session;
     },
   },
-  pages: {
-    signIn: '/auth/login',
-    error: '/auth/login',
-  },
+  // Use default NextAuth pages (no custom login page)
+  // pages: {
+  //   signIn: '/auth/login',
+  //   error: '/auth/login',
+  // },
   session: {
     strategy: 'jwt',
   },
