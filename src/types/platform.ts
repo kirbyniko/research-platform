@@ -376,7 +376,7 @@ export interface UpdateRecordTypeRequest {
 }
 
 export interface CreateFieldDefinitionRequest {
-  key: string;
+  slug: string;
   name: string;
   description?: string;
   placeholder?: string;

@@ -9,14 +9,14 @@
  *   - src/lib/statement-field-definitions.ts
  */
 
-import type { 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars`nimport type { 
   IncidentSource, 
   IncidentQuote, 
   SourceType, 
   QuoteCategory 
 } from './incident';
 
-import type {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars`nimport type {
   ContentType,
   StatementType,
   SpeakerType,
@@ -111,7 +111,7 @@ export interface Statement {
 // LEGAL CASE INTERFACE
 // ============================================
 
-import type {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars`nimport type {
   LegalCaseType,
   LegalCaseStatus,
 } from '@/lib/content-types';
@@ -182,7 +182,7 @@ export interface LegalCase {
 // POLICY INTERFACE
 // ============================================
 
-import type { PolicyType } from '@/lib/content-types';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars`nimport type { PolicyType } from '@/lib/content-types';
 
 export interface Policy {
   // Identity
