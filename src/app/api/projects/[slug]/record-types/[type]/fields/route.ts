@@ -124,7 +124,7 @@ export async function POST(
     const body: CreateFieldDefinitionRequest = await request.json();
     
     // Validate required fields
-    if (!body.name || !body.key || !body.field_type) {
+    if (!body.name || !body.slug || !body.field_type) {
       return NextResponse.json(
         { error: 'Name, key, and field_type are required' },
         { status: 400 }
@@ -142,7 +142,7 @@ export async function POST(
     // Check key uniqueness within record type
     const existingKey = await pool.query(
       'SELECT id FROM field_definitions WHERE record_type_id = $1 AND key = $2',
-      [recordType.id, body.key]
+      [recordType.id, body.slug]
     );
     
     if (existingKey.rows.length > 0) {
@@ -153,7 +153,7 @@ export async function POST(
     }
     
     // Validate key format (lowercase, alphanumeric, underscores)
-    if (!/^[a-z][a-z0-9_]*$/.test(body.key)) {
+    if (!/^[a-z][a-z0-9_]*$/.test(body.slug)) {
       return NextResponse.json(
         { error: 'Key must start with a lowercase letter and contain only lowercase letters, numbers, and underscores' },
         { status: 400 }
@@ -179,7 +179,7 @@ export async function POST(
       [
         recordType.id,
         body.name,
-        body.key,
+        body.slug,
         body.description || null,
         body.field_type,
         body.is_required ?? false,
