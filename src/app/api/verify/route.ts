@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireServerAuth } from '@/lib/server-auth';
 import pool from '@/lib/db';
 
-// GET - List all unverified items
+// GET - List all unverified items including statements
 export async function GET(request: NextRequest) {
   try {
     const authResult = await requireServerAuth(request, 'editor');
@@ -49,6 +49,21 @@ export async function GET(request: NextRequest) {
         ORDER BY q.verified ASC, q.created_at DESC
       `);
 
+      // Get statements
+      const statementsResult = await client.query(`
+        SELECT 
+          id, 
+          statement_type, 
+          speaker_name, 
+          headline, 
+          statement_date, 
+          verification_status,
+          is_guest_submission,
+          created_at
+        FROM statements
+        ORDER BY verification_status ASC, created_at DESC
+      `);
+
       // Summary counts
       const summary = {
         cases: {
@@ -71,6 +86,12 @@ export async function GET(request: NextRequest) {
           verified: quotesResult.rows.filter((r: any) => r.verified).length,
           unverified: quotesResult.rows.filter((r: any) => !r.verified).length,
         },
+        statements: {
+          total: statementsResult.rows.length,
+          verified: statementsResult.rows.filter((r: any) => r.verification_status === 'verified').length,
+          pending: statementsResult.rows.filter((r: any) => r.verification_status === 'pending').length,
+          rejected: statementsResult.rows.filter((r: any) => r.verification_status === 'rejected').length,
+        },
       };
 
       return NextResponse.json({
@@ -79,6 +100,7 @@ export async function GET(request: NextRequest) {
         timeline: timelineResult.rows,
         sources: sourcesResult.rows,
         discrepancies: quotesResult.rows,
+        statements: statementsResult.rows,
       });
     } finally {
       client.release();
@@ -104,7 +126,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { type, id, verified } = await request.json();
+    const { type, id, verified, verification_status } = await request.json();
     const user = authResult.user;
 
     if (!type || id === undefined) {
@@ -152,6 +174,28 @@ export async function POST(request: NextRequest) {
             RETURNING id, ice_claim, verified
           `;
           break;
+        case 'statement':
+          // Statements use verification_status instead of boolean verified
+          const status = verification_status || (verifiedValue ? 'verified' : 'rejected');
+          const result = await client.query(`
+            UPDATE statements 
+            SET verification_status = $1, verified_by = $2, verified_at = NOW()
+            WHERE id = $3
+            RETURNING id, speaker_name, headline, verification_status
+          `, [status, user.email, id]);
+          
+          if (result.rows.length === 0) {
+            return NextResponse.json(
+              { error: 'Statement not found' },
+              { status: 404 }
+            );
+          }
+          
+          return NextResponse.json({
+            success: true,
+            item: result.rows[0],
+            verifiedBy: user.email,
+          });
         default:
           return NextResponse.json(
             { error: 'Invalid type' },

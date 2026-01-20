@@ -7,24 +7,397 @@ let currentCase = null;
 let pendingQuotes = [];
 let verifiedQuotes = [];
 let sources = [];
+let customFields = []; // Custom fields for current incident
+let currentContentMode = 'incident'; // 'incident' or 'statement' - controls context menu
+let isValidateMode = false; // True when validating existing cases
+let currentStatementType = ''; // Current statement type (for conditional menu sections)
+
+// ===========================================
+// FIELD MENU DEFINITIONS
+// Hierarchical menu structure for quote-to-field linking
+// These match EXACTLY what's shown in the extension forms
+// ===========================================
+
+const FIELD_MENU_CATEGORIES = [
+  {
+    id: 'core-fields',
+    title: '📋 Core Fields',
+    fields: [
+      { key: 'victim_name', label: 'Victim Name' },
+      { key: 'incident_date', label: 'Date' },
+      { key: 'subject_age', label: 'Age' },
+      { key: 'subject_nationality', label: 'Nationality' },
+      { key: 'subject_gender', label: 'Gender' },
+      { key: 'subject_immigration_status', label: 'Immigration Status' },
+      { key: 'facility', label: 'Facility' },
+      { key: 'city', label: 'City' },
+      { key: 'state', label: 'State' },
+      { key: 'summary', label: 'Summary' },
+    ]
+  },
+  {
+    id: 'shooting-details',
+    title: '🔫 Shooting Details',
+    fields: [
+      { key: 'shooting_fatal', label: 'Fatal' },
+      { key: 'shots_fired', label: 'Shots Fired' },
+      { key: 'weapon_type', label: 'Weapon Type' },
+      { key: 'bodycam_available', label: 'Bodycam Available' },
+      { key: 'victim_armed', label: 'Victim Armed' },
+      { key: 'warning_given', label: 'Warning Given' },
+      { key: 'shooting_context', label: 'Context' },
+    ]
+  },
+  {
+    id: 'death-details',
+    title: '💀 Death Details',
+    fields: [
+      { key: 'cause_of_death', label: 'Cause of Death' },
+      { key: 'manner_of_death', label: 'Manner of Death' },
+      { key: 'custody_duration', label: 'Custody Duration' },
+      { key: 'medical_neglect_alleged', label: 'Medical Neglect Alleged' },
+      { key: 'autopsy_available', label: 'Autopsy Available' },
+      { key: 'circumstances', label: 'Circumstances' },
+    ]
+  },
+  {
+    id: 'arrest-details',
+    title: '⚖️ Arrest Details',
+    fields: [
+      { key: 'arrest_reason', label: 'Stated Reason' },
+      { key: 'arrest_context', label: 'Context' },
+      { key: 'arrest_charges', label: 'Charges' },
+      { key: 'warrant_present', label: 'Warrant Present' },
+      { key: 'timing_suspicious', label: 'Timing Suspicious' },
+      { key: 'pretext_arrest', label: 'Pretext Arrest' },
+      { key: 'selective_enforcement', label: 'Selective Enforcement' },
+    ]
+  },
+  {
+    id: 'force-details',
+    title: '💥 Excessive Force Details',
+    fields: [
+      { key: 'force_types', label: 'Force Types' },
+      { key: 'victim_restrained', label: 'Victim Restrained' },
+      { key: 'victim_complying', label: 'Victim Complying' },
+      { key: 'video_evidence', label: 'Video Evidence' },
+      { key: 'hospitalization_required', label: 'Hospitalization Required' },
+      { key: 'injuries_sustained', label: 'Injuries Sustained' },
+    ]
+  },
+  {
+    id: 'injury-details',
+    title: '🩹 Injury Details',
+    fields: [
+      { key: 'injury_type', label: 'Injury Type' },
+      { key: 'injury_severity', label: 'Severity' },
+      { key: 'injury_weapon', label: 'Weapon Used' },
+      { key: 'injury_cause', label: 'Cause/Context' },
+    ]
+  },
+  {
+    id: 'medical-neglect-details',
+    title: '🏥 Medical Neglect Details',
+    fields: [
+      { key: 'medical_condition', label: 'Medical Condition' },
+      { key: 'treatment_denied', label: 'Treatment Denied' },
+      { key: 'requests_documented', label: 'Requests Documented' },
+      { key: 'resulted_in_death', label: 'Resulted in Death' },
+    ]
+  },
+  {
+    id: 'protest-details',
+    title: '📢 Protest Details',
+    fields: [
+      { key: 'protest_topic', label: 'Protest Topic' },
+      { key: 'protest_size', label: 'Estimated Size' },
+      { key: 'permitted', label: 'Permitted' },
+      { key: 'dispersal_method', label: 'Dispersal Methods' },
+      { key: 'arrests_made', label: 'Arrests Made' },
+    ]
+  },
+];
+
+// Statement field menu categories (shown when in statement mode)
+// Simplified for major public figure statements
+const STATEMENT_FIELD_MENU_CATEGORIES = [
+  {
+    id: 'statement-core',
+    title: '📋 Statement Info',
+    fields: [
+      { key: 'statement_type', label: 'Statement Type' },
+      { key: 'statement_date', label: 'Statement Date' },
+      { key: 'headline', label: 'Headline/Summary' },
+      { key: 'key_quote', label: 'Key Quote' },
+    ]
+  },
+  {
+    id: 'speaker-info',
+    title: '👤 Speaker Information',
+    fields: [
+      { key: 'speaker_name', label: 'Speaker Name' },
+      { key: 'speaker_title', label: 'Title/Role' },
+      { key: 'speaker_type', label: 'Speaker Type' },
+      { key: 'political_affiliation', label: 'Political Affiliation' },
+      { key: 'wikipedia_url', label: 'Wikipedia URL' },
+    ]
+  },
+  {
+    id: 'statement-context',
+    title: '📍 Context & Platform',
+    fields: [
+      { key: 'platform', label: 'Platform' },
+      { key: 'platform_url', label: 'Direct Link' },
+      { key: 'context', label: 'What Prompted This?' },
+    ]
+  },
+];
+
+// Validate mode menu categories (simplified for validation)
+const VALIDATE_FIELD_MENU_CATEGORIES = [
+  {
+    id: 'validate-core',
+    title: '📋 Core Fields',
+    fields: [
+      { key: 'victim_name', label: 'Victim Name' },
+      { key: 'incident_date', label: 'Date' },
+      { key: 'facility', label: 'Facility' },
+      { key: 'city', label: 'City' },
+      { key: 'state', label: 'State' },
+      { key: 'summary', label: 'Summary' },
+    ]
+  },
+  {
+    id: 'validate-details',
+    title: '📝 Details',
+    fields: [
+      { key: 'cause_of_death', label: 'Cause of Death' },
+      { key: 'manner_of_death', label: 'Manner of Death' },
+      { key: 'circumstances', label: 'Circumstances' },
+    ]
+  },
+];
+
+// Get the appropriate menu categories based on current mode
+function getActiveFieldCategories() {
+  if (isValidateMode) {
+    return VALIDATE_FIELD_MENU_CATEGORIES;
+  }
+  
+  if (currentContentMode === 'statement') {
+    return STATEMENT_FIELD_MENU_CATEGORIES;
+  }
+  
+  return FIELD_MENU_CATEGORIES;
+}
+
+// Build context menus on install
+function buildContextMenus() {
+  console.log('Building context menus...');
+  
+  // Clear existing menus first
+  chrome.contextMenus.removeAll(() => {
+    console.log('Cleared existing menus, creating new ones...');
+    
+    try {
+      // Root menu: Add Quote to Case
+      chrome.contextMenus.create({
+        id: 'add-quote-root',
+        title: 'Add Quote to Case',
+        contexts: ['selection']
+      }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('Error creating root menu:', chrome.runtime.lastError);
+        } else {
+          console.log('Created root menu');
+        }
+      });
+      
+      // Add "General (uncategorized)" option
+      chrome.contextMenus.create({
+        id: 'add-quote-general',
+        parentId: 'add-quote-root',
+        title: '📝 General (no field link)',
+        contexts: ['selection']
+      }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('Error creating general menu:', chrome.runtime.lastError);
+        }
+      });
+      
+      // Separator
+      chrome.contextMenus.create({
+        id: 'separator-1',
+        parentId: 'add-quote-root',
+        type: 'separator',
+        contexts: ['selection']
+      });
+      
+      // Create category submenus with field children based on current mode
+      const activeCategories = getActiveFieldCategories();
+      const modeLabel = isValidateMode ? '(Validating)' : (currentContentMode === 'statement' ? '(Statement)' : '(Incident)');
+      
+      for (const category of activeCategories) {
+        // Category submenu
+        chrome.contextMenus.create({
+          id: `category-${category.id}`,
+          parentId: 'add-quote-root',
+          title: category.title,
+          contexts: ['selection']
+        }, () => {
+          if (chrome.runtime.lastError) {
+            console.error(`Error creating category ${category.id}:`, chrome.runtime.lastError);
+          }
+        });
+        
+        // Fields within category
+        for (const field of category.fields) {
+          chrome.contextMenus.create({
+            id: `field-${field.key}`,
+            parentId: `category-${category.id}`,
+            title: field.label,
+            contexts: ['selection']
+          }, () => {
+            if (chrome.runtime.lastError) {
+              console.error(`Error creating field ${field.key}:`, chrome.runtime.lastError);
+            }
+          });
+        }
+      }
+      
+      // Separator before custom fields
+      chrome.contextMenus.create({
+        id: 'separator-2',
+        parentId: 'add-quote-root',
+        type: 'separator',
+        contexts: ['selection']
+      });
+      
+      // Custom fields category (always shown, but items added dynamically)
+      chrome.contextMenus.create({
+        id: 'category-custom-fields',
+        parentId: 'add-quote-root',
+        title: '🔧 Custom Fields',
+        contexts: ['selection']
+      }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('Error creating custom fields category:', chrome.runtime.lastError);
+        }
+      });
+      
+      // Add "Add New" option
+      chrome.contextMenus.create({
+        id: 'custom-field-add-new',
+        parentId: 'category-custom-fields',
+        title: '➕ Add New Custom Field...',
+        contexts: ['selection']
+      }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('Error adding custom-field-add-new:', chrome.runtime.lastError);
+        }
+      });
+      
+      // Separator before timeline
+      chrome.contextMenus.create({
+        id: 'separator-3',
+        parentId: 'add-quote-root',
+        type: 'separator',
+        contexts: ['selection']
+      });
+      
+      // Timeline event option
+      chrome.contextMenus.create({
+        id: 'add-quote-timeline',
+        parentId: 'add-quote-root',
+        title: '📅 Add as Timeline Event',
+        contexts: ['selection']
+      });
+      
+      console.log('Context menus creation initiated');
+    } catch (error) {
+      console.error('Error building menus:', error);
+    }
+  });
+}
+
+// Update custom fields menu with incident's custom fields
+async function updateCustomFieldsMenu(incidentId) {
+  console.log('Updating custom fields menu for incident:', incidentId);
+  
+  // Remove existing custom field items (except add-new)
+  for (const field of customFields) {
+    try {
+      chrome.contextMenus.remove(`custom-field-${field.id}`);
+    } catch (e) {
+      // Ignore if doesn't exist
+    }
+  }
+  
+  // Remove separator if it exists
+  try {
+    chrome.contextMenus.remove('custom-field-separator');
+  } catch (e) {
+    // Ignore
+  }
+  
+  if (!incidentId) {
+    customFields = [];
+    return;
+  }
+  
+  // Fetch custom fields for this incident
+  try {
+    const response = await fetch(`${API_BASE}/incidents/${incidentId}/custom-fields`);
+    if (response.ok) {
+      const data = await response.json();
+      customFields = data.fields || [];
+      
+      console.log('Loaded custom fields:', customFields.length);
+      
+      // Add menu items for each custom field
+      for (const field of customFields) {
+        chrome.contextMenus.create({
+          id: `custom-field-${field.id}`,
+          parentId: 'category-custom-fields',
+          title: `📌 ${field.field_name}: ${field.field_value?.substring(0, 30) || '(empty)'}...`,
+          contexts: ['selection']
+        }, () => {
+          if (chrome.runtime.lastError) {
+            console.log('Error adding custom field menu item:', chrome.runtime.lastError);
+          }
+        });
+      }
+      
+      // Add separator before "Add New" if we have existing fields
+      if (customFields.length > 0) {
+        chrome.contextMenus.create({
+          id: 'custom-field-separator',
+          parentId: 'category-custom-fields',
+          type: 'separator',
+          contexts: ['selection']
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching custom fields:', err);
+    customFields = [];
+  }
+}
 
 // Initialize extension
 chrome.runtime.onInstalled.addListener(() => {
   console.log('ICE Incident Tracker installed');
-  
-  // Create context menu
-  chrome.contextMenus.create({
-    id: 'add-quote',
-    title: 'Add Quote to Case',
-    contexts: ['selection']
-  });
-  
-  chrome.contextMenus.create({
-    id: 'add-quote-timeline',
-    title: 'Add as Timeline Event',
-    contexts: ['selection']
-  });
+  buildContextMenus();
 });
+
+// Also build menus on startup (when service worker wakes up)
+chrome.runtime.onStartup.addListener(() => {
+  console.log('ICE Incident Tracker startup');
+  buildContextMenus();
+});
+
+// Build menus immediately when script loads
+buildContextMenus();
 
 // Handle extension icon click - open side panel
 chrome.action.onClicked.addListener((tab) => {
@@ -32,37 +405,128 @@ chrome.action.onClicked.addListener((tab) => {
 });
 
 // Handle context menu clicks
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === 'add-quote' || 
-      info.menuItemId === 'add-quote-timeline') {
-    
-    const category = info.menuItemId === 'add-quote-timeline' ? 'timeline' : 'uncategorized';
-    
-    const quote = {
-      id: crypto.randomUUID(),
-      text: info.selectionText,
-      sourceUrl: tab.url,
-      sourceTitle: tab.title,
-      category: category,
-      status: 'verified',
-      createdAt: new Date().toISOString()
-    };
-    
-    // Add to verified quotes (user-selected quotes go directly to verified)
-    verifiedQuotes.unshift(quote);
-    
-    // Notify sidebar
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  const menuId = info.menuItemId;
+  
+  // Handle custom field operations
+  if (menuId === 'custom-field-add-new') {
+    // Request the sidepanel to show a popup for new custom field name
     chrome.runtime.sendMessage({
-      type: 'QUOTE_VERIFIED',
-      quote: quote
+      type: 'PROMPT_CUSTOM_FIELD',
+      selectedText: info.selectionText,
+      sourceUrl: tab.url,
+      sourceTitle: tab.title
     });
-    
-    // Show notification
-    notifyContentScript(tab.id, {
-      type: 'SHOW_TOAST',
-      message: 'Quote added to case'
-    });
+    return;
   }
+  
+  if (menuId.startsWith('custom-field-') && menuId !== 'custom-field-separator') {
+    // Adding quote to existing custom field
+    const fieldId = parseInt(menuId.replace('custom-field-', ''));
+    const field = customFields.find(f => f.id === fieldId);
+    if (field) {
+      // Create quote linked to this custom field
+      const quote = {
+        id: crypto.randomUUID(),
+        text: info.selectionText,
+        sourceUrl: tab.url,
+        sourceTitle: tab.title,
+        category: 'custom',
+        linkedField: `custom_${field.field_name}`,
+        customFieldId: field.id,
+        customFieldName: field.field_name,
+        status: 'verified',
+        createdAt: new Date().toISOString()
+      };
+      
+      verifiedQuotes.unshift(quote);
+      
+      chrome.runtime.sendMessage({
+        type: 'QUOTE_VERIFIED',
+        quote: quote
+      });
+      
+      notifyContentScript(tab.id, {
+        type: 'SHOW_TOAST',
+        message: `Quote linked to custom field "${field.field_name}"`
+      });
+    }
+    return;
+  }
+  
+  // Determine category and linked field for standard fields
+  let category = 'uncategorized';
+  let linkedField = null;
+  
+  // All possible field category sets to search
+  const allFieldCategories = [
+    ...FIELD_MENU_CATEGORIES,
+    ...STATEMENT_FIELD_MENU_CATEGORIES,
+    ...VALIDATE_FIELD_MENU_CATEGORIES
+  ];
+  
+  if (menuId === 'add-quote-general') {
+    category = 'uncategorized';
+  } else if (menuId === 'add-quote-timeline') {
+    category = 'timeline';
+  } else if (menuId.startsWith('field-')) {
+    // Extract field key from menu ID
+    linkedField = menuId.replace('field-', '');
+    
+    // Find the category this field belongs to (search all category sets)
+    for (const cat of allFieldCategories) {
+      const foundField = cat.fields.find(f => f.key === linkedField);
+      if (foundField) {
+        // Use a friendly category name based on the category id
+        category = cat.id.replace('-details', '').replace(/-/g, '_');
+        break;
+      }
+    }
+  } else {
+    // Unknown menu item, ignore
+    return;
+  }
+  
+  const quote = {
+    id: crypto.randomUUID(),
+    text: info.selectionText,
+    sourceUrl: tab.url,
+    sourceTitle: tab.title,
+    category: category,
+    linkedField: linkedField,
+    status: 'verified',
+    createdAt: new Date().toISOString()
+  };
+  
+  // Add to verified quotes (user-selected quotes go directly to verified)
+  verifiedQuotes.unshift(quote);
+  
+  // Notify sidebar with field link info
+  chrome.runtime.sendMessage({
+    type: 'QUOTE_VERIFIED',
+    quote: quote
+  });
+  
+  // Build toast message
+  let toastMessage = 'Quote added to case';
+  if (linkedField) {
+    // Find the friendly label for the field (search all category sets)
+    for (const cat of allFieldCategories) {
+      const foundField = cat.fields.find(f => f.key === linkedField);
+      if (foundField) {
+        toastMessage = `Quote linked to "${foundField.label}"`;
+        break;
+      }
+    }
+  } else if (category === 'timeline') {
+    toastMessage = 'Quote added as timeline event';
+  }
+  
+  // Show notification
+  notifyContentScript(tab.id, {
+    type: 'SHOW_TOAST',
+    message: toastMessage
+  });
 });
 
 // Handle keyboard shortcuts
@@ -130,13 +594,51 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         currentCase: currentCase,
         pendingQuotes: pendingQuotes,
         verifiedQuotes: verifiedQuotes,
-        sources: sources
+        sources: sources,
+        customFields: customFields,
+        currentContentMode: currentContentMode,
+        isValidateMode: isValidateMode
       });
       return true;
+    
+    case 'SET_CONTENT_MODE':
+      // Update content mode and rebuild context menus
+      const newMode = message.mode;
+      const newValidateMode = message.isValidateMode || false;
+      const newStatementType = message.statementType || '';
+      console.log(`Switching content mode from ${currentContentMode} to ${newMode}, validate: ${newValidateMode}, statementType: ${newStatementType}`);
+      
+      const modeChanged = newMode !== currentContentMode || 
+                          newValidateMode !== isValidateMode || 
+                          newStatementType !== currentStatementType;
+      
+      if (modeChanged) {
+        currentContentMode = newMode;
+        isValidateMode = newValidateMode;
+        currentStatementType = newStatementType;
+        buildContextMenus();
+        saveState();
+      }
+      sendResponse({ success: true });
+      break;
       
     case 'SET_CURRENT_CASE':
       currentCase = message.case;
       saveState();
+      // Update custom fields menu for this incident
+      if (currentCase && currentCase.id) {
+        updateCustomFieldsMenu(currentCase.id);
+      } else {
+        updateCustomFieldsMenu(null);
+      }
+      sendResponse({ success: true });
+      break;
+      
+    case 'REFRESH_CUSTOM_FIELDS':
+      // Refresh custom fields menu
+      if (currentCase && currentCase.id) {
+        updateCustomFieldsMenu(currentCase.id);
+      }
       sendResponse({ success: true });
       break;
       
@@ -152,6 +654,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       verifiedQuotes = [];
       sources = [];
       currentCase = null;
+      customFields = [];
+      updateCustomFieldsMenu(null);
       saveState();
       chrome.runtime.sendMessage({ type: 'REFRESH_QUOTES' });
       sendResponse({ success: true });
@@ -216,6 +720,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         saveState();
       }
       chrome.runtime.sendMessage({ type: 'REFRESH_QUOTES' });
+      sendResponse({ success: true });
+      break;
+    
+    case 'QUOTE_CAPTURED':
+      // Forward captured quote to sidepanel
+      chrome.runtime.sendMessage({
+        type: 'QUOTE_CAPTURED',
+        text: message.text,
+        field: message.field,
+        sourceUrl: message.sourceUrl,
+        sourceTitle: message.sourceTitle
+      });
+      sendResponse({ success: true });
+      break;
+    
+    case 'CAPTURE_CANCELLED':
+      // Forward cancel to sidepanel
+      chrome.runtime.sendMessage({ type: 'CAPTURE_CANCELLED' });
       sendResponse({ success: true });
       break;
     

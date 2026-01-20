@@ -105,9 +105,6 @@ export default function QuoteCard({
           </span>
         </div>
         <div className="flex items-center space-x-2">
-          <span className={`text-xs px-2 py-0.5 rounded ${CATEGORY_COLORS[quote.category] || 'bg-gray-100'}`}>
-            {CATEGORY_LABELS[quote.category] || quote.category}
-          </span>
           <span className="text-xs text-gray-400">
             {Math.round((quote.confidence_score || 0) * 100)}%
           </span>

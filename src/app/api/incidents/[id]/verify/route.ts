@@ -49,7 +49,8 @@ export async function POST(
     let verificationNumber: number;
     let newStatus: string;
     
-    if (currentCase.verification_status === 'pending') {
+    if (currentCase.verification_status === 'pending' || currentCase.verification_status === 'rejected') {
+      // Both pending and rejected cases can be reviewed (rejected cases are being corrected/resubmitted)
       verificationNumber = 1;
       // After first review, go directly to validation queue (no second_review step)
       newStatus = 'first_review';
@@ -76,21 +77,41 @@ export async function POST(
     try {
       await client.query('BEGIN');
       
-      // Insert verification record
-      await client.query(`
-        INSERT INTO case_verifications (case_id, verified_by, verification_number, verification_type, notes)
-        VALUES ($1, $2, $3, $4, $5)
-      `, [caseId, user.id, verificationNumber, verificationType, notes]);
+      // Insert verification record only if this is a new review (not a re-review of rejected case)
+      if (currentCase.verification_status !== 'rejected' || !currentCase.first_verified_by) {
+        await client.query(`
+          INSERT INTO case_verifications (case_id, verified_by, verification_number, verification_type, notes)
+          VALUES ($1, $2, $3, $4, $5)
+        `, [caseId, user.id, verificationNumber, verificationType, notes]);
+      } else {
+        // For rejected cases being re-reviewed, update the existing verification record
+        await client.query(`
+          UPDATE case_verifications
+          SET notes = $1, verified_at = NOW()
+          WHERE case_id = $2 AND verification_number = $3
+        `, [notes, caseId, verificationNumber]);
+      }
       
       // Update case status - first review goes directly to validation queue
-      await client.query(`
-        UPDATE incidents 
-        SET 
-          verification_status = $1,
-          first_verified_by = $2,
-          first_verified_at = NOW()
-        WHERE id = $3
-      `, [newStatus, user.id, caseId]);
+      // For rejected cases being re-reviewed, only update status if first_verified_by is not already set
+      if (currentCase.verification_status === 'rejected' && currentCase.first_verified_by) {
+        // Just update status, keep existing verifier info
+        await client.query(`
+          UPDATE incidents 
+          SET verification_status = $1
+          WHERE id = $2
+        `, [newStatus, caseId]);
+      } else {
+        // First time review - set verifier info
+        await client.query(`
+          UPDATE incidents 
+          SET 
+            verification_status = $1,
+            first_verified_by = $2,
+            first_verified_at = NOW()
+          WHERE id = $3
+        `, [newStatus, user.id, caseId]);
+      }
       
       await client.query('COMMIT');
       
@@ -104,6 +125,7 @@ export async function POST(
       
     } catch (error) {
       await client.query('ROLLBACK');
+      console.error('Transaction error:', error);
       throw error;
     } finally {
       client.release();
@@ -111,7 +133,14 @@ export async function POST(
     
   } catch (error) {
     console.error('Error verifying case:', error);
-    return NextResponse.json({ error: 'Failed to verify case' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Failed to verify case';
+    const errorDetails = error instanceof Error ? error.stack : String(error);
+    console.error('Full error details:', errorDetails);
+    return NextResponse.json({ 
+      error: 'Failed to verify case', 
+      details: errorMessage,
+      debug: process.env.NODE_ENV === 'development' ? errorDetails : undefined
+    }, { status: 500 });
   }
 }
 

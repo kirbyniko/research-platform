@@ -753,13 +753,11 @@ export async function deleteIncidentMedia(mediaId: number): Promise<void> {
 // ============================================
 
 export async function addIncidentQuote(incidentId: number, quote: Omit<IncidentQuote, 'id'>): Promise<number> {
-  // Validate: quotes must have text and source
+  // Validate: quotes must have text
   if (!quote.text || quote.text.trim() === '') {
     throw new Error('Quote text is required');
   }
-  if (!quote.source_id) {
-    throw new Error('Quote must be linked to a source (source_id required)');
-  }
+  // Note: source_id is optional - quotes can be added without sources initially
   
   const client = await pool.connect();
   try {

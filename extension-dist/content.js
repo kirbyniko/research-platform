@@ -650,6 +650,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse(customContent);
       break;
       
+    case 'START_QUOTE_CAPTURE':
+      activateCaptureMode(message.field);
+      sendResponse({success: true});
+      break;
+      
+    case 'CANCEL_QUOTE_CAPTURE':
+      deactivateCaptureMode();
+      sendResponse({success: true});
+      break;
+      
     default:
       console.log('Unknown message:', message.type);
   }
@@ -857,4 +867,385 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
   init();
+}
+
+// ===========================================
+// QUOTE CAPTURE MODE
+// ===========================================
+
+let captureModeActive = false;
+let captureField = null;
+let captureOverlay = null;
+
+function activateCaptureMode(field) {
+  // Cancel any existing capture mode first
+  if (captureModeActive) {
+    deactivateCaptureMode();
+  }
+  
+  console.log('[CAPTURE MODE] Activating for field:', field);
+  captureModeActive = true;
+  captureField = field;
+  
+  // Create a non-blocking indicator bar at top
+  captureOverlay = document.createElement('div');
+  captureOverlay.id = 'ice-capture-overlay';
+  captureOverlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: white;
+    font-family: system-ui, sans-serif;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  `;
+  
+  // Different instructions for PDF vs regular pages
+  const isPdf = isPdfPage();
+  captureOverlay.innerHTML = `
+    <span>${isPdf ? '📋 Copy text with Ctrl+C (quote will capture automatically)' : '📌 Select text below, then click'}</span>
+    ${isPdf ? '' : '<button id="ice-capture-confirm" style="background: #22c55e; color: white; border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">✓ Capture Selected</button>'}
+    <button id="ice-capture-cancel" style="background: #ef4444; color: white; border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">✗ Cancel</button>
+  `;
+  
+  document.body.appendChild(captureOverlay);
+  console.log('[CAPTURE MODE] Overlay bar added');
+  
+  // Add click handlers for the buttons
+  const confirmBtn = document.getElementById('ice-capture-confirm');
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', captureCurrentSelection);
+  }
+  
+  document.getElementById('ice-capture-cancel').addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: 'CAPTURE_CANCELLED' });
+    deactivateCaptureMode();
+    showToast('Capture cancelled', 'info', 2000);
+  });
+  
+  // Listen for keyboard events (including Ctrl+C for PDFs)
+  document.addEventListener('keydown', handleCaptureKeyDown, true);
+  console.log('[CAPTURE MODE] Event listeners attached');
+}
+
+function handleCaptureKeyDown(e) {
+  console.log('[CAPTURE MODE] Key pressed:', e.key, 'Ctrl:', e.ctrlKey, 'Meta:', e.metaKey);
+  
+  // Check for Escape
+  if (e.key === 'Escape') {
+    chrome.runtime.sendMessage({ type: 'CAPTURE_CANCELLED' });
+    showToast('Capture cancelled', 'info', 2000);
+    deactivateCaptureMode();
+    return;
+  }
+  
+  // Check for Ctrl+C or Cmd+C (for PDF auto-capture)
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C') && isPdfPage()) {
+    console.log('[CAPTURE MODE] Ctrl+C detected on PDF, will read clipboard');
+    // Small delay to ensure clipboard is populated
+    setTimeout(() => {
+      navigator.clipboard.readText()
+        .then(clipboardText => {
+          const text = clipboardText.trim();
+          console.log('[CAPTURE MODE] Clipboard content length:', text.length);
+          console.log('[CAPTURE MODE] Clipboard preview:', text.substring(0, 100));
+          
+          if (text && text.length > 0) {
+            console.log('[CAPTURE MODE] Sending quote from clipboard');
+            chrome.runtime.sendMessage({
+              type: 'QUOTE_CAPTURED',
+              text: text,
+              field: captureField,
+              sourceUrl: window.location.href,
+              sourceTitle: document.title
+            });
+            deactivateCaptureMode();
+            showToast('✓ Quote auto-captured!', 'success', 2000);
+          } else {
+            console.log('[CAPTURE MODE] Clipboard was empty');
+          }
+        })
+        .catch(err => {
+          console.error('[CAPTURE MODE] Clipboard read error:', err);
+          showToast('Could not read clipboard. Try again.', 'error', 2000);
+        });
+    }, 200);
+  }
+}
+
+function handleCopyEvent(e) {
+  console.log('[CAPTURE MODE] Copy event detected');
+  // Small delay to ensure clipboard is populated
+  setTimeout(() => {
+    navigator.clipboard.readText()
+      .then(clipboardText => {
+        const text = clipboardText.trim();
+        console.log('[CAPTURE MODE] Auto-captured from copy:', text.substring(0, 100));
+        
+        if (text && text.length > 0) {
+          chrome.runtime.sendMessage({
+            type: 'QUOTE_CAPTURED',
+            text: text,
+            field: captureField,
+            sourceUrl: window.location.href,
+            sourceTitle: document.title
+          });
+          deactivateCaptureMode();
+          showToast('✓ Quote auto-captured!', 'success', 2000);
+        }
+      })
+      .catch(err => {
+        console.error('[CAPTURE MODE] Clipboard error:', err);
+      });
+  }, 100);
+}
+
+function captureCurrentSelection() {
+  console.log('[CAPTURE MODE] Capture button clicked');
+  
+  // For PDFs, try clipboard first
+  if (isPdfPage()) {
+    console.log('[CAPTURE MODE] PDF detected, trying clipboard');
+    navigator.clipboard.readText()
+      .then(clipboardText => {
+        const text = clipboardText.trim();
+        console.log('[CAPTURE MODE] Clipboard text:', text);
+        
+        if (text && text.length > 0) {
+          console.log('[CAPTURE MODE] Sending captured quote from clipboard');
+          chrome.runtime.sendMessage({
+            type: 'QUOTE_CAPTURED',
+            text: text,
+            field: captureField,
+            sourceUrl: window.location.href,
+            sourceTitle: document.title
+          });
+          deactivateCaptureMode();
+          showToast('Quote captured from clipboard!', 'success', 2000);
+        } else {
+          showToast('Clipboard is empty! Copy some text first (Ctrl+C).', 'error', 3000);
+        }
+      })
+      .catch(err => {
+        console.error('[CAPTURE MODE] Clipboard error:', err);
+        showToast('Could not read clipboard. Make sure you copied text first (Ctrl+C).', 'error', 3000);
+      });
+    return;
+  }
+  
+  // For regular pages, try selection
+  let selectedText = '';
+  
+  // Method 1: Standard window.getSelection()
+  const standardSelection = window.getSelection();
+  if (standardSelection) {
+    selectedText = standardSelection.toString().trim();
+    console.log('[CAPTURE MODE] Standard selection:', selectedText);
+  }
+  
+  // Method 2: Try document.getSelection()
+  if (!selectedText) {
+    const docSelection = document.getSelection();
+    if (docSelection) {
+      selectedText = docSelection.toString().trim();
+      console.log('[CAPTURE MODE] Document selection:', selectedText);
+    }
+  }
+  
+  console.log('[CAPTURE MODE] Final selected text:', selectedText);
+  
+  if (selectedText && selectedText.length > 0) {
+    console.log('[CAPTURE MODE] Sending captured quote');
+    chrome.runtime.sendMessage({
+      type: 'QUOTE_CAPTURED',
+      text: selectedText,
+      field: captureField,
+      sourceUrl: window.location.href,
+      sourceTitle: document.title
+    });
+    deactivateCaptureMode();
+    showToast('Quote captured!', 'success', 2000);
+  } else {
+    showToast('No text selected! Select some text first.', 'error', 2000);
+  }
+}
+
+function handleTextSelection(e) {
+  console.log('[CAPTURE MODE] Selection event fired');
+  
+  // Check if we're in a PDF
+  let selectedText = '';
+  if (isPdfPage() && window.ICEDeathsPdfHandler) {
+    const pdfSelection = window.ICEDeathsPdfHandler.getPdfSelection();
+    selectedText = pdfSelection?.text?.trim() || '';
+    console.log('[CAPTURE MODE] PDF selection:', selectedText);
+  } else {
+    const selection = window.getSelection();
+    selectedText = selection.toString().trim();
+    console.log('[CAPTURE MODE] Regular selection:', selectedText);
+  }
+  
+  if (selectedText && selectedText.length > 0) {
+    console.log('[CAPTURE MODE] Valid selection found, showing confirmation');
+    
+    // For PDFs, use a fixed position; for regular pages, use selection rect
+    let rect;
+    if (isPdfPage()) {
+      rect = {
+        left: window.innerWidth / 2 - 50,
+        bottom: window.innerHeight / 2,
+        top: window.innerHeight / 2 - 40
+      };
+    } else {
+      const selection = window.getSelection();
+      if (selection.rangeCount > 0) {
+        rect = selection.getRangeAt(0).getBoundingClientRect();
+      } else {
+        rect = { left: window.innerWidth / 2 - 50, bottom: window.innerHeight / 2, top: window.innerHeight / 2 - 40 };
+      }
+    }
+    
+    showCaptureConfirmation(selectedText, rect);
+  } else {
+    console.log('[CAPTURE MODE] No text selected');
+  }
+}
+
+function showCaptureConfirmation(text, rect) {
+  // Remove any existing confirmation
+  const existing = document.getElementById('quote-capture-confirm');
+  if (existing) existing.remove();
+  
+  // Create confirmation popup
+  const popup = document.createElement('div');
+  popup.id = 'quote-capture-confirm';
+  popup.style.cssText = `
+    position: fixed;
+    left: ${rect.left + window.scrollX}px;
+    top: ${rect.bottom + window.scrollY + 5}px;
+    background: white;
+    border: 2px solid #3b82f6;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    padding: 8px;
+    display: flex;
+    gap: 8px;
+    z-index: 999999;
+    animation: slideIn 0.2s ease-out;
+  `;
+  
+  // Add CSS animation
+  if (!document.getElementById('quote-capture-styles')) {
+    const style = document.createElement('style');
+    style.id = 'quote-capture-styles';
+    style.textContent = `
+      @keyframes slideIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  // Confirm button
+  const confirmBtn = document.createElement('button');
+  confirmBtn.textContent = '✓';
+  confirmBtn.style.cssText = `
+    background: #22c55e;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.15s;
+  `;
+  confirmBtn.onmouseover = () => confirmBtn.style.background = '#16a34a';
+  confirmBtn.onmouseout = () => confirmBtn.style.background = '#22c55e';
+  confirmBtn.onclick = (e) => {
+    e.stopPropagation();
+    // Capture the quote
+    chrome.runtime.sendMessage({
+      type: 'QUOTE_CAPTURED',
+      text: text,
+      field: captureField,
+      sourceUrl: window.location.href,
+      sourceTitle: document.title
+    });
+    popup.remove();
+    deactivateCaptureMode();
+  };
+  
+  // Cancel button
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = '✗';
+  cancelBtn.style.cssText = `
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.15s;
+  `;
+  cancelBtn.onmouseover = () => cancelBtn.style.background = '#dc2626';
+  cancelBtn.onmouseout = () => cancelBtn.style.background = '#ef4444';
+  cancelBtn.onclick = (e) => {
+    e.stopPropagation();
+    popup.remove();
+    window.getSelection().removeAllRanges();
+  };
+  
+  popup.appendChild(confirmBtn);
+  popup.appendChild(cancelBtn);
+  document.body.appendChild(popup);
+  
+  // Position adjustment if off-screen
+  const popupRect = popup.getBoundingClientRect();
+  if (popupRect.right > window.innerWidth) {
+    popup.style.left = `${window.innerWidth - popupRect.width - 10}px`;
+  }
+  if (popupRect.bottom > window.innerHeight) {
+    popup.style.top = `${rect.top + window.scrollY - popupRect.height - 5}px`;
+  }
+}
+
+function handleEscapeKey(e) {
+  if (e.key === 'Escape') {
+    chrome.runtime.sendMessage({ type: 'CAPTURE_CANCELLED' });
+    showToast('Capture cancelled', 'info', 2000);
+    deactivateCaptureMode();
+  }
+}
+
+function deactivateCaptureMode() {
+  if (!captureModeActive) return;
+  
+  console.log('[CAPTURE MODE] Deactivating');
+  captureModeActive = false;
+  captureField = null;
+  
+  // Remove overlay
+  const overlay = document.getElementById('ice-capture-overlay');
+  if (overlay) overlay.remove();
+  captureOverlay = null;
+  
+  // Remove confirmation popup if exists
+  const popup = document.getElementById('quote-capture-confirm');
+  if (popup) popup.remove();
+  
+  // Remove listeners
+  document.removeEventListener('keydown', handleCaptureKeyDown, true);
+  document.removeEventListener('copy', handleCopyEvent, true);
 }

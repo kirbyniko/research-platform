@@ -1,0 +1,427 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { DynamicForm } from '@/components/dynamic-form';
+import { FieldDefinition, FieldGroup, RecordQuote, RecordSource } from '@/types/platform';
+
+interface RecordData {
+  id: number;
+  data: Record<string, unknown>;
+  status: string;
+  record_type_slug: string;
+  record_type_name: string;
+  record_type_id: number;
+  workflow_config?: Record<string, unknown>;
+  verified_fields: Record<string, { verified: boolean; by: number; at: string }>;
+  submitted_by_name?: string;
+  submitted_by_email?: string;
+  reviewed_by_name?: string;
+  validated_by_name?: string;
+  is_guest_submission: boolean;
+  guest_name?: string;
+  guest_email?: string;
+  created_at: string;
+  updated_at: string;
+  reviewed_at?: string;
+  validated_at?: string;
+}
+
+export default function RecordDetailPage({ 
+  params 
+}: { 
+  params: Promise<{ slug: string; recordId: string }> 
+}) {
+  const router = useRouter();
+  const [projectSlug, setProjectSlug] = useState<string>('');
+  const [recordId, setRecordId] = useState<string>('');
+  const [record, setRecord] = useState<RecordData | null>(null);
+  const [fields, setFields] = useState<FieldDefinition[]>([]);
+  const [groups, setGroups] = useState<FieldGroup[]>([]);
+  const [quotes, setQuotes] = useState<RecordQuote[]>([]);
+  const [sources, setSources] = useState<RecordSource[]>([]);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+
+  const fetchRecord = useCallback(async () => {
+    if (!projectSlug || !recordId) return;
+    
+    try {
+      const response = await fetch(`/api/projects/${projectSlug}/records/${recordId}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Record not found');
+        }
+        throw new Error('Failed to fetch record');
+      }
+      
+      const data = await response.json();
+      setRecord(data.record);
+      setFields(data.fields || []);
+      setQuotes(data.quotes || []);
+      setSources(data.sources || []);
+      setUserRole(data.role);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  }, [projectSlug, recordId]);
+
+  useEffect(() => {
+    params.then(p => {
+      setProjectSlug(p.slug);
+      setRecordId(p.recordId);
+    });
+  }, [params]);
+
+  useEffect(() => {
+    fetchRecord();
+  }, [fetchRecord]);
+
+  const handleUpdate = async (formData: Record<string, unknown>) => {
+    const response = await fetch(`/api/projects/${projectSlug}/records/${recordId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: formData }),
+    });
+    
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Failed to update record');
+    }
+    
+    setIsEditing(false);
+    fetchRecord();
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!confirm(`Change status to ${newStatus}?`)) return;
+    
+    try {
+      const response = await fetch(`/api/projects/${projectSlug}/records/${recordId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update status');
+      }
+      
+      fetchRecord();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update status');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this record? This action cannot be undone.')) return;
+    
+    try {
+      const response = await fetch(`/api/projects/${projectSlug}/records/${recordId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete record');
+      }
+      
+      router.push(`/projects/${projectSlug}/records`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete record');
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusColors: Record<string, string> = {
+      pending_review: 'bg-yellow-100 text-yellow-800',
+      pending_validation: 'bg-blue-100 text-blue-800',
+      verified: 'bg-green-100 text-green-800',
+      rejected: 'bg-red-100 text-red-800',
+      archived: 'bg-gray-100 text-gray-800',
+    };
+    
+    const statusLabels: Record<string, string> = {
+      pending_review: 'Pending Review',
+      pending_validation: 'Pending Validation',
+      verified: 'Verified',
+      rejected: 'Rejected',
+      archived: 'Archived',
+    };
+    
+    return (
+      <span className={`px-3 py-1 text-sm font-medium rounded-full ${statusColors[status] || 'bg-gray-100 text-gray-800'}`}>
+        {statusLabels[status] || status}
+      </span>
+    );
+  };
+
+  const canEdit = userRole && ['owner', 'admin', 'reviewer', 'validator'].includes(userRole);
+  const canDelete = userRole && ['owner', 'admin'].includes(userRole);
+
+  if (!projectSlug || !recordId) {
+    return <div className="p-8">Loading...</div>;
+  }
+
+  if (loading) {
+    return <div className="p-8 text-center">Loading record...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+        <Link href={`/projects/${projectSlug}/records`} className="mt-4 inline-block text-blue-600 hover:underline">
+          ← Back to Records
+        </Link>
+      </div>
+    );
+  }
+
+  if (!record) {
+    return <div className="p-8">Record not found</div>;
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      {/* Header */}
+      <div className="mb-6">
+        <Link href={`/projects/${projectSlug}/records`} className="text-blue-600 hover:underline text-sm">
+          ← Back to Records
+        </Link>
+        
+        <div className="flex items-center justify-between mt-4">
+          <div>
+            <h1 className="text-2xl font-bold">{record.record_type_name} #{record.id}</h1>
+            <div className="flex items-center space-x-4 mt-2">
+              {getStatusBadge(record.status)}
+              <span className="text-sm text-gray-500">
+                Created {new Date(record.created_at).toLocaleString()}
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex space-x-2">
+            {canEdit && !isEditing && (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+              >
+                Edit
+              </button>
+            )}
+            {canDelete && (
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 text-sm bg-red-100 text-red-700 rounded-md hover:bg-red-200"
+              >
+                Delete
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Status Actions */}
+      {canEdit && (
+        <div className="bg-gray-50 rounded-lg p-4 mb-6">
+          <h3 className="text-sm font-medium text-gray-700 mb-2">Workflow Actions</h3>
+          <div className="flex flex-wrap gap-2">
+            {record.status === 'pending_review' && (
+              <>
+                <button
+                  onClick={() => handleStatusChange('pending_validation')}
+                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Mark as Reviewed
+                </button>
+                <button
+                  onClick={() => handleStatusChange('rejected')}
+                  className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
+                >
+                  Reject
+                </button>
+              </>
+            )}
+            {record.status === 'pending_validation' && (
+              <>
+                <button
+                  onClick={() => handleStatusChange('verified')}
+                  className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                >
+                  Verify & Publish
+                </button>
+                <button
+                  onClick={() => handleStatusChange('pending_review')}
+                  className="px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200"
+                >
+                  Send Back to Review
+                </button>
+              </>
+            )}
+            {record.status === 'verified' && (
+              <button
+                onClick={() => handleStatusChange('archived')}
+                className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+              >
+                Archive
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Metadata */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <h3 className="text-lg font-medium mb-4">Submission Info</h3>
+        <dl className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <dt className="text-gray-500">Submitted By</dt>
+            <dd className="font-medium">
+              {record.is_guest_submission ? (
+                <span>
+                  Guest{record.guest_name ? `: ${record.guest_name}` : ''}
+                  {record.guest_email && <span className="text-gray-500 ml-2">({record.guest_email})</span>}
+                </span>
+              ) : (
+                record.submitted_by_name || 'Unknown'
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-gray-500">Created</dt>
+            <dd className="font-medium">{new Date(record.created_at).toLocaleString()}</dd>
+          </div>
+          {record.reviewed_by_name && (
+            <div>
+              <dt className="text-gray-500">Reviewed By</dt>
+              <dd className="font-medium">
+                {record.reviewed_by_name}
+                {record.reviewed_at && (
+                  <span className="text-gray-500 ml-2">
+                    ({new Date(record.reviewed_at).toLocaleString()})
+                  </span>
+                )}
+              </dd>
+            </div>
+          )}
+          {record.validated_by_name && (
+            <div>
+              <dt className="text-gray-500">Validated By</dt>
+              <dd className="font-medium">
+                {record.validated_by_name}
+                {record.validated_at && (
+                  <span className="text-gray-500 ml-2">
+                    ({new Date(record.validated_at).toLocaleString()})
+                  </span>
+                )}
+              </dd>
+            </div>
+          )}
+        </dl>
+      </div>
+
+      {/* Record Data */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <h3 className="text-lg font-medium mb-4">Record Data</h3>
+        
+        {isEditing ? (
+          <DynamicForm
+            projectSlug={projectSlug}
+            recordTypeSlug={record.record_type_slug}
+            recordId={record.id}
+            mode="review"
+            fields={fields}
+            groups={groups}
+            initialData={record.data}
+            quotes={quotes}
+            verifiedFields={record.verified_fields}
+            onSubmit={handleUpdate}
+            onCancel={() => setIsEditing(false)}
+          />
+        ) : (
+          <DynamicForm
+            projectSlug={projectSlug}
+            recordTypeSlug={record.record_type_slug}
+            recordId={record.id}
+            mode="view"
+            fields={fields}
+            groups={groups}
+            initialData={record.data}
+            quotes={quotes}
+            verifiedFields={record.verified_fields}
+            onSubmit={async () => {}}
+          />
+        )}
+      </div>
+
+      {/* Quotes */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <h3 className="text-lg font-medium mb-4">Quotes ({quotes.length})</h3>
+        {quotes.length === 0 ? (
+          <p className="text-gray-500">No quotes attached to this record.</p>
+        ) : (
+          <div className="space-y-4">
+            {quotes.map(quote => (
+              <div key={quote.id} className="border-l-4 border-blue-300 pl-4 py-2">
+                <p className="italic">&ldquo;{quote.quote_text}&rdquo;</p>
+                {quote.source && (
+                  <p className="text-sm text-gray-500 mt-1">— {quote.source}</p>
+                )}
+                {quote.source_url && (
+                  <a href={quote.source_url} target="_blank" rel="noopener noreferrer" 
+                     className="text-xs text-blue-600 hover:underline">
+                    View Source
+                  </a>
+                )}
+                {quote.linked_fields && quote.linked_fields.length > 0 && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Linked to: {quote.linked_fields.join(', ')}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Sources */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-medium mb-4">Sources ({sources.length})</h3>
+        {sources.length === 0 ? (
+          <p className="text-gray-500">No sources attached to this record.</p>
+        ) : (
+          <div className="space-y-3">
+            {sources.map(source => (
+              <div key={source.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded">
+                <span className="text-gray-400">🔗</span>
+                <div className="flex-1">
+                  <a href={source.url} target="_blank" rel="noopener noreferrer" 
+                     className="text-blue-600 hover:underline font-medium">
+                    {source.title || source.url}
+                  </a>
+                  {source.source_type && (
+                    <span className="ml-2 text-xs bg-gray-200 px-2 py-0.5 rounded">
+                      {source.source_type}
+                    </span>
+                  )}
+                  {source.notes && (
+                    <p className="text-sm text-gray-500 mt-1">{source.notes}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -454,6 +454,43 @@
       border-radius: 4px;
     }
     
+    .quote-picker-capture {
+      padding: 6px 8px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      gap: 6px;
+    }
+    
+    .quote-picker-capture-btn {
+      flex: 1;
+      padding: 6px 12px;
+      font-size: 12px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.15s;
+    }
+    
+    .quote-picker-capture-btn:hover {
+      background: #2563eb;
+    }
+    
+    .quote-picker-capture-btn.active {
+      background: #22c55e;
+      animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
     .quote-picker-list {
       flex: 1;
       overflow-y: auto;
@@ -710,6 +747,160 @@
       padding: 12px 16px;
     }
     
+    /* Custom Fields Styles */
+    .custom-fields-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .custom-fields-empty {
+      text-align: center;
+      padding: 16px;
+      color: #666;
+    }
+    
+    .custom-field-item {
+      background: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 10px;
+    }
+    
+    .custom-field-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 6px;
+    }
+    
+    .custom-field-name {
+      font-weight: 600;
+      color: #1a1a1a;
+      font-size: 12px;
+    }
+    
+    .custom-field-actions {
+      display: flex;
+      gap: 4px;
+    }
+    
+    .custom-field-btn {
+      background: none;
+      border: none;
+      color: #666;
+      cursor: pointer;
+      padding: 2px 4px;
+      font-size: 11px;
+      border-radius: 3px;
+    }
+    
+    .custom-field-btn:hover {
+      background: #e0e0e0;
+    }
+    
+    .custom-field-btn.delete:hover {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    
+    .custom-field-value {
+      font-size: 12px;
+      color: #333;
+      margin-bottom: 6px;
+      padding: 6px 8px;
+      background: white;
+      border-radius: 4px;
+      border: 1px solid #e0e0e0;
+    }
+    
+    .custom-field-value:empty::before {
+      content: '(no value)';
+      color: #999;
+      font-style: italic;
+    }
+    
+    .custom-field-quotes {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 6px;
+    }
+    
+    .custom-field-quote {
+      font-size: 11px;
+      color: #666;
+      background: #f0fdf4;
+      padding: 6px 8px;
+      border-radius: 4px;
+      border-left: 2px solid #22c55e;
+    }
+    
+    .custom-field-quote-text {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    
+    /* Custom Field Modal */
+    .custom-field-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 3000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .custom-field-modal.open {
+      display: flex;
+    }
+    
+    .custom-field-modal-content {
+      background: white;
+      border-radius: 8px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    
+    .custom-field-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid #eee;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .custom-field-modal-close {
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: #666;
+      padding: 4px 8px;
+    }
+    
+    .custom-field-modal-body {
+      padding: 16px;
+    }
+    
+    .custom-field-modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 12px 16px;
+      border-top: 1px solid #eee;
+    }
+
     /* Field Verification Styles */
     .verification-checkbox-wrapper {
       display: inline-flex;
@@ -745,6 +936,22 @@
     .form-input.unverified-highlight {
       border: 2px solid #f59e0b;
       background: #fef3c7;
+    }
+    
+    .form-input.missing-quote-warning,
+    textarea.missing-quote-warning {
+      border: 2px solid #fbbf24 !important;
+      background: #fef3c7 !important;
+      animation: pulse-warning 1s ease-in-out 3;
+    }
+    
+    @keyframes pulse-warning {
+      0%, 100% { 
+        box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7);
+      }
+      50% {
+        box-shadow: 0 0 0 8px rgba(251, 191, 36, 0);
+      }
     }
 
     /* Validation Items */
@@ -791,6 +998,14 @@
       color: #1f2937;
       font-size: 13px;
       margin-top: 2px;
+    }
+    
+    .validation-quotes-header {
+      font-size: 12px;
+      font-weight: 500;
+      color: #1e40af;
+      margin-top: 8px;
+      margin-bottom: 4px;
     }
     
     .validation-quote {
@@ -1147,6 +1362,16 @@
     
     .btn-danger:hover:not(:disabled) {
       background: #dc2626;
+    }
+    
+    .btn-outline {
+      background: white;
+      color: #3b82f6;
+      border: 1px solid #3b82f6;
+    }
+    
+    .btn-outline:hover:not(:disabled) {
+      background: #eff6ff;
     }
     
     .btn-sm {
@@ -1735,6 +1960,62 @@
       cursor: pointer;
     }
     
+    /* Content Type Selector */
+    .content-type-option {
+      flex: 1;
+      min-width: 100px;
+    }
+    
+    .content-type-option:has(input:checked) {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+    
+    .content-type-option:hover:not(:has(input:disabled)) {
+      border-color: #93c5fd;
+      background: #f8fafc;
+    }
+    
+    .content-type-option:has(input:disabled) {
+      cursor: not-allowed;
+    }
+
+    /* Tri-state selector for binary yes/no/unknown fields */
+    .tri-state-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    
+    .tri-state-field .field-label {
+      font-size: 12px;
+      color: #374151;
+    }
+    
+    .tri-state-select {
+      padding: 4px 8px;
+      font-size: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      background: white;
+      width: 120px;
+      cursor: pointer;
+    }
+    
+    .tri-state-select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+    
+    .tri-state-select option[value=""] { color: #9ca3af; }
+    .tri-state-select option[value="yes"] { color: #166534; }
+    .tri-state-select option[value="no"] { color: #b91c1c; }
+    
+    .tri-state-select.value-unknown { border-color: #d1d5db; }
+    .tri-state-select.value-yes { border-color: #16a34a; background: #f0fdf4; }
+    .tri-state-select.value-no { border-color: #dc2626; background: #fef2f2; }
+    
     /* Violation cards (checkbox-based with expandable details) */
     .violations-list {
       display: flex;
@@ -2249,6 +2530,259 @@
     .duplicate-match-link:hover {
       text-decoration: underline;
     }
+    
+    /* AI Chat Styles */
+    .ai-message {
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    
+    .ai-message.ai-user {
+      background: #dbeafe;
+      color: #1e40af;
+      margin-left: 20px;
+    }
+    
+    .ai-message.ai-assistant {
+      background: white;
+      border: 1px solid #e2e8f0;
+      margin-right: 20px;
+    }
+    
+    .ai-message.ai-system {
+      background: #f8fafc;
+      color: #64748b;
+      font-style: italic;
+    }
+    
+    .ai-message.ai-error {
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+    
+    .ai-citation {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 6px;
+      padding: 10px;
+      margin: 8px 0;
+    }
+    
+    .ai-citation-header {
+      font-size: 10px;
+      color: #92400e;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .ai-citation-text {
+      font-style: italic;
+      color: #1f2937;
+      border-left: 3px solid #fcd34d;
+      padding-left: 8px;
+      margin: 8px 0;
+    }
+    
+    .ai-citation-source {
+      font-size: 10px;
+      color: #6b7280;
+    }
+    
+    .ai-suggestion {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: 6px;
+      padding: 10px;
+      margin: 8px 0;
+    }
+    
+    .ai-suggestion-header {
+      font-size: 10px;
+      color: #166534;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .ai-field-suggestion {
+      background: #f0f9ff;
+      border: 1px solid #7dd3fc;
+      border-radius: 6px;
+      padding: 10px;
+      margin: 8px 0;
+    }
+    
+    .ai-field-suggestion-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    
+    .ai-field-suggestion-field {
+      font-size: 11px;
+      font-weight: 600;
+      color: #0369a1;
+      text-transform: capitalize;
+    }
+    
+    .ai-field-suggestion-value {
+      background: white;
+      border: 1px solid #e0f2fe;
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin: 4px 0;
+    }
+    
+    .ai-field-suggestion-source {
+      font-size: 10px;
+      color: #64748b;
+      margin-top: 4px;
+      font-style: italic;
+    }
+    
+    .ai-field-suggestion-quote {
+      font-size: 10px;
+      color: #475569;
+      background: #f8fafc;
+      padding: 4px 6px;
+      border-radius: 3px;
+      margin-top: 4px;
+      border-left: 2px solid #7dd3fc;
+    }
+    
+    .btn-apply-field {
+      font-size: 10px;
+      padding: 2px 8px;
+      background: #0284c7;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .btn-apply-field:hover {
+      background: #0369a1;
+    }
+    
+    .btn-apply-field.applied {
+      background: #16a34a;
+    }
+    
+    .ai-quick-btn {
+      font-size: 10px;
+      padding: 4px 8px;
+    }
+    
+    .ai-thinking {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      color: #64748b;
+      font-size: 12px;
+    }
+    
+    .ai-thinking-dots {
+      display: flex;
+      gap: 4px;
+    }
+    
+    .ai-thinking-dot {
+      width: 6px;
+      height: 6px;
+      background: #94a3b8;
+      border-radius: 50%;
+      animation: ai-pulse 1.4s infinite ease-in-out both;
+    }
+    
+    .ai-thinking-dot:nth-child(1) { animation-delay: -0.32s; }
+    .ai-thinking-dot:nth-child(2) { animation-delay: -0.16s; }
+    
+    @keyframes ai-pulse {
+      0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+    
+    /* Exact citation badge */
+    .exact-badge {
+      display: inline-block;
+      background: #22c55e;
+      color: white;
+      font-size: 9px;
+      padding: 1px 4px;
+      border-radius: 3px;
+      margin-left: 4px;
+      font-weight: 600;
+    }
+    
+    /* AI Analysis Modal */
+    .ai-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 20px;
+      overflow-y: auto;
+    }
+    
+    .ai-modal {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      width: 95%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .ai-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      color: white;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .ai-modal-close {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 4px;
+    }
+    
+    .ai-modal-close:hover {
+      opacity: 0.8;
+    }
+    
+    .ai-modal-body {
+      padding: 16px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    
+    .wide-tab-header {
+      display: flex;
+      align-items: center;
+    }
   </style>
 </head>
 <body>
@@ -2269,6 +2803,7 @@
     <div class="tabs">
       <button class="tab active" data-tab="case">Incident</button>
       <button class="tab" data-tab="review" id="reviewTab" style="display: none;">Cases</button>
+      <button class="tab" data-tab="statements" id="statementsTab" style="display: none;">Statements</button>
       <button class="tab" data-tab="validate" id="validateTab" style="display: none;">Validate</button>
       <button class="tab" data-tab="settings">Settings</button>
     </div>
@@ -2276,20 +2811,66 @@
     <div class="tab-content-wrapper">
     <!-- Case Tab -->
     <div class="tab-content active" id="tab-case">
-      <div class="wide-tab-header">Incident Details</div>
+      <div class="wide-tab-header">
+        Incident Details
+        <button class="btn btn-sm btn-outline" id="openAiAnalysisBtn" style="margin-left: auto; background: #eff6ff; border-color: #3b82f6;" title="AI Analysis Assistant">🤖 AI Analysis</button>
+      </div>
       
       <!-- Extract buttons at top -->
       <div style="display: flex; gap: 8px; margin-bottom: 16px; padding: 12px; background: #f8f9fa; border-radius: 4px;">
         <button class="btn btn-primary" id="caseExtractBtn" style="flex: 1;" title="Extract quotes from entire page">📰 Extract Page</button>
         <button class="btn btn-secondary" id="togglePasteTextBtn" style="flex: 1;">📋 Paste Text</button>
-        <button class="btn btn-secondary" id="newCaseBtn" style="flex: 1;">New Incident</button>
+        <button class="btn btn-secondary" id="newCaseBtn" style="flex: 1;">New Record</button>
       </div>
+      
+      <!-- CONTENT TYPE SELECTOR (NEW) -->
+      <div class="section" style="margin-bottom: 16px;">
+        <div class="form-group">
+          <label class="form-label" style="font-weight: 600; margin-bottom: 8px;">What are you documenting?</label>
+          <div class="content-type-selector" style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <label class="content-type-option" style="display: flex; align-items: center; padding: 8px 12px; border: 2px solid #e0e0e0; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+              <input type="radio" name="content_type" value="incident" checked style="margin-right: 8px;">
+              <div>
+                <div style="font-weight: 500;">🚨 Incident</div>
+                <div style="font-size: 10px; color: #666;">Deaths, arrests, raids</div>
+              </div>
+            </label>
+            <label class="content-type-option" style="display: flex; align-items: center; padding: 8px 12px; border: 2px solid #e0e0e0; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+              <input type="radio" name="content_type" value="statement" style="margin-right: 8px;">
+              <div>
+                <div style="font-weight: 500;">📢 Statement</div>
+                <div style="font-size: 10px; color: #666;">Public denunciations</div>
+              </div>
+            </label>
+            <label class="content-type-option" style="display: flex; align-items: center; padding: 8px 12px; border: 2px solid #e0e0e0; border-radius: 6px; cursor: pointer; transition: all 0.2s; opacity: 0.5;">
+              <input type="radio" name="content_type" value="legal" disabled style="margin-right: 8px;">
+              <div>
+                <div style="font-weight: 500;">⚖️ Legal</div>
+                <div style="font-size: 10px; color: #666;">Coming soon</div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- INCIDENT FORM (existing, wrapped in container) -->
+      <div id="incidentFormContainer">
       
       <!-- Paste text area (collapsible) -->
       <div id="pasteTextArea" style="display: none; margin-bottom: 16px; padding: 12px; background: #f8f9fa; border-radius: 4px;">
         <label class="form-label" style="margin-bottom: 6px;">Paste text to extract quotes from:</label>
         <textarea class="form-input" id="casePasteText" rows="6" placeholder="Paste article text here..." style="font-size: 12px; line-height: 1.4;"></textarea>
         <button class="btn btn-primary" id="caseExtractFromTextBtn" style="width: 100%; margin-top: 8px;">Extract from Pasted Text</button>
+      </div>
+      
+      <!-- Duplicate Checker -->
+      <div id="duplicateChecker" class="duplicate-checker" style="margin-bottom: 16px;">
+        <button type="button" id="checkDuplicatesBtn" class="btn btn-sm btn-secondary" style="width: 100%;">
+          🔍 Check for Duplicates
+        </button>
+        <div id="duplicateResults" class="duplicate-results hidden" style="margin-top: 8px; padding: 8px; border-radius: 4px; font-size: 12px;">
+          <!-- Results will be populated here -->
+        </div>
       </div>
       
       <!-- Progress indicator -->
@@ -2426,16 +3007,6 @@
               <div class="quote-picker-list" data-field="name"></div>
             </div>
           </div>
-          
-          <!-- Duplicate Checker -->
-          <div id="duplicateChecker" class="duplicate-checker" style="margin-top: 8px;">
-            <button type="button" id="checkDuplicatesBtn" class="btn btn-sm btn-secondary" style="width: 100%;">
-              🔍 Check for Duplicates
-            </button>
-            <div id="duplicateResults" class="duplicate-results hidden" style="margin-top: 8px; padding: 8px; border-radius: 4px; font-size: 12px;">
-              <!-- Results will be populated here -->
-            </div>
-          </div>
         </div>
         
         <div class="form-row">
@@ -2454,8 +3025,7 @@
               <div class="quote-picker-dropdown" data-field="date">
                 <div class="quote-picker-search">
                   <input type="text" placeholder="Search quotes..." data-field="date">
-                </div>
-                <div class="quote-picker-list" data-field="date"></div>
+                </div><div class="quote-picker-list" data-field="date"></div>
               </div>
             </div>
           </div>
@@ -2474,8 +3044,7 @@
               <div class="quote-picker-dropdown" data-field="age">
                 <div class="quote-picker-search">
                   <input type="text" placeholder="Search quotes..." data-field="age">
-                </div>
-                <div class="quote-picker-list" data-field="age"></div>
+                </div><div class="quote-picker-list" data-field="age"></div>
               </div>
             </div>
           </div>
@@ -2497,8 +3066,7 @@
               <div class="quote-picker-dropdown" data-field="nationality">
                 <div class="quote-picker-search">
                   <input type="text" placeholder="Search quotes..." data-field="nationality">
-                </div>
-                <div class="quote-picker-list" data-field="nationality"></div>
+                </div><div class="quote-picker-list" data-field="nationality"></div>
               </div>
             </div>
           </div>
@@ -2517,8 +3085,7 @@
               <div class="quote-picker-dropdown" data-field="gender">
                 <div class="quote-picker-search">
                   <input type="text" placeholder="Search quotes..." data-field="gender">
-                </div>
-                <div class="quote-picker-list" data-field="gender"></div>
+                </div><div class="quote-picker-list" data-field="gender"></div>
               </div>
             </div>
           </div>
@@ -2540,8 +3107,7 @@
               <div class="quote-picker-dropdown" data-field="immigration_status">
                 <div class="quote-picker-search">
                   <input type="text" placeholder="Search quotes..." data-field="immigration_status">
-                </div>
-                <div class="quote-picker-list" data-field="immigration_status"></div>
+                </div><div class="quote-picker-list" data-field="immigration_status"></div>
               </div>
             </div>
           </div>
@@ -2562,8 +3128,7 @@
             <div class="quote-picker-dropdown" data-field="facility">
               <div class="quote-picker-search">
                 <input type="text" placeholder="Search quotes..." data-field="facility">
-              </div>
-              <div class="quote-picker-list" data-field="facility"></div>
+              </div><div class="quote-picker-list" data-field="facility"></div>
             </div>
           </div>
         </div>
@@ -2584,8 +3149,7 @@
               <div class="quote-picker-dropdown" data-field="city">
                 <div class="quote-picker-search">
                   <input type="text" placeholder="Search quotes..." data-field="city">
-                </div>
-                <div class="quote-picker-list" data-field="city"></div>
+                </div><div class="quote-picker-list" data-field="city"></div>
               </div>
             </div>
           </div>
@@ -2604,8 +3168,7 @@
               <div class="quote-picker-dropdown" data-field="state">
                 <div class="quote-picker-search">
                   <input type="text" placeholder="Search quotes..." data-field="state">
-                </div>
-                <div class="quote-picker-list" data-field="state"></div>
+                </div><div class="quote-picker-list" data-field="state"></div>
               </div>
             </div>
           </div>
@@ -2624,8 +3187,7 @@
               <span class="selected-quote-preview">[src] Link...</span>
             </button>
             <div class="quote-picker-dropdown" data-field="summary">
-              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="summary"></div>
-              <div class="quote-picker-list" data-field="summary"></div>
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="summary"></div><div class="quote-picker-list" data-field="summary"></div>
             </div>
           </div>
         </div>
@@ -2634,8 +3196,18 @@
         <div class="form-group">
           <label class="form-label">Media (Images &amp; Videos)</label>
           <div id="mediaList" class="media-list" style="margin-bottom: 8px;"></div>
-          <button type="button" class="btn btn-sm btn-secondary btn-block" id="addMediaBtn">+ Add Image/Video</button>
-          <p class="form-hint">Images must be public domain, Creative Commons, or otherwise free-use. Videos can be YouTube, Vimeo, or direct links.</p>
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <button type="button" class="btn btn-sm btn-secondary" id="addMediaBtn" style="flex: 1;">+ Add URL</button>
+            <button type="button" class="btn btn-sm btn-primary" id="uploadMediaBtn" style="flex: 1;">📤 Upload File</button>
+            <input type="file" id="mediaFileInput" accept="image/*,video/*" style="display: none;" multiple>
+          </div>
+          <div id="uploadProgress" style="display: none; margin-bottom: 8px;">
+            <div style="background: #e2e8f0; border-radius: 4px; height: 8px; overflow: hidden;">
+              <div id="uploadProgressBar" style="background: #3b82f6; height: 100%; width: 0%; transition: width 0.3s;"></div>
+            </div>
+            <p id="uploadStatus" style="font-size: 11px; color: #64748b; margin-top: 4px;">Uploading...</p>
+          </div>
+          <p class="form-hint">Upload screenshots or videos directly, or add URLs to existing media. Max: 10MB images, 100MB videos.</p>
         </div>
         
         <!-- Tags Section -->
@@ -2706,10 +3278,21 @@
         </div>
         <div class="collapsible-content open" id="shootingContent">
           <div class="form-row">
-            <div class="form-group">
-              <label class="checkbox-item">
-                <input type="checkbox" id="shootingFatal"> Fatal
-              </label>
+            <div class="form-group tri-state-field">
+              <label class="field-label">Fatal</label>
+              <select class="tri-state-select" id="shootingFatal">
+                <option value="">Unknown</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+              <div class="quote-association" style="position: relative; margin-top: 4px;">
+                <button type="button" class="quote-picker-trigger" data-field="shooting_fatal">
+                  <span class="selected-quote-preview">[src] Link...</span>
+                </button>
+                <div class="quote-picker-dropdown" data-field="shooting_fatal">
+                  <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="shooting_fatal"></div><div class="quote-picker-list" data-field="shooting_fatal"></div>
+                </div>
+              </div>
             </div>
             <div class="form-group">
               <label class="form-label">Shots Fired
@@ -2724,8 +3307,7 @@
                   <span class="selected-quote-preview">[src] Link...</span>
                 </button>
                 <div class="quote-picker-dropdown" data-field="shots_fired">
-                  <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="shots_fired"></div>
-                  <div class="quote-picker-list" data-field="shots_fired"></div>
+                  <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="shots_fired"></div><div class="quote-picker-list" data-field="shots_fired"></div>
                 </div>
               </div>
             </div>
@@ -2750,21 +3332,59 @@
                 <span class="selected-quote-preview">[src] Link...</span>
               </button>
               <div class="quote-picker-dropdown" data-field="weapon_type">
-                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="weapon_type"></div>
-                <div class="quote-picker-list" data-field="weapon_type"></div>
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="weapon_type"></div><div class="quote-picker-list" data-field="weapon_type"></div>
               </div>
             </div>
           </div>
-          <div class="checkbox-grid">
-            <label class="checkbox-item">
-              <input type="checkbox" id="bodycamAvailable"> Bodycam Available
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="victimArmed"> Victim Was Armed
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="warningGiven"> Warning Given
-            </label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="tri-state-field">
+              <label class="field-label">Bodycam Available</label>
+              <select class="tri-state-select" id="bodycamAvailable">
+                <option value="">Unknown</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+              <div class="quote-association" style="position: relative; margin-top: 4px;">
+                <button type="button" class="quote-picker-trigger" data-field="bodycam_available">
+                  <span class="selected-quote-preview">[src] Link...</span>
+                </button>
+                <div class="quote-picker-dropdown" data-field="bodycam_available">
+                  <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="bodycam_available"></div><div class="quote-picker-list" data-field="bodycam_available"></div>
+                </div>
+              </div>
+            </div>
+            <div class="tri-state-field">
+              <label class="field-label">Victim Armed</label>
+              <select class="tri-state-select" id="victimArmed">
+                <option value="">Unknown</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+              <div class="quote-association" style="position: relative; margin-top: 4px;">
+                <button type="button" class="quote-picker-trigger" data-field="victim_armed">
+                  <span class="selected-quote-preview">[src] Link...</span>
+                </button>
+                <div class="quote-picker-dropdown" data-field="victim_armed">
+                  <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="victim_armed"></div><div class="quote-picker-list" data-field="victim_armed"></div>
+                </div>
+              </div>
+            </div>
+            <div class="tri-state-field">
+              <label class="field-label">Warning Given</label>
+              <select class="tri-state-select" id="warningGiven">
+                <option value="">Unknown</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+              <div class="quote-association" style="position: relative; margin-top: 4px;">
+                <button type="button" class="quote-picker-trigger" data-field="warning_given">
+                  <span class="selected-quote-preview">[src] Link...</span>
+                </button>
+                <div class="quote-picker-dropdown" data-field="warning_given">
+                  <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="warning_given"></div><div class="quote-picker-list" data-field="warning_given"></div>
+                </div>
+              </div>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">Context
@@ -2779,8 +3399,7 @@
                 <span class="selected-quote-preview">[src] Link...</span>
               </button>
               <div class="quote-picker-dropdown" data-field="shooting_context">
-                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="shooting_context"></div>
-                <div class="quote-picker-list" data-field="shooting_context"></div>
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="shooting_context"></div><div class="quote-picker-list" data-field="shooting_context"></div>
               </div>
             </div>
           </div>
@@ -2806,8 +3425,7 @@
               <span class="selected-quote-preview">[src] Link...</span>
             </button>
             <div class="quote-picker-dropdown" data-field="death_cause">
-              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_cause"></div>
-              <div class="quote-picker-list" data-field="death_cause"></div>
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_cause"></div><div class="quote-picker-list" data-field="death_cause"></div>
             </div>
           </div>
         </div>
@@ -2834,8 +3452,7 @@
                 <span class="selected-quote-preview">[src] Link...</span>
               </button>
               <div class="quote-picker-dropdown" data-field="death_manner">
-                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_manner"></div>
-                <div class="quote-picker-list" data-field="death_manner"></div>
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_manner"></div><div class="quote-picker-list" data-field="death_manner"></div>
               </div>
             </div>
           </div>
@@ -2852,20 +3469,29 @@
                 <span class="selected-quote-preview">[src] Link...</span>
               </button>
               <div class="quote-picker-dropdown" data-field="death_custody_duration">
-                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_custody_duration"></div>
-                <div class="quote-picker-list" data-field="death_custody_duration"></div>
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_custody_duration"></div><div class="quote-picker-list" data-field="death_custody_duration"></div>
               </div>
             </div>
           </div>
         </div>
         
-        <div class="checkbox-grid" style="margin-top: 8px;">
-          <label class="checkbox-item">
-            <input type="checkbox" id="medicalNeglectAlleged"> Medical neglect alleged
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" id="autopsyAvailable"> Autopsy Available
-          </label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px;">
+          <div class="tri-state-field">
+            <label class="field-label">Medical Neglect Alleged</label>
+            <select class="tri-state-select" id="medicalNeglectAlleged">
+              <option value="">Unknown</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+          <div class="tri-state-field">
+            <label class="field-label">Autopsy Available</label>
+            <select class="tri-state-select" id="autopsyAvailable">
+              <option value="">Unknown</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </div>
         </div>
         
         <div class="form-group" style="margin-top: 12px;">
@@ -2881,8 +3507,136 @@
               <span class="selected-quote-preview">[src] Link...</span>
             </button>
             <div class="quote-picker-dropdown" data-field="death_circumstances">
-              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_circumstances"></div>
-              <div class="quote-picker-list" data-field="death_circumstances"></div>
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="death_circumstances"></div><div class="quote-picker-list" data-field="death_circumstances"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Arrest Details Section -->
+
+      <div class="section hidden" id="arrestFields">
+        <div class="section-header">
+          <span class="section-title">Arrest Details</span>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Stated Reason
+            <span class="verification-checkbox-wrapper" style="display: none;" data-field="arrest_reason">
+              <input type="checkbox" class="field-verify-checkbox" data-field="arrest_reason">
+              <span class="checkbox-label">Verified</span>
+            </span>
+          </label>
+          <textarea class="form-input" id="arrestReason" rows="2" placeholder="Official reason given..."></textarea>
+          <div class="quote-association" style="position: relative; margin-top: 4px;">
+            <button type="button" class="quote-picker-trigger" data-field="arrest_reason">
+              <span class="selected-quote-preview">[src] Link...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="arrest_reason">
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="arrest_reason"></div><div class="quote-picker-list" data-field="arrest_reason"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Context
+            <span class="verification-checkbox-wrapper" style="display: none;" data-field="arrest_context">
+              <input type="checkbox" class="field-verify-checkbox" data-field="arrest_context">
+              <span class="checkbox-label">Verified</span>
+            </span>
+          </label>
+          <textarea class="form-input" id="arrestContext" rows="2" placeholder="Circumstances around arrest..."></textarea>
+          <div class="quote-association" style="position: relative; margin-top: 4px;">
+            <button type="button" class="quote-picker-trigger" data-field="arrest_context">
+              <span class="selected-quote-preview">[src] Link...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="arrest_context">
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="arrest_context"></div><div class="quote-picker-list" data-field="arrest_context"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Charges
+            <span class="verification-checkbox-wrapper" style="display: none;" data-field="arrest_charges">
+              <input type="checkbox" class="field-verify-checkbox" data-field="arrest_charges">
+              <span class="checkbox-label">Verified</span>
+            </span>
+          </label>
+          <textarea class="form-input" id="arrestCharges" rows="2" placeholder="Formal charges filed (if any)..."></textarea>
+          <div class="quote-association" style="position: relative; margin-top: 4px;">
+            <button type="button" class="quote-picker-trigger" data-field="arrest_charges">
+              <span class="selected-quote-preview">[src] Link...</span>
+            </button>
+            <div class="quote-picker-dropdown" data-field="arrest_charges">
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="arrest_charges"></div><div class="quote-picker-list" data-field="arrest_charges"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px;">
+          <div class="tri-state-field">
+            <label class="field-label">Warrant Present</label>
+            <select class="tri-state-select" id="warrantPresent">
+              <option value="">Unknown</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+            <div class="quote-association" style="position: relative; margin-top: 4px;">
+              <button type="button" class="quote-picker-trigger" data-field="warrant_present">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="warrant_present">
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="warrant_present"></div><div class="quote-picker-list" data-field="warrant_present"></div>
+              </div>
+            </div>
+          </div>
+          <div class="tri-state-field">
+            <label class="field-label">Timing Suspicious</label>
+            <select class="tri-state-select" id="arrestTimingSuspicious">
+              <option value="">Unknown</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+            <div class="quote-association" style="position: relative; margin-top: 4px;">
+              <button type="button" class="quote-picker-trigger" data-field="timing_suspicious">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="timing_suspicious">
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="timing_suspicious"></div><div class="quote-picker-list" data-field="timing_suspicious"></div>
+              </div>
+            </div>
+          </div>
+          <div class="tri-state-field">
+            <label class="field-label">Pretext Arrest</label>
+            <select class="tri-state-select" id="arrestPretext">
+              <option value="">Unknown</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+            <div class="quote-association" style="position: relative; margin-top: 4px;">
+              <button type="button" class="quote-picker-trigger" data-field="pretext_arrest">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="pretext_arrest">
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="pretext_arrest"></div><div class="quote-picker-list" data-field="pretext_arrest"></div>
+              </div>
+            </div>
+          </div>
+          <div class="tri-state-field">
+            <label class="field-label">Selective Enforcement</label>
+            <select class="tri-state-select" id="arrestSelective">
+              <option value="">Unknown</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+            <div class="quote-association" style="position: relative; margin-top: 4px;">
+              <button type="button" class="quote-picker-trigger" data-field="selective_enforcement">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="selective_enforcement">
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="selective_enforcement"></div><div class="quote-picker-list" data-field="selective_enforcement"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -2897,6 +3651,14 @@
         <div class="collapsible-content open" id="excessiveForceContent">
           <div class="form-group">
             <label class="form-label">Force Type(s)</label>
+            <div class="quote-association" style="position: relative; margin-top: 4px; margin-bottom: 8px;">
+              <button type="button" class="quote-picker-trigger" data-field="force_types">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="force_types">
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="force_types"></div><div class="quote-picker-list" data-field="force_types"></div>
+              </div>
+            </div>
             <div class="checkbox-grid">
               <label class="checkbox-item">
                 <input type="checkbox" id="force-physical" value="physical"> Physical
@@ -2924,19 +3686,39 @@
               </label>
             </div>
           </div>
-          <div class="checkbox-grid">
-            <label class="checkbox-item">
-              <input type="checkbox" id="victimRestrained"> Victim Was Restrained
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="victimComplying"> Victim Was Complying
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="videoEvidence"> Video Evidence Exists
-            </label>
-            <label class="checkbox-item">
-              <input type="checkbox" id="hospitalizationRequired"> Hospitalization Required
-            </label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+            <div class="tri-state-field">
+              <label class="field-label">Victim Restrained</label>
+              <select class="tri-state-select" id="victimRestrained">
+                <option value="">Unknown</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+            <div class="tri-state-field">
+              <label class="field-label">Victim Complying</label>
+              <select class="tri-state-select" id="victimComplying">
+                <option value="">Unknown</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+            <div class="tri-state-field">
+              <label class="field-label">Video Evidence Exists</label>
+              <select class="tri-state-select" id="videoEvidence">
+                <option value="">Unknown</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+            <div class="tri-state-field">
+              <label class="field-label">Hospitalization Required</label>
+              <select class="tri-state-select" id="hospitalizationRequired">
+                <option value="">Unknown</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
           </div>
           <div class="form-group" style="margin-top: 12px;">
             <label class="form-label">Injuries Sustained
@@ -2951,8 +3733,7 @@
                 <span class="selected-quote-preview">[src] Link...</span>
               </button>
               <div class="quote-picker-dropdown" data-field="injuries_sustained">
-                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="injuries_sustained"></div>
-                <div class="quote-picker-list" data-field="injuries_sustained"></div>
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="injuries_sustained"></div><div class="quote-picker-list" data-field="injuries_sustained"></div>
               </div>
             </div>
           </div>
@@ -2979,8 +3760,7 @@
               <span class="selected-quote-preview">[src] Link...</span>
             </button>
             <div class="quote-picker-dropdown" data-field="injury_type">
-              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="injury_type"></div>
-              <div class="quote-picker-list" data-field="injury_type"></div>
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="injury_type"></div><div class="quote-picker-list" data-field="injury_type"></div>
             </div>
           </div>
         </div>
@@ -3005,8 +3785,7 @@
                 <span class="selected-quote-preview">[src] Link...</span>
               </button>
               <div class="quote-picker-dropdown" data-field="injury_severity">
-                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="injury_severity"></div>
-                <div class="quote-picker-list" data-field="injury_severity"></div>
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="injury_severity"></div><div class="quote-picker-list" data-field="injury_severity"></div>
               </div>
             </div>
           </div>
@@ -3018,8 +3797,7 @@
                 <span class="selected-quote-preview">[src] Link...</span>
               </button>
               <div class="quote-picker-dropdown" data-field="injury_weapon">
-                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="injury_weapon"></div>
-                <div class="quote-picker-list" data-field="injury_weapon"></div>
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="injury_weapon"></div><div class="quote-picker-list" data-field="injury_weapon"></div>
               </div>
             </div>
           </div>
@@ -3033,8 +3811,7 @@
               <span class="selected-quote-preview">[src] Link...</span>
             </button>
             <div class="quote-picker-dropdown" data-field="injury_cause">
-              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="injury_cause"></div>
-              <div class="quote-picker-list" data-field="injury_cause"></div>
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="injury_cause"></div><div class="quote-picker-list" data-field="injury_cause"></div>
             </div>
           </div>
         </div>
@@ -3059,8 +3836,7 @@
               <span class="selected-quote-preview">[src] Link...</span>
             </button>
             <div class="quote-picker-dropdown" data-field="medical_condition">
-              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="medical_condition"></div>
-              <div class="quote-picker-list" data-field="medical_condition"></div>
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="medical_condition"></div><div class="quote-picker-list" data-field="medical_condition"></div>
             </div>
           </div>
         </div>
@@ -3078,19 +3854,44 @@
               <span class="selected-quote-preview">[src] Link...</span>
             </button>
             <div class="quote-picker-dropdown" data-field="treatment_denied">
-              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="treatment_denied"></div>
-              <div class="quote-picker-list" data-field="treatment_denied"></div>
+              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="treatment_denied"></div><div class="quote-picker-list" data-field="treatment_denied"></div>
             </div>
           </div>
         </div>
         
-        <div class="checkbox-grid" style="margin-top: 8px;">
-          <label class="checkbox-item">
-            <input type="checkbox" id="requestsDocumented"> Requests documented
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" id="resultedInDeath"> Resulted in death
-          </label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px;">
+          <div class="tri-state-field">
+            <label class="field-label">Requests Documented</label>
+            <select class="tri-state-select" id="requestsDocumented">
+              <option value="">Unknown</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+            <div class="quote-association" style="position: relative; margin-top: 4px;">
+              <button type="button" class="quote-picker-trigger" data-field="requests_documented">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="requests_documented">
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="requests_documented"></div><div class="quote-picker-list" data-field="requests_documented"></div>
+              </div>
+            </div>
+          </div>
+          <div class="tri-state-field">
+            <label class="field-label">Resulted in Death</label>
+            <select class="tri-state-select" id="resultedInDeath">
+              <option value="">Unknown</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+            <div class="quote-association" style="position: relative; margin-top: 4px;">
+              <button type="button" class="quote-picker-trigger" data-field="resulted_in_death">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="resulted_in_death">
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="resulted_in_death"></div><div class="quote-picker-list" data-field="resulted_in_death"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       
@@ -3104,110 +3905,100 @@
           <div class="form-group">
             <label class="form-label">Protest Topic</label>
             <input type="text" class="form-input" id="protestTopic" placeholder="e.g., Immigration policy, ICE protest">
+            <div class="quote-association" style="position: relative; margin-top: 4px;">
+              <button type="button" class="quote-picker-trigger" data-field="protest_topic">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="protest_topic">
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="protest_topic"></div><div class="quote-picker-list" data-field="protest_topic"></div>
+              </div>
+            </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Estimated Size</label>
               <input type="text" class="form-input" id="protestSize" placeholder="e.g., 50-100">
+              <div class="quote-association" style="position: relative; margin-top: 4px;">
+                <button type="button" class="quote-picker-trigger" data-field="protest_size">
+                  <span class="selected-quote-preview">[src] Link...</span>
+                </button>
+                <div class="quote-picker-dropdown" data-field="protest_size">
+                  <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="protest_size"></div><div class="quote-picker-list" data-field="protest_size"></div>
+                </div>
+              </div>
             </div>
-            <div class="form-group">
-              <label class="checkbox-item" style="margin-top: 28px;">
-                <input type="checkbox" id="protestPermitted"> Permitted
+            <div class="form-group tri-state-field">
+              <label class="field-label">Permitted</label>
+              <select class="tri-state-select" id="protestPermitted">
+                <option value="">Unknown</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+              <div class="quote-association" style="position: relative; margin-top: 4px;">
+                <button type="button" class="quote-picker-trigger" data-field="permitted">
+                  <span class="selected-quote-preview">[src] Link...</span>
+                </button>
+                <div class="quote-picker-dropdown" data-field="permitted">
+                  <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="permitted"></div><div class="quote-picker-list" data-field="permitted"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Dispersal Methods (if any) - Select all that apply</label>
+            <div class="quote-association" style="position: relative; margin-top: 4px; margin-bottom: 8px;">
+              <button type="button" class="quote-picker-trigger" data-field="dispersal_method">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="dispersal_method">
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="dispersal_method"></div><div class="quote-picker-list" data-field="dispersal_method"></div>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px;">
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 13px;">
+                <input type="checkbox" class="dispersal-method-checkbox" value="tear_gas"> Tear Gas
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 13px;">
+                <input type="checkbox" class="dispersal-method-checkbox" value="pepper_spray"> Pepper Spray
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 13px;">
+                <input type="checkbox" class="dispersal-method-checkbox" value="rubber_bullets"> Rubber Bullets
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 13px;">
+                <input type="checkbox" class="dispersal-method-checkbox" value="flashbang"> Flashbang
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 13px;">
+                <input type="checkbox" class="dispersal-method-checkbox" value="batons"> Batons
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 13px;">
+                <input type="checkbox" class="dispersal-method-checkbox" value="sound_cannons"> Sound Cannons
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 13px;">
+                <input type="checkbox" class="dispersal-method-checkbox" value="water_cannon"> Water Cannon
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 13px;">
+                <input type="checkbox" class="dispersal-method-checkbox" value="mounted_police"> Mounted Police
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 13px;">
+                <input type="checkbox" class="dispersal-method-checkbox" value="mass_arrest"> Mass Arrest
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 13px;">
+                <input type="checkbox" class="dispersal-method-checkbox" value="other"> Other
               </label>
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">Dispersal Method (if any)</label>
-            <select class="form-input" id="dispersalMethod">
-              <option value="">None/N/A</option>
-              <option value="tear_gas">Tear Gas</option>
-              <option value="rubber_bullets">Rubber Bullets</option>
-              <option value="flashbang">Flashbang</option>
-              <option value="batons">Batons/Physical Force</option>
-              <option value="water_cannon">Water Cannon</option>
-              <option value="mounted_police">Mounted Police</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div class="form-group">
             <label class="form-label">Arrests Made</label>
             <input type="number" class="form-input" id="arrestsMade" placeholder="Number">
-          </div>
-        </div>
-      </div>
-      
-      <!-- Case Form Section -->
-
-      <div class="section hidden" id="arrestFields">
-        <div class="section-header">
-          <span class="section-title">Arrest Details</span>
-        </div>
-        
-        <div class="form-group">
-          <label class="form-label">Stated Reason
-            <span class="verification-checkbox-wrapper" style="display: none;" data-field="arrest_reason">
-              <input type="checkbox" class="field-verify-checkbox" data-field="arrest_reason">
-              <span class="checkbox-label">Verified</span>
-            </span>
-          </label>
-          <input type="text" class="form-input" id="arrestReason" placeholder="Official justification">
-          <div class="quote-association" style="position: relative; margin-top: 4px;">
-            <button type="button" class="quote-picker-trigger" data-field="arrest_reason">
-              <span class="selected-quote-preview">[src] Link...</span>
-            </button>
-            <div class="quote-picker-dropdown" data-field="arrest_reason">
-              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="arrest_reason"></div>
-              <div class="quote-picker-list" data-field="arrest_reason"></div>
+            <div class="quote-association" style="position: relative; margin-top: 4px;">
+              <button type="button" class="quote-picker-trigger" data-field="arrests_made">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="arrests_made">
+                <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="arrests_made"></div><div class="quote-picker-list" data-field="arrests_made"></div>
+              </div>
             </div>
           </div>
-        </div>
-        
-        <div class="form-group">
-          <label class="form-label">Actual Context
-            <span class="verification-checkbox-wrapper" style="display: none;" data-field="arrest_context">
-              <input type="checkbox" class="field-verify-checkbox" data-field="arrest_context">
-              <span class="checkbox-label">Verified</span>
-            </span>
-          </label>
-          <textarea class="form-input" id="arrestContext" placeholder="What was really happening"></textarea>
-          <div class="quote-association" style="position: relative; margin-top: 4px;">
-            <button type="button" class="quote-picker-trigger" data-field="arrest_context">
-              <span class="selected-quote-preview">[src] Link...</span>
-            </button>
-            <div class="quote-picker-dropdown" data-field="arrest_context">
-              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="arrest_context"></div>
-              <div class="quote-picker-list" data-field="arrest_context"></div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label class="form-label">Charges</label>
-          <input type="text" class="form-input" id="arrestCharges" placeholder="Comma-separated charges">
-          <div class="quote-association" style="position: relative; margin-top: 4px;">
-            <button type="button" class="quote-picker-trigger" data-field="arrest_charges">
-              <span class="selected-quote-preview">[src] Link...</span>
-            </button>
-            <div class="quote-picker-dropdown" data-field="arrest_charges">
-              <div class="quote-picker-search"><input type="text" placeholder="Search quotes..." data-field="arrest_charges"></div>
-              <div class="quote-picker-list" data-field="arrest_charges"></div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="checkbox-grid" style="margin-top: 8px;">
-          <label class="checkbox-item">
-            <input type="checkbox" id="warrantPresent"> Warrant present
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" id="arrestTimingSuspicious"> Timing suspicious
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" id="arrestPretext"> Pretext arrest
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" id="arrestSelective"> Selective enforcement
-          </label>
         </div>
       </div>
       
@@ -3710,6 +4501,21 @@
         </div>
       </div>
       
+      <!-- Custom Fields Section -->
+      <div class="section" id="customFieldsSection">
+        <div class="section-header">
+          <span class="section-title">🔧 Custom Fields (<span id="customFieldCount">0</span>)</span>
+          <button class="btn btn-sm btn-secondary" id="addCustomFieldBtn">+ Add Field</button>
+        </div>
+        
+        <div id="customFieldsList" class="custom-fields-list">
+          <div class="empty-state custom-fields-empty">
+            <p>No custom fields yet</p>
+            <p style="font-size: 11px; margin-top: 4px;">Add custom fields via right-click menu or the button above</p>
+          </div>
+        </div>
+      </div>
+      
       <!-- Sources Section -->
       <div class="section">
         <div class="section-header">
@@ -3724,6 +4530,314 @@
           <!-- Sources will be populated here -->
         </div>
       </div>
+      
+      </div><!-- End incidentFormContainer -->
+      
+      <!-- STATEMENT FORM CONTAINER (NEW - hidden by default) -->
+      <div id="statementFormContainer" style="display: none;">
+        
+        <!-- Statement Core Fields -->
+        <div class="section">
+          <div class="section-header">
+            <span class="section-title">Statement Details</span>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Statement Type *</label>
+            <select class="form-input" id="statementType" required>
+              <option value="">Select type...</option>
+              <option value="denunciation">Denunciation</option>
+              <option value="support">Statement of Support</option>
+              <option value="legal_analysis">Legal Analysis</option>
+              <option value="official_response">Official Response</option>
+            </select>
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="statement_type">
+                <span class="selected-quote-preview">[src] Link quote...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="statement_type">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="statement_type">
+                </div>
+                <div class="quote-picker-list" data-field="statement_type"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Date of Statement *
+              <span class="verification-checkbox-wrapper" style="display: none;" data-field="statement_date">
+                <input type="checkbox" class="field-verify-checkbox" data-field="statement_date">
+                <span class="checkbox-label">Verified</span>
+              </span>
+            </label>
+            <input type="date" class="form-input" id="statementDate" required>
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="statement_date">
+                <span class="selected-quote-preview">[src] Link...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="statement_date">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="statement_date">
+                </div>
+                <div class="quote-picker-list" data-field="statement_date"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Headline/Summary *
+              <span class="verification-checkbox-wrapper" style="display: none;" data-field="headline">
+                <input type="checkbox" class="field-verify-checkbox" data-field="headline">
+                <span class="checkbox-label">Verified</span>
+              </span>
+            </label>
+            <input type="text" class="form-input" id="statementHeadline" placeholder="Brief summary for listings" required>
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="headline">
+                <span class="selected-quote-preview">[src] Link quote...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="headline">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="headline">
+                </div>
+                <div class="quote-picker-list" data-field="headline"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Key Quote *
+              <span class="verification-checkbox-wrapper" style="display: none;" data-field="key_quote">
+                <input type="checkbox" class="field-verify-checkbox" data-field="key_quote">
+                <span class="checkbox-label">Verified</span>
+              </span>
+            </label>
+            <textarea class="form-input" id="statementKeyQuote" rows="3" placeholder="Most impactful quote (required)" required></textarea>
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="key_quote">
+                <span class="selected-quote-preview">[src] Link quote...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="key_quote">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="key_quote">
+                </div>
+                <div class="quote-picker-list" data-field="key_quote"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Speaker Information -->
+        <div class="section">
+          <div class="section-header">
+            <span class="section-title">Speaker Information</span>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Speaker Name *</label>
+            <input type="text" class="form-input" id="speakerName" placeholder="Full name" required>
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="speaker_name">
+                <span class="selected-quote-preview">[src] Link quote...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="speaker_name">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="speaker_name">
+                </div>
+                <div class="quote-picker-list" data-field="speaker_name"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Title/Role</label>
+            <input type="text" class="form-input" id="speakerTitle" placeholder="e.g., Senator, Actor, Immigration Attorney">
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="speaker_title">
+                <span class="selected-quote-preview">[src] Link quote...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="speaker_title">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="speaker_title">
+                </div>
+                <div class="quote-picker-list" data-field="speaker_title"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Speaker Type *</label>
+            <select class="form-input" id="speakerType" required>
+              <option value="">Select type...</option>
+              <option value="politician">Politician</option>
+              <option value="celebrity">Celebrity/Public Figure</option>
+              <option value="journalist">Journalist</option>
+              <option value="legal_expert">Legal Expert</option>
+              <option value="medical_expert">Medical Professional</option>
+              <option value="religious_leader">Religious Leader</option>
+              <option value="business_leader">Business Leader</option>
+              <option value="activist">Activist</option>
+              <option value="academic">Academic/Researcher</option>
+              <option value="law_enforcement">Law Enforcement</option>
+              <option value="military">Military Official</option>
+              <option value="former_official">Former Government Official</option>
+              <option value="victim">Victim</option>
+              <option value="family_member">Family Member</option>
+              <option value="witness">Witness</option>
+              <option value="other">Other</option>
+            </select>
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="speaker_type">
+                <span class="selected-quote-preview">[src] Link quote...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="speaker_type">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="speaker_type">
+                </div>
+                <div class="quote-picker-list" data-field="speaker_type"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Political Affiliation</label>
+            <select class="form-input" id="politicalAffiliation">
+              <option value="">Select affiliation...</option>
+              <option value="democrat">Democrat</option>
+              <option value="republican">Republican</option>
+              <option value="independent">Independent</option>
+              <option value="libertarian">Libertarian</option>
+              <option value="green">Green Party</option>
+              <option value="nonpartisan">Non-partisan</option>
+              <option value="unknown">Unknown</option>
+            </select>
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="political_affiliation">
+                <span class="selected-quote-preview">[src] Link quote...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="political_affiliation">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="political_affiliation">
+                </div>
+                <div class="quote-picker-list" data-field="political_affiliation"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Wikipedia URL</label>
+            <input type="text" class="form-input" id="speakerWikipedia" placeholder="For identity verification">
+          </div>
+        </div>
+        
+        <!-- Statement Context -->
+        <div class="section">
+          <div class="section-header">
+            <span class="section-title">Statement Context</span>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Platform</label>
+            <select class="form-input" id="statementPlatform">
+              <option value="">Select platform...</option>
+              <option value="twitter">Twitter/X</option>
+              <option value="facebook">Facebook</option>
+              <option value="instagram">Instagram</option>
+              <option value="tiktok">TikTok</option>
+              <option value="interview">Interview</option>
+              <option value="press_conference">Press Conference</option>
+              <option value="speech">Speech</option>
+              <option value="op_ed">Op-Ed</option>
+              <option value="testimony">Congressional Testimony</option>
+              <option value="other">Other</option>
+            </select>
+            <div class="quote-association" style="position: relative;">
+              <button type="button" class="quote-picker-trigger" data-field="platform">
+                <span class="selected-quote-preview">[src] Link quote...</span>
+              </button>
+              <div class="quote-picker-dropdown" data-field="platform">
+                <div class="quote-picker-search">
+                  <input type="text" placeholder="Search quotes..." data-field="platform">
+                </div>
+                <div class="quote-picker-list" data-field="platform"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Statement Quotes Section (reuses same quote UI) -->
+        <div class="section">
+          <div class="section-header">
+            <span class="section-title">💬 Supporting Quotes (<span id="statementQuoteCount">0</span>)</span>
+          </div>
+          
+          <div class="quote-list" id="statementQuoteList">
+            <div class="empty-state">
+              <p>No quotes captured yet</p>
+              <p style="font-size: 11px; margin-top: 4px;">Use "Extract Page" or add manually below</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Manual Quote Add Section for Statements -->
+        <div class="section">
+          <div class="collapsible-header" id="statementManualAddHeader">
+            <span class="section-title">➕ Add Quote Manually</span>
+          </div>
+          <div class="collapsible-content" id="statementManualAddContent">
+            <div class="form-group">
+              <label class="form-label">Quote Text</label>
+              <textarea class="form-input" id="statementManualQuoteText" placeholder="Paste or type the exact quote..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Source</label>
+              <select class="form-input" id="statementManualQuoteSource">
+                <option value="">-- Select a source --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Category</label>
+              <select class="form-input" id="statementManualQuoteCategory">
+                <option value="speaker_quote">Speaker Quote</option>
+                <option value="context">Background Context</option>
+                <option value="response">Response/Reaction</option>
+                <option value="impact">Impact Evidence</option>
+                <option value="verification">Verification/Confirmation</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <button class="btn btn-primary btn-block" id="addStatementManualQuoteBtn">Add Quote</button>
+          </div>
+        </div>
+        
+        <!-- Statement Sources (reuses same source UI) -->
+        <div class="section">
+          <div class="section-header">
+            <span class="section-title">Sources (<span id="statementSourceCount">0</span>)</span>
+            <div style="display: flex; gap: 4px;">
+              <button class="btn btn-sm btn-secondary" id="addStatementSourceBtn">+ Add Page</button>
+              <button class="btn btn-sm btn-secondary" id="addManualStatementSourceBtn">+ Add URL</button>
+            </div>
+          </div>
+          
+          <div class="source-list" id="statementSourceList">
+            <!-- Sources will be populated here -->
+          </div>
+        </div>
+        
+      </div><!-- End statementFormContainer -->
+      
+      <!-- FORM ACTIONS (shown for both incident and statement forms) -->
+      <div class="section" id="formActionsSection">
+        <button class="btn btn-primary btn-block" id="saveCaseFormBtn" style="font-size: 14px; padding: 12px;">
+          💾 Save Case
+        </button>
+        <button class="btn btn-secondary btn-block" id="clearFormBtn" style="margin-top: 8px;">
+          🗑️ Clear Form
+        </button>
+      </div>
+      
     </div>
     
     <!-- Extract Tab -->
@@ -3809,6 +4923,12 @@
           <div class="form-group">
             <label class="form-label">Quote Text</label>
             <textarea class="form-input" id="manualQuoteText" placeholder="Paste or type the exact quote..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Source</label>
+            <select class="form-input" id="manualQuoteSource">
+              <option value="">-- Select a source --</option>
+            </select>
           </div>
           <div class="form-group">
             <label class="form-label">Category</label>
@@ -3929,61 +5049,168 @@
     <div class="tab-content" id="tab-validate">
       <div class="wide-tab-header">Validation Queue</div>
       
-      <!-- Validation Queue View -->
-      <div id="validateQueueView">
-        <div class="section">
-          <div class="section-header">
-            <span class="section-title">Cases Awaiting Validation</span>
-            <button class="btn btn-sm" id="refreshValidateQueueBtn">↻ Refresh</button>
-          </div>
-          <p class="help-text" style="font-size: 11px; color: #666; margin-bottom: 12px;">
-            Read-only verification. Cases must complete two reviews before appearing here.
-          </p>
-          
-          <!-- Filter Buttons for Validation -->
-          <div class="filter-buttons" id="validateFilterButtons">
-            <button class="filter-btn active" data-filter="all">All <span class="count" id="validateFilterAllCount">0</span></button>
-            <button class="filter-btn" data-filter="revalidation">🔄 Re-validate <span class="count" id="validateFilterRevalidationCount">0</span></button>
-            <button class="filter-btn" data-filter="new">New <span class="count" id="validateFilterNewCount">0</span></button>
-          </div>
-          
-          <div id="validateQueueList" class="queue-list">
-            <div class="empty-state">Loading validation queue...</div>
-          </div>
-        </div>
+      <!-- Sub-tabs for Cases and Statements -->
+      <div style="display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb;">
+        <button class="validate-subtab active" data-type="cases" style="padding: 8px 16px; border: none; background: none; cursor: pointer; font-weight: 500; border-bottom: 2px solid #3b82f6; color: #3b82f6; margin-bottom: -2px;">
+          📋 Cases
+        </button>
+        <button class="validate-subtab" data-type="statements" style="padding: 8px 16px; border: none; background: none; cursor: pointer; font-weight: 500; color: #6b7280;">
+          📢 Statements
+        </button>
       </div>
       
-      <!-- Validation Case View -->
-      <div id="validateCaseView" style="display: none;">
-        <div class="section">
-          <div class="section-header">
-            <button class="btn btn-sm btn-secondary" id="backToValidateQueueBtn">← Back to Queue</button>
-            <span class="section-title" id="validateCaseTitle">Validating Case</span>
-          </div>
-          
-          <!-- Validation Status -->
-          <div id="validateStatusBadge" class="status-badge" style="margin-bottom: 16px; padding: 8px 12px; border-radius: 6px; font-size: 12px;"></div>
-          
-          <!-- Previous Issues Warning -->
-          <div id="validatePreviousIssues" class="alert alert-warning" style="display: none; margin-bottom: 16px; padding: 12px; background: #fef3cd; border: 1px solid #ffc107; border-radius: 6px;">
-            <h4 style="margin: 0 0 8px 0; font-size: 13px;">⚠️ Previous Validation Issues</h4>
-            <div id="validatePreviousIssuesList"></div>
-          </div>
-          
-          <!-- Validation Content -->
-          <div id="validateCaseContent">
-            <!-- Fields, quotes, timeline, sources rendered here -->
+      <!-- Cases Validation Queue -->
+      <div id="validateCasesContainer">
+        <div id="validateQueueView">
+          <div class="section">
+            <div class="section-header">
+              <span class="section-title">Cases Awaiting Validation</span>
+              <button class="btn btn-sm" id="refreshValidateQueueBtn">↻ Refresh</button>
+            </div>
+            <p class="help-text" style="font-size: 11px; color: #666; margin-bottom: 12px;">
+              Read-only verification. Cases must complete two reviews before appearing here.
+            </p>
+            
+            <!-- Filter Buttons for Validation -->
+            <div class="filter-buttons" id="validateFilterButtons">
+              <button class="filter-btn active" data-filter="all">All <span class="count" id="validateFilterAllCount">0</span></button>
+              <button class="filter-btn" data-filter="revalidation">🔄 Re-validate <span class="count" id="validateFilterRevalidationCount">0</span></button>
+              <button class="filter-btn" data-filter="new">New <span class="count" id="validateFilterNewCount">0</span></button>
+            </div>
+            
+            <div id="validateQueueList" class="queue-list">
+              <div class="empty-state">Loading validation queue...</div>
+            </div>
           </div>
         </div>
         
-        <!-- Validation Actions -->
-        <div class="validate-actions" style="background: #fafafa; padding: 16px 0; border-top: 1px solid #e0e0e0; margin-top: 16px;">
+        <!-- Validation Case View -->
+        <div id="validateCaseView" style="display: none;">
+          <div class="section">
+            <div class="section-header">
+              <button class="btn btn-sm btn-secondary" id="backToValidateQueueBtn">← Back to Queue</button>
+              <span class="section-title" id="validateCaseTitle">Validating Case</span>
+            </div>
+            
+            <!-- Validation Status -->
+            <div id="validateStatusBadge" class="status-badge" style="margin-bottom: 16px; padding: 8px 12px; border-radius: 6px; font-size: 12px;"></div>
+            
+            <!-- Previous Issues Warning -->
+            <div id="validatePreviousIssues" class="alert alert-warning" style="display: none; margin-bottom: 16px; padding: 12px; background: #fef3cd; border: 1px solid #ffc107; border-radius: 6px;">
+              <h4 style="margin: 0 0 8px 0; font-size: 13px;">⚠️ Previous Validation Issues</h4>
+              <div id="validatePreviousIssuesList"></div>
+            </div>
+            
+            <!-- Validation Content -->
+            <div id="validateCaseContent">
+              <!-- Fields, quotes, timeline, sources rendered here -->
+            </div>
+          </div>
+          
+          <!-- Validation Actions -->
+          <div class="validate-actions" style="background: #fafafa; padding: 16px 0; border-top: 1px solid #e0e0e0; margin-top: 16px;">
           <div id="validateSummary" style="font-size: 12px; color: #666; margin-bottom: 12px;"></div>
           <div style="display: flex; gap: 8px;">
             <button class="btn btn-danger btn-sm" id="rejectValidationBtn">✗ Reject</button>
             <button class="btn btn-secondary btn-sm" id="returnToReviewBtn" disabled>↩ Return to Review</button>
             <button class="btn btn-success" id="submitValidationBtn" disabled>✓ Validate</button>
           </div>
+        </div>
+      </div>
+      </div>
+      
+      <!-- Statements Validation Queue -->
+      <div id="validateStatementsContainer" style="display: none;">
+        <div class="section">
+          <div class="section-header">
+            <span class="section-title">Statements Awaiting Validation</span>
+            <button class="btn btn-sm" id="refreshValidateStatementsBtn">↻ Refresh</button>
+          </div>
+          <p class="help-text" style="font-size: 11px; color: #666; margin-bottom: 12px;">
+            Statements need validation before publishing to the public site.
+          </p>
+          
+          <div id="validateStatementsQueueList" class="queue-list">
+            <div class="empty-state">Loading statements...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Statements Tab (Analyst Only) -->
+    <div class="tab-content" id="tab-statements">
+      <div class="wide-tab-header">Public Statements</div>
+      
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">📢 Statements Dashboard</span>
+          <button class="btn btn-small" id="refreshStatementsQueue">↻ Refresh</button>
+        </div>
+        
+        <!-- Search Bar -->
+        <div style="margin-bottom: 12px;">
+          <input type="text" id="statementsSearchInput" placeholder="🔍 Search by speaker, headline, quote..." 
+                 class="form-input" style="width: 100%; padding: 8px 12px;">
+        </div>
+        
+        <!-- Filter Summary and Dropdown Toggle -->
+        <div style="margin-bottom: 12px;">
+          <button id="statementsFilterToggle" class="filter-btn active" style="width: 100%; padding: 10px; text-align: left; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <span style="font-weight: 600; font-size: 13px;" id="statementsFilterLabel">Pending Review</span>
+              <span style="font-size: 18px; font-weight: bold; margin-left: 8px;" id="statementsFilterActiveCount">0</span>
+            </div>
+            <span style="font-size: 12px; opacity: 0.6;">▼ Filters</span>
+          </button>
+          
+          <div id="statementsFilterDropdown" style="display: none; margin-top: 8px; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px; background: #f9fafb;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px;">
+              <button class="filter-btn" data-filter="all" data-label="All Statements" style="padding: 8px; text-align: center; font-size: 11px;">
+                <div style="font-size: 16px; font-weight: bold;" id="statementsFilterAllCount">0</div>
+                <div style="opacity: 0.8;">All Statements</div>
+              </button>
+              <button class="filter-btn active" data-filter="pending" data-label="Pending Review" style="padding: 8px; text-align: center; font-size: 11px; background: #fef3c7; border-color: #fbbf24;">
+                <div style="font-size: 16px; font-weight: bold;" id="statementsFilterPendingCount">0</div>
+                <div style="opacity: 0.8;">Pending</div>
+              </button>
+              <button class="filter-btn" data-filter="first_review" data-label="🔍 Needs Validation" style="padding: 8px; text-align: center; font-size: 11px; background: #dbeafe; border-color: #3b82f6;">
+                <div style="font-size: 16px; font-weight: bold;" id="statementsFilterFirstReviewCount">0</div>
+                <div style="opacity: 0.8;">🔍 Validate</div>
+              </button>
+              <button class="filter-btn" data-filter="verified" data-label="✓ Verified" style="padding: 8px; text-align: center; font-size: 11px; background: #d1fae5; border-color: #10b981;">
+                <div style="font-size: 16px; font-weight: bold;" id="statementsFilterVerifiedCount">0</div>
+                <div style="opacity: 0.8;">✓ Verified</div>
+              </button>
+              <button class="filter-btn" data-filter="rejected" data-label="✗ Rejected" style="padding: 8px; text-align: center; font-size: 11px; background: #fee2e2; border-color: #ef4444;">
+                <div style="font-size: 16px; font-weight: bold;" id="statementsFilterRejectedCount">0</div>
+                <div style="opacity: 0.8;">✗ Rejected</div>
+              </button>
+              <button class="filter-btn" data-filter="guest" data-label="📝 Guest Submissions" style="padding: 8px; text-align: center; font-size: 11px; background: #e0e7ff; border-color: #6366f1;">
+                <div style="font-size: 16px; font-weight: bold;" id="statementsFilterGuestCount">0</div>
+                <div style="opacity: 0.8;">📝 Guest</div>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div id="statementsQueueStatus" style="padding: 12px; text-align: center; color: #666; font-size: 12px;">
+          Loading...
+        </div>
+        
+        <div id="statementsQueueList" style="display: none;">
+          <!-- Statements will be populated here -->
+        </div>
+      </div>
+      
+      <!-- Selected Statement Details -->
+      <div class="section" id="statementDetails" style="display: none;">
+        <div class="section-header">
+          <span class="section-title">Statement Details</span>
+          <button class="btn btn-small" id="closeStatementDetails">✕ Close</button>
+        </div>
+        
+        <div id="statementDetailContent">
+          <!-- Statement details will be populated here -->
         </div>
       </div>
     </div>
@@ -4061,7 +5288,157 @@
         </p>
       </div>
     </div>
+    
     </div><!-- end tab-content-wrapper -->
+    
+    <!-- AI Analysis Modal (Popup) -->
+    <div class="ai-modal-overlay" id="aiAnalysisModal" style="display: none;">
+      <div class="ai-modal">
+        <div class="ai-modal-header">
+          <span>🤖 AI Legal Analyst</span>
+          <button class="ai-modal-close" id="closeAiModal">×</button>
+        </div>
+        
+        <div class="ai-modal-body">
+          <!-- Important Disclaimer -->
+          <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 6px; padding: 10px; margin-bottom: 12px;">
+            <p style="font-size: 11px; color: #92400e; margin: 0; font-weight: 600;">
+              ⚠️ <strong>AI Suggestion Tool Only</strong> — This analysis is automated pattern matching, not legal advice. All findings must be reviewed by qualified legal professionals. The AI may miss context or make errors.
+            </p>
+          </div>
+          
+          <!-- Main Action: Auto-Fill from Quotes -->
+          <div style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1px solid #93c5fd; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <strong style="color: #1e40af; font-size: 13px;">🎯 Smart Auto-Fill</strong>
+              <button class="btn btn-sm" id="runSmartAutoFillBtn" style="background: #2563eb; color: white; padding: 6px 12px; font-weight: 600;">
+                Analyze & Fill Fields
+              </button>
+            </div>
+            <p style="font-size: 10px; color: #3b82f6; margin: 0;">
+              Scans all quotes, extracts relevant data, and fills form fields with source attribution.
+            </p>
+          </div>
+          
+          <!-- Rights Violation Analysis -->
+          <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #f59e0b; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <strong style="color: #92400e; font-size: 13px;">⚖️ Rights Violation Analysis</strong>
+              <button class="btn btn-sm" id="runRightsAnalysisBtn" style="background: #d97706; color: white; padding: 6px 12px; font-weight: 600;">
+                Analyze for Violations
+              </button>
+            </div>
+            <p style="font-size: 10px; color: #b45309; margin: 0;">
+              Checks quotes against constitutional standards and relevant case law. Suggests violations with legal citations.
+            </p>
+          </div>
+          
+          <!-- Analysis Results -->
+          <div id="analysisResults" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; max-height: 350px; overflow-y: auto; margin-bottom: 16px;">
+            <div id="analysisResultsContent" style="font-size: 12px;"></div>
+          </div>
+          
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 12px 0;">
+          
+          <!-- AI Model Section (Optional Enhancement) -->
+          <details id="aiModelSection">
+            <summary style="cursor: pointer; font-size: 12px; color: #64748b; margin-bottom: 8px;">
+              🤖 Advanced: Load AI Model (experimental)
+            </summary>
+            <div style="padding-top: 8px;">
+              <div id="aiNotReady" style="padding: 10px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 6px; margin-bottom: 10px;">
+                <p style="font-size: 10px; color: #92400e; margin-bottom: 8px;">
+                  Load a local AI model for conversational analysis. Requires WebGPU.
+                </p>
+                <div id="webgpuCheck" style="margin-bottom: 6px; font-size: 10px; color: #666;">
+                  Checking WebGPU support...
+                </div>
+                <select id="aiModelSelect" class="form-input" style="margin-bottom: 6px; font-size: 11px; padding: 4px;">
+                  <option value="TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC">TinyLlama 1.1B (2GB)</option>
+                  <option value="Qwen2-1.5B-Instruct-q4f16_1-MLC">Qwen2 1.5B (4GB)</option>
+                  <option value="Phi-3-mini-4k-instruct-q4f16_1-MLC">Phi-3 Mini (8GB)</option>
+                </select>
+                <button class="btn btn-sm btn-secondary btn-block" id="loadAiBtn" style="font-size: 11px;">Load AI Model</button>
+                <div id="aiLoadProgress" style="display: none; margin-top: 8px;">
+                  <div style="background: #e2e8f0; border-radius: 4px; height: 4px; overflow: hidden;">
+                    <div id="aiProgressBar" style="background: #3b82f6; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                  </div>
+                  <p id="aiProgressText" style="font-size: 9px; color: #64748b; margin-top: 4px;">Loading model...</p>
+                </div>
+              </div>
+              
+              <div id="aiReady" style="display: none; padding: 8px; background: #dcfce7; border: 1px solid #86efac; border-radius: 6px; margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="color: #166534; font-size: 11px;">✅ AI Ready (<span id="aiModelName">-</span>)</span>
+                  <button class="btn btn-sm btn-secondary" id="unloadAiBtn" style="font-size: 9px; padding: 2px 6px;">Unload</button>
+                </div>
+              </div>
+            </div>
+          </details>
+          
+          <!-- Chat Interface (shown when AI loaded) -->
+          <div id="aiChatSection" style="display: none;">
+            <!-- Disclaimer -->
+            <div style="background: #fef3c7; border: 1px solid #fbbf24; border-radius: 6px; padding: 8px; margin-bottom: 10px; font-size: 10px; color: #92400e;">
+              <strong>⚠️ Important:</strong> This AI assistant is a research tool, not legal advice. It analyzes patterns and references case law, but <strong>all legal determinations must be made by humans</strong>. The AI may make errors or miss important context. Always verify its suggestions.
+            </div>
+            
+            <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px;">
+              <button class="btn btn-sm btn-outline ai-quick-btn" data-query="Could this be a constitutional violation? Analyze the documented facts.">Rights</button>
+              <button class="btn btn-sm btn-outline ai-quick-btn" data-query="List all quotes and identify which might support a legal claim.">Evidence</button>
+              <button class="btn btn-sm btn-outline ai-quick-btn" data-query="What case law is relevant to these circumstances?">Case Law</button>
+            </div>
+            
+            <!-- Chat Messages -->
+            <div id="aiChatMessages" style="max-height: 200px; overflow-y: auto; margin-bottom: 8px; padding: 8px; background: #f8f9fa; border-radius: 6px; min-height: 100px;">
+              <div class="ai-message ai-system" style="padding: 8px; font-size: 10px; color: #666; text-align: center;">
+                AI chat ready. All citations are exact quotes from your data.
+              </div>
+            </div>
+            
+            <!-- Input -->
+            <div style="display: flex; gap: 6px;">
+              <textarea id="aiChatInput" class="form-input" rows="2" placeholder="Ask about this case..." style="flex: 1; resize: none; font-size: 11px;"></textarea>
+              <button class="btn btn-primary" id="aiSendBtn" style="align-self: flex-end; font-size: 11px;">Send</button>
+            </div>
+          </div>
+            
+            <div style="display: flex; justify-content: space-between;">
+              <button class="btn btn-sm btn-secondary" id="clearAiChatBtn" style="font-size: 10px;">Clear Chat</button>
+            </div>
+          </div>
+          
+          <!-- Results Panels (collapsible) -->
+          <div id="aiResultsPanels">
+            <!-- Citations Panel -->
+            <details id="aiCitationsSection" style="display: none; margin-top: 10px;">
+              <summary style="cursor: pointer; font-weight: 600; font-size: 12px; padding: 6px; background: #f1f5f9; border-radius: 4px;">📎 Citations</summary>
+              <div id="aiCitationsList" style="font-size: 11px; max-height: 150px; overflow-y: auto; padding: 8px;">
+              </div>
+            </details>
+            
+            <!-- Suggestions Panel -->
+            <details id="aiSuggestionsSection" style="display: none; margin-top: 8px;">
+              <summary style="cursor: pointer; font-weight: 600; font-size: 12px; padding: 6px; background: #f0fdf4; border-radius: 4px;">💡 Suggestions</summary>
+              <div id="aiSuggestionsList" style="font-size: 11px; max-height: 150px; overflow-y: auto; padding: 8px;">
+              </div>
+            </details>
+            
+            <!-- Field Suggestions Panel -->
+            <details id="aiFieldSuggestionsSection" style="display: none; margin-top: 8px;">
+              <summary style="cursor: pointer; font-weight: 600; font-size: 12px; padding: 6px; background: #f0f9ff; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+                <span>📝 Field Suggestions</span>
+              </summary>
+              <div style="padding: 8px;">
+                <button class="btn btn-sm btn-secondary" id="applyAllFieldSuggestions" style="margin-bottom: 8px; font-size: 10px;">Apply All</button>
+                <div id="aiFieldSuggestionsList" style="font-size: 11px; max-height: 150px; overflow-y: auto;">
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+    </div>
     
     <!-- Quote Picker Modal -->
     <div class="quote-picker-modal" id="quotePickerModal">
@@ -4075,6 +5452,26 @@
           <input type="text" placeholder="Search quotes..." id="modalQuoteSearch">
         </div>
         <div class="quote-picker-list" id="modalQuoteList"></div>
+      </div>
+    </div>
+    
+    <!-- Edit Quote Modal -->
+    <div class="quote-picker-modal" id="editQuoteModal">
+      <div class="quote-picker-modal-content">
+        <div class="quote-picker-modal-header">
+          <span>Edit Quote</span>
+          <button class="quote-picker-modal-close" id="closeEditQuoteModal">X</button>
+        </div>
+        <div style="padding: 16px;">
+          <div class="form-group">
+            <label class="form-label">Quote Text</label>
+            <textarea class="form-input" id="editQuoteText" rows="6" placeholder="Enter quote text..."></textarea>
+          </div>
+          <div style="display: flex; gap: 8px; justify-content: flex-end;">
+            <button class="btn btn-secondary" id="cancelEditQuote">Cancel</button>
+            <button class="btn btn-primary" id="saveEditQuote">Save Changes</button>
+          </div>
+        </div>
       </div>
     </div>
     
@@ -4125,6 +5522,37 @@
       </div>
     </div>
     
+    <!-- Custom Field Modal -->
+    <div class="custom-field-modal" id="customFieldModal">
+      <div class="custom-field-modal-content">
+        <div class="custom-field-modal-header">
+          <span id="customFieldModalTitle">Add Custom Field</span>
+          <button class="custom-field-modal-close" id="customFieldModalClose">&times;</button>
+        </div>
+        <div class="custom-field-modal-body">
+          <div class="form-group">
+            <label class="form-label">Field Name *</label>
+            <input type="text" class="form-input" id="customFieldName" placeholder="e.g., Attorney Name, Case Number">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Value</label>
+            <input type="text" class="form-input" id="customFieldValue" placeholder="Field value (optional)">
+          </div>
+          <div class="form-group" id="customFieldQuoteGroup" style="display: none;">
+            <label class="form-label">Quote to Link</label>
+            <textarea class="form-input" id="customFieldQuote" rows="3" readonly style="background: #f8f9fa;"></textarea>
+            <p class="help-text" style="font-size: 11px; color: #666; margin-top: 4px;">
+              This quote will be linked to the custom field
+            </p>
+          </div>
+        </div>
+        <div class="custom-field-modal-footer">
+          <button class="btn btn-secondary" id="customFieldCancel">Cancel</button>
+          <button class="btn btn-primary" id="customFieldSave">Save Field</button>
+        </div>
+      </div>
+    </div>
+    
     <!-- Guest Submission Confirmation Modal -->
     <div class="modal-container" id="guestSubmissionModal" style="display: none;">
       <div class="modal-content" style="max-width: 500px;">
@@ -4170,6 +5598,11 @@
   
   <script src="field-registry.js"></script>
   <script src="type-field-definitions.js"></script>
+  <script src="content-types.js"></script>
+  <script src="statement-field-definitions.js"></script>
+  <!-- WebLLM must load before ai-analyst.js -->
+  <script src="webllm.bundle.js"></script>
+  <script src="ai-analyst.js"></script>
   <script src="sidepanel.js"></script>
 </body>
 </html>

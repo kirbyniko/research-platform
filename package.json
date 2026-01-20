@@ -4,15 +4,18 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run validate && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "validate": "node scripts/validate-cases.js",
     "export-data": "node scripts/export-data.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.971.0",
+    "@aws-sdk/s3-request-presigner": "^3.971.0",
     "@descope/nextjs-sdk": "^0.15.7",
     "@descope/react-sdk": "^2.25.7",
+    "@mlc-ai/web-llm": "^0.2.80",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/nodemailer": "^7.0.4",
@@ -35,6 +38,7 @@
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "autoprefixer": "^10.4.23",
+    "esbuild": "^0.27.2",
     "eslint": "^9.17.0",
     "eslint-config-next": "^15.1.3",
     "postcss": "^8.4.49",

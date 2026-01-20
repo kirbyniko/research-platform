@@ -440,9 +440,6 @@ export default function DocumentAnalyzer({ caseId, onComplete }: DocumentAnalyze
                 <div className="space-y-3">
                   {result.quotes.filter(q => q.quote && q.quote.trim().length > 0).map((quote, idx) => (
                     <div key={idx} className="bg-gray-50 p-3 text-sm">
-                      <span className="inline-block bg-gray-200 text-xs px-2 py-1 mb-2">
-                        {quote.category}
-                      </span>
                       <blockquote className="italic text-gray-700">
                         "{quote.quote}"
                       </blockquote>

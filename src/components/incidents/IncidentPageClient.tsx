@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { IncidentHeader } from '@/components/incidents/IncidentHeader';
 import { IncidentDetails } from '@/components/incidents/IncidentDetails';
 import { IncidentSources } from '@/components/incidents/IncidentSources';
@@ -35,6 +36,14 @@ export function IncidentPageClient({ incident, incidentId, flatData, userRole }:
           </a>
           <div className="flex items-center gap-4">
             <SourceToggle />
+            {isAnalystOrAbove && (
+              <Link
+                href={`/dashboard/incidents/${incidentId}/propose-changes`}
+                className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors"
+              >
+                ✏️ Propose Changes
+              </Link>
+            )}
             <SuggestEditButton incidentId={incidentId} incidentData={flatData} />
           </div>
         </div>

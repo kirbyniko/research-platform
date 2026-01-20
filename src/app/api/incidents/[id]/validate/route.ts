@@ -214,8 +214,38 @@ export async function GET(
       `, [incidentId]);
       detailsRows = detailsResult.rows;
       console.log('[validate GET] Found', detailsRows.length, 'incident detail records');
+      
+      // Ensure details JSONB fields are properly parsed
+      detailsRows = detailsRows.map(row => ({
+        ...row,
+        details: typeof row.details === 'string' ? JSON.parse(row.details) : row.details
+      }));
     } catch (e) {
       console.log('[validate GET] Error fetching incident details:', e);
+    }
+    
+    // Get custom fields with linked quotes
+    console.log('[validate GET] Fetching custom fields...');
+    let customFieldsRows: any[] = [];
+    try {
+      const customFieldsResult = await pool.query(`
+        SELECT 
+          cf.*,
+          q.quote_text,
+          s.title as quote_source_title,
+          s.url as quote_source_url
+        FROM incident_custom_fields cf
+        LEFT JOIN quote_field_links qfl ON qfl.incident_id = cf.incident_id 
+          AND qfl.field_name = 'custom_' || cf.field_name
+        LEFT JOIN incident_quotes q ON qfl.quote_id = q.id
+        LEFT JOIN incident_sources s ON q.source_id = s.id
+        WHERE cf.incident_id = $1
+        ORDER BY cf.field_name
+      `, [incidentId]);
+      customFieldsRows = customFieldsResult.rows;
+      console.log('[validate GET] Found', customFieldsRows.length, 'custom fields');
+    } catch (e) {
+      console.log('[validate GET] Error fetching custom fields:', e);
     }
     
     console.log('[validate GET] Returning response...');
@@ -228,6 +258,7 @@ export async function GET(
       agencies: agenciesRows,
       violations: violationsRows,
       incident_details: detailsRows,
+      custom_fields: customFieldsRows,
       quote_field_links: linksRows,
       previous_issues: issuesRows
     });

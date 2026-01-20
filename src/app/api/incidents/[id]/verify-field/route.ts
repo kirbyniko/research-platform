@@ -50,13 +50,18 @@ export async function POST(
     }
     
     // Get current field value from incident
+    // NOTE: Return both victim_name and subject_name separately - don't transform
     const fieldQuery = await pool.query(
-      `SELECT COALESCE(subject_name, victim_name) as victim_name, 
+      `SELECT victim_name, subject_name, 
               incident_date, city, state, facility, summary, incident_type
        FROM incidents WHERE id = $1`,
       [incidentId]
     );
-    const currentFieldValue = fieldQuery.rows[0]?.[field_name] || null;
+    // For field verification, prioritize subject_name (canonical format) over victim_name (legacy)
+    let currentFieldValue = fieldQuery.rows[0]?.[field_name] || null;
+    if (field_name === 'victim_name' && !currentFieldValue) {
+      currentFieldValue = fieldQuery.rows[0]?.subject_name || null;
+    }
     
     // Check if field verification record exists
     const fieldVerifResult = await pool.query(
@@ -169,10 +174,12 @@ export async function GET(
     `, [incidentId]);
     
     // Get full incident details
+    // NOTE: Return raw data without transformation - the frontend handles display logic
+    // Do NOT use COALESCE(subject_name, victim_name) as victim_name - this causes
+    // data mismatches when comparing for proposed changes
     const incidentResult = await pool.query(`
       SELECT 
         i.*,
-        COALESCE(i.subject_name, i.victim_name) as victim_name,
         u1.name as submitter_name,
         u1.email as submitter_email,
         u2.name as first_verifier_name,

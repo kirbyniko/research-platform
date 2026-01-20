@@ -431,10 +431,10 @@ export const FIELD_REGISTRY: FieldDefinition[] = [
   {
     canonical: 'dispersal_method',
     aliases: ['dispersalMethod'],
-    label: 'Dispersal Method',
-    type: 'select',
+    label: 'Dispersal Methods',
+    type: 'array',
     category: 'protest',
-    options: ['tear_gas', 'pepper_spray', 'rubber_bullets', 'batons', 'sound_cannons', 'mass_arrest', 'other'],
+    options: ['tear_gas', 'pepper_spray', 'rubber_bullets', 'flashbang', 'batons', 'sound_cannons', 'water_cannon', 'mounted_police', 'mass_arrest', 'other'],
   },
   {
     canonical: 'arrests_made',

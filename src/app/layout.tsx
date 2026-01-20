@@ -4,8 +4,8 @@ import { AuthProvider } from '@/components/AuthProvider';
 import Navigation from '@/components/Navigation';
 
 export const metadata: Metadata = {
-  title: 'ICE Incident Tracker',
-  description: 'Verified records of incidents connected to U.S. Immigration and Customs Enforcement',
+  title: 'Research Platform',
+  description: 'A multi-project research documentation platform with verified records and collaborative workflows',
   icons: {
     icon: '/favicon.svg',
   },
@@ -24,7 +24,7 @@ export default function RootLayout({
         <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2">
           <div className="max-w-6xl mx-auto text-center">
             <p className="text-sm text-yellow-800">
-              <strong>⚠️ Beta Site:</strong> This site is under active construction. Data is currently unverified and should not be cited as authoritative.
+              <strong>⚠️ Beta:</strong> This platform is under active development. Features may change.
             </p>
           </div>
         </div>
@@ -33,7 +33,7 @@ export default function RootLayout({
         </main>
         <footer className="border-t border-gray-200 mt-16">
           <div className="max-w-6xl mx-auto px-4 py-8 text-sm text-gray-600">
-            <p>This project documents incidents connected to ICE using publicly available sources.</p>
+            <p>Research Platform - A documentation-first approach to verified research.</p>
             <p className="mt-2">All data is version-controlled and open for verification.</p>
           </div>
         </footer>
