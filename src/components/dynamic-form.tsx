@@ -1,30 +1,53 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FieldDefinition, FieldGroup, SelectOption } from '@/types/platform';
+import { FieldDefinition, FieldGroup, SelectOption, RecordQuote } from '@/types/platform';
 
 interface DynamicFormProps {
   fields: FieldDefinition[];
   groups?: FieldGroup[];
   initialValues?: Record<string, any>;
-  mode: 'guest' | 'review' | 'validation' | 'edit';
+  initialData?: Record<string, any>; // Alias for initialValues
+  mode: 'guest' | 'review' | 'validation' | 'edit' | 'view';
   onSubmit: (values: Record<string, any>) => void | Promise<void>;
+  onCancel?: () => void;
+  onLinkQuote?: (fieldSlug: string, quoteId: number) => void;
   disabled?: boolean;
   showQuoteFields?: boolean;
+  // Additional props used by existing pages (optional)
+  projectSlug?: string;
+  recordTypeSlug?: string;
+  recordId?: number;
+  quotes?: RecordQuote[];
+  verifiedFields?: Record<string, any>;
 }
 
 export function DynamicForm({
   fields,
   groups = [],
-  initialValues = {},
+  initialValues,
+  initialData,
   mode,
   onSubmit,
+  onCancel,
+  onLinkQuote,
   disabled = false,
   showQuoteFields = false,
+  projectSlug,
+  recordTypeSlug,
+  recordId,
+  quotes = [],
+  verifiedFields = {},
 }: DynamicFormProps) {
-  const [values, setValues] = useState<Record<string, any>>(initialValues);
+  // Use initialData if initialValues not provided (backward compatibility)
+  const startValues = initialValues || initialData || {};
+  const [values, setValues] = useState<Record<string, any>>(startValues);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  
+  // In view mode, disable all fields
+  const isViewMode = mode === 'view';
+  const isDisabled = disabled || isViewMode;
 
   // Filter fields based on mode
   const visibleFields = fields.filter(field => {
@@ -35,16 +58,18 @@ export function DynamicForm({
         return field.show_in_review_form;
       case 'validation':
         return field.show_in_validation_form;
+      case 'view':
+      case 'edit':
       default:
         return true;
     }
   });
 
   // Group fields
-  const ungroupedFields = visibleFields.filter(f => !f.group_id);
+  const ungroupedFields = visibleFields.filter(f => !f.field_group_id);
   const groupedFields = groups.map(group => ({
     ...group,
-    fields: visibleFields.filter(f => f.group_id === group.id),
+    fields: visibleFields.filter(f => f.field_group_id === group.id),
   })).filter(g => g.fields.length > 0);
 
   const handleChange = (fieldSlug: string, value: any) => {
@@ -124,7 +149,7 @@ export function DynamicForm({
     
     const baseInputClass = `w-full border rounded px-3 py-2 ${
       error ? 'border-red-500' : 'border-gray-300'
-    } ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`;
+    } ${isDisabled ? 'bg-gray-100 cursor-not-allowed' : ''}`;
 
     return (
       <div key={field.id} className={`mb-4 ${field.width === 'half' ? 'w-1/2' : 'w-full'}`}>
@@ -144,7 +169,7 @@ export function DynamicForm({
             value={value}
             onChange={e => handleChange(field.slug, e.target.value)}
             placeholder={field.placeholder || ''}
-            disabled={disabled}
+            disabled={isDisabled}
             className={baseInputClass}
           />
         )}
@@ -155,7 +180,7 @@ export function DynamicForm({
             value={value}
             onChange={e => handleChange(field.slug, e.target.value)}
             placeholder={field.placeholder || ''}
-            disabled={disabled}
+            disabled={isDisabled}
             rows={4}
             className={baseInputClass}
           />
@@ -167,7 +192,7 @@ export function DynamicForm({
             value={value}
             onChange={e => handleChange(field.slug, e.target.value)}
             placeholder={field.placeholder || ''}
-            disabled={disabled}
+            disabled={isDisabled}
             rows={6}
             className={baseInputClass}
           />
@@ -180,7 +205,7 @@ export function DynamicForm({
             value={value}
             onChange={e => handleChange(field.slug, e.target.value ? Number(e.target.value) : '')}
             placeholder={field.placeholder || ''}
-            disabled={disabled}
+            disabled={isDisabled}
             min={config.min}
             max={config.max}
             step={config.step || 1}
@@ -194,7 +219,7 @@ export function DynamicForm({
             type="date"
             value={value}
             onChange={e => handleChange(field.slug, e.target.value)}
-            disabled={disabled}
+            disabled={isDisabled}
             className={baseInputClass}
           />
         )}
@@ -205,7 +230,7 @@ export function DynamicForm({
             type="datetime-local"
             value={value}
             onChange={e => handleChange(field.slug, e.target.value)}
-            disabled={disabled}
+            disabled={isDisabled}
             className={baseInputClass}
           />
         )}
@@ -217,7 +242,7 @@ export function DynamicForm({
             value={value}
             onChange={e => handleChange(field.slug, e.target.value)}
             placeholder={field.placeholder || ''}
-            disabled={disabled}
+            disabled={isDisabled}
             className={baseInputClass}
           />
         )}
@@ -229,7 +254,7 @@ export function DynamicForm({
             value={value}
             onChange={e => handleChange(field.slug, e.target.value)}
             placeholder={field.placeholder || ''}
-            disabled={disabled}
+            disabled={isDisabled}
             className={baseInputClass}
           />
         )}
@@ -241,7 +266,7 @@ export function DynamicForm({
               type="checkbox"
               checked={!!value}
               onChange={e => handleChange(field.slug, e.target.checked)}
-              disabled={disabled}
+              disabled={isDisabled}
               className="w-4 h-4"
             />
             <span className="text-sm">{field.placeholder || 'Yes'}</span>
@@ -253,7 +278,7 @@ export function DynamicForm({
           <select
             value={value}
             onChange={e => handleChange(field.slug, e.target.value)}
-            disabled={disabled}
+            disabled={isDisabled}
             className={baseInputClass}
           >
             <option value="">{field.placeholder || 'Select an option'}</option>
@@ -272,7 +297,7 @@ export function DynamicForm({
               const selected = Array.from(e.target.selectedOptions, option => option.value);
               handleChange(field.slug, selected);
             }}
-            disabled={disabled}
+            disabled={isDisabled}
             className={`${baseInputClass} min-h-[100px]`}
           >
             {(config.options as SelectOption[] || []).map((opt: SelectOption) => (
@@ -292,7 +317,7 @@ export function DynamicForm({
                   value={opt.value}
                   checked={value === opt.value}
                   onChange={e => handleChange(field.slug, e.target.value)}
-                  disabled={disabled}
+                  disabled={isDisabled}
                   className="w-4 h-4"
                 />
                 <span className="text-sm">{opt.label}</span>
@@ -317,7 +342,7 @@ export function DynamicForm({
                       handleChange(field.slug, current.filter((v: string) => v !== opt.value));
                     }
                   }}
-                  disabled={disabled}
+                  disabled={isDisabled}
                   className="w-4 h-4"
                 />
                 <span className="text-sm">{opt.label}</span>
@@ -334,7 +359,7 @@ export function DynamicForm({
               value={value?.city || ''}
               onChange={e => handleChange(field.slug, { ...value, city: e.target.value })}
               placeholder="City"
-              disabled={disabled}
+              disabled={isDisabled}
               className={baseInputClass}
             />
             <input
@@ -342,7 +367,7 @@ export function DynamicForm({
               value={value?.state || ''}
               onChange={e => handleChange(field.slug, { ...value, state: e.target.value })}
               placeholder="State"
-              disabled={disabled}
+              disabled={isDisabled}
               className={baseInputClass}
             />
             <input
@@ -350,7 +375,7 @@ export function DynamicForm({
               value={value?.country || ''}
               onChange={e => handleChange(field.slug, { ...value, country: e.target.value })}
               placeholder="Country"
-              disabled={disabled}
+              disabled={isDisabled}
               className={baseInputClass}
             />
           </div>
