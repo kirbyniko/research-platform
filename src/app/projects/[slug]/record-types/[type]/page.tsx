@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -30,31 +30,26 @@ export default function RecordTypePage({
   const [project, setProject] = useState<Project | null>(null);
   const [recordType, setRecordType] = useState<RecordType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     params.then(({ slug, type }) => {
-      // Fetch project
-      fetch(`/api/projects/${slug}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.project) {
-            setProject(data.project);
-            return fetch(`/api/projects/${slug}/record-types`);
-          }
-        })
-        .then(res => res?.json())
-        .then(data => {
-          if (data.recordTypes) {
-            const rt = data.recordTypes.find((r: RecordType) => r.slug === type);
-            if (rt) {
-              setRecordType(rt);
-            }
-          }
+      Promise.all([
+        fetch(`/api/projects/${slug}`).then(r => r.json()),
+        fetch(`/api/projects/${slug}/record-types/${type}`).then(r => r.json())
+      ])
+        .then(([projectData, recordTypeData]) => {
+          if (projectData.project) setProject(projectData.project);
+          else if (projectData.error) setError(projectData.error);
+          
+          if (recordTypeData.recordType) setRecordType(recordTypeData.recordType);
+          else if (recordTypeData.error) setError(recordTypeData.error);
+          
           setLoading(false);
         })
         .catch(err => {
-          console.error('Error loading record type:', err);
+          setError(err.message);
           setLoading(false);
         });
     });
@@ -64,13 +59,16 @@ export default function RecordTypePage({
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
+  if (error) {
+    return <div className="min-h-screen flex items-center justify-center text-red-600">{error}</div>;
+  }
+
   if (!project || !recordType) {
     return <div className="min-h-screen flex items-center justify-center">Record type not found</div>;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
@@ -88,7 +86,6 @@ export default function RecordTypePage({
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="bg-white p-6 border rounded-lg">
             <h3 className="text-sm text-gray-500 uppercase mb-2">Total Records</h3>
@@ -96,20 +93,20 @@ export default function RecordTypePage({
           </div>
           <div className="bg-white p-6 border rounded-lg">
             <h3 className="text-sm text-gray-500 uppercase mb-2">Guest Submissions</h3>
-            <p className="text-3xl font-bold">
-              {recordType.guest_form_enabled ? 'Enabled' : 'Disabled'}
+            <p className="text-lg font-medium">
+              {recordType.guest_form_enabled ? '✓ Enabled' : '✗ Disabled'}
             </p>
           </div>
           <div className="bg-white p-6 border rounded-lg">
             <h3 className="text-sm text-gray-500 uppercase mb-2">Workflow</h3>
             <p className="text-sm">
-              {recordType.requires_review && 'Review → '}
-              {recordType.requires_validation && 'Validation'}
+              {recordType.requires_review && <span className="mr-2">📋 Review</span>}
+              {recordType.requires_validation && <span>✓ Validation</span>}
+              {!recordType.requires_review && !recordType.requires_validation && 'Direct publish'}
             </p>
           </div>
         </div>
 
-        {/* Actions */}
         <div className="bg-white border rounded-lg p-6">
           <h2 className="text-lg font-semibold mb-4">Manage {recordType.name}</h2>
           
@@ -118,7 +115,7 @@ export default function RecordTypePage({
               href={`/projects/${project.slug}/record-types/${recordType.slug}/fields`}
               className="block p-4 border rounded hover:bg-gray-50"
             >
-              <h3 className="font-medium">Configure Fields</h3>
+              <h3 className="font-medium">⚙️ Configure Fields</h3>
               <p className="text-sm text-gray-600">Define custom fields for this record type</p>
             </Link>
 
@@ -126,7 +123,7 @@ export default function RecordTypePage({
               href={`/projects/${project.slug}/records?type=${recordType.slug}`}
               className="block p-4 border rounded hover:bg-gray-50"
             >
-              <h3 className="font-medium">View Records</h3>
+              <h3 className="font-medium">📄 View Records</h3>
               <p className="text-sm text-gray-600">See all {recordType.name_plural || recordType.name + 's'}</p>
             </Link>
 
@@ -134,7 +131,7 @@ export default function RecordTypePage({
               href={`/projects/${project.slug}/records/new?type=${recordType.slug}`}
               className="block p-4 border rounded hover:bg-gray-50 bg-black text-white"
             >
-              <h3 className="font-medium">Create New Record</h3>
+              <h3 className="font-medium">➕ Create New Record</h3>
               <p className="text-sm text-gray-300">Add a new {recordType.name}</p>
             </Link>
           </div>
