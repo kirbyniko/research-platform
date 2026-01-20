@@ -30,6 +30,194 @@ const FIELD_TYPES: { value: FieldType; label: string; description: string }[] = 
   { value: 'rich_text', label: 'Rich Text', description: 'Formatted text with markdown' },
 ];
 
+interface GroupManagerModalProps {
+  projectSlug: string;
+  recordTypeSlug: string;
+  groups: FieldGroup[];
+  onClose: () => void;
+  onSave: () => void;
+}
+
+function GroupManagerModal({ projectSlug, recordTypeSlug, groups, onClose, onSave }: GroupManagerModalProps) {
+  const [localGroups, setLocalGroups] = useState<FieldGroup[]>(groups);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupSlug, setNewGroupSlug] = useState('');
+  const [autoSlug, setAutoSlug] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function generateSlug(name: string): string {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '_')
+      .substring(0, 100);
+  }
+
+  function handleNameChange(value: string) {
+    setNewGroupName(value);
+    if (autoSlug) {
+      setNewGroupSlug(generateSlug(value));
+    }
+  }
+
+  async function handleAddGroup() {
+    if (!newGroupName.trim() || !newGroupSlug.trim()) {
+      setError('Name and slug are required');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `/api/projects/${projectSlug}/record-types/${recordTypeSlug}/groups`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: newGroupName.trim(),
+            slug: newGroupSlug.trim(),
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create group');
+      }
+
+      setLocalGroups([...localGroups, data.group]);
+      setNewGroupName('');
+      setNewGroupSlug('');
+      setAutoSlug(true);
+      onSave();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create group');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDeleteGroup(groupId: number) {
+    if (!confirm('Are you sure you want to delete this group? Fields in this group will become ungrouped.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/projects/${projectSlug}/record-types/${recordTypeSlug}/groups/${groupId}`,
+        { method: 'DELETE' }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete group');
+      }
+
+      setLocalGroups(localGroups.filter(g => g.id !== groupId));
+      onSave();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete group');
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">Manage Field Groups</h2>
+          <p className="text-sm text-gray-500 mt-1">Groups organize fields into sections in forms</p>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {error && (
+            <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm">{error}</div>
+          )}
+
+          {/* Add New Group */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-gray-900 mb-3">Add New Group</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Name *</label>
+                <input
+                  type="text"
+                  value={newGroupName}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  placeholder="e.g., Shooting Details"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Slug *</label>
+                <input
+                  type="text"
+                  value={newGroupSlug}
+                  onChange={(e) => {
+                    setAutoSlug(false);
+                    setNewGroupSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''));
+                  }}
+                  placeholder="e.g., shooting_details"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
+                />
+              </div>
+            </div>
+            <button
+              onClick={handleAddGroup}
+              disabled={saving || !newGroupName.trim() || !newGroupSlug.trim()}
+              className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
+            >
+              {saving ? 'Adding...' : '+ Add Group'}
+            </button>
+          </div>
+
+          {/* Existing Groups */}
+          <div>
+            <h3 className="text-sm font-medium text-gray-900 mb-3">Existing Groups ({localGroups.length})</h3>
+            {localGroups.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-8">
+                No groups yet. Create your first group above.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {localGroups.map((group) => (
+                  <div key={group.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <div className="font-medium text-gray-900">{group.name}</div>
+                      <div className="text-xs text-gray-500 font-mono">{group.slug}</div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteGroup(group.id)}
+                      className="text-red-600 hover:text-red-800 text-sm px-3 py-1"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-gray-200 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface FieldEditorModalProps {
   projectSlug: string;
   recordTypeSlug: string;
@@ -527,6 +715,7 @@ export default function FieldEditorPage({ params }: { params: Promise<{ slug: st
   const [error, setError] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<FieldDefinition | undefined>(undefined);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showGroupManager, setShowGroupManager] = useState(false);
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -607,12 +796,20 @@ export default function FieldEditorPage({ params }: { params: Promise<{ slug: st
               </h1>
               <p className="text-gray-600">Define the fields for this record type</p>
             </div>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-            >
-              + Add Field
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowGroupManager(true)}
+                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+              >
+                📁 Manage Groups
+              </button>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              >
+                + Add Field
+              </button>
+            </div>
           </div>
 
           {fields.length === 0 ? (
@@ -765,6 +962,21 @@ export default function FieldEditorPage({ params }: { params: Promise<{ slug: st
           onClose={() => {
             setShowAddModal(false);
             setEditingField(undefined);
+          }}
+        />
+      )}
+
+      {/* Group Manager Modal */}
+      {showGroupManager && (
+        <GroupManagerModal
+          projectSlug={resolvedParams.slug}
+          recordTypeSlug={resolvedParams.type}
+          groups={groups}
+          onSave={() => {
+            fetchData();
+          }}
+          onClose={() => {
+            setShowGroupManager(false);
           }}
         />
       )}
