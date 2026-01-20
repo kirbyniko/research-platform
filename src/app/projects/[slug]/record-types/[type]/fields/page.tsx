@@ -430,7 +430,7 @@ export default function FieldEditorPage({ params }: { params: Promise<{ slug: st
       if (!typeRes.ok) throw new Error('Record type not found');
       const typeData = await typeRes.json();
       setRecordType(typeData.recordType);
-      setFields(typeData.fieldDefinitions);
+      setFields(typeData.fields);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
