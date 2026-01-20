@@ -38,9 +38,7 @@ export default function Navigation() {
 
   async function handleLogout() {
     try {
-      // Sign out from NextAuth
       await signOut({ redirect: false });
-      // Also clear legacy auth
       await fetch('/api/auth/logout', { method: 'POST' });
       setUser(null);
       window.location.href = '/';
@@ -49,9 +47,9 @@ export default function Navigation() {
     }
   }
 
-  const isActive = (path: string) => pathname === path;
-  
-  const navLinkClass = (path: string) => 
+  const isActive = (path: string) => pathname?.startsWith(path);
+
+  const navLinkClass = (path: string) =>
     `hover:text-blue-600 transition-colors ${isActive(path) ? 'text-blue-600 font-medium' : 'text-gray-700'}`;
 
   return (
@@ -60,18 +58,13 @@ export default function Navigation() {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors">
-            ICE Incident Tracker
+            Research Platform
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6">
             <ul className="flex gap-6 text-sm">
-              <li><Link href="/incidents" className={navLinkClass('/incidents')}>Incidents</Link></li>
-              <li><Link href="/statements" className={navLinkClass('/statements')}>Statements</Link></li>
-              <li><Link href="/submit" className={navLinkClass('/submit')}>Submit</Link></li>
-              {(user?.role === 'analyst' || user?.role === 'admin' || user?.role === 'editor') && (
-                <li><Link href="/legal-help" className={navLinkClass('/legal-help')}>Habeas Corpus</Link></li>
-              )}
+              <li><Link href="/projects" className={navLinkClass('/projects')}>Projects</Link></li>
             </ul>
 
             <div className="h-5 w-px bg-gray-300" />
@@ -109,25 +102,15 @@ export default function Navigation() {
                           {user.role}
                         </span>
                       </div>
-                      
+
                       <Link
-                        href="/account"
+                        href="/projects"
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                         onClick={() => setMenuOpen(false)}
                       >
-                        API Keys & Settings
+                        My Projects
                       </Link>
-                      
-                      {(user.role === 'analyst' || user.role === 'admin' || user.role === 'editor') && (
-                        <Link
-                          href="/dashboard"
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                          onClick={() => setMenuOpen(false)}
-                        >
-                          Analyst Dashboard
-                        </Link>
-                      )}
-                      
+
                       {user.role === 'admin' && (
                         <Link
                           href="/admin"
@@ -137,7 +120,7 @@ export default function Navigation() {
                           Admin Panel
                         </Link>
                       )}
-                      
+
                       <div className="border-t border-gray-100 mt-2 pt-2">
                         <button
                           onClick={() => { setMenuOpen(false); handleLogout(); }}
@@ -152,14 +135,14 @@ export default function Navigation() {
               </div>
             ) : (
               <div className="flex items-center gap-3 text-sm">
-                <Link href="/auth/login" className="text-gray-700 hover:text-blue-600">
+                <Link href="/api/auth/signin" className="text-gray-700 hover:text-blue-600">
                   Sign In
                 </Link>
                 <Link
-                  href="/submit"
+                  href="/api/auth/signin"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  Submit Report
+                  Get Started
                 </Link>
               </div>
             )}
@@ -184,28 +167,20 @@ export default function Navigation() {
         {menuOpen && (
           <div className="md:hidden mt-4 pb-4 border-t border-gray-100 pt-4">
             <ul className="flex flex-col gap-3 text-sm">
-              <li><Link href="/incidents" className={navLinkClass('/incidents')} onClick={() => setMenuOpen(false)}>Incidents</Link></li>
-              <li><Link href="/statements" className={navLinkClass('/statements')} onClick={() => setMenuOpen(false)}>Statements</Link></li>
-              <li><Link href="/submit" className={navLinkClass('/submit')} onClick={() => setMenuOpen(false)}>Submit</Link></li>
-              {(user?.role === 'analyst' || user?.role === 'admin' || user?.role === 'editor') && (
-                <li><Link href="/legal-help" className={navLinkClass('/legal-help')} onClick={() => setMenuOpen(false)}>Habeas Corpus</Link></li>
-              )}
+              <li><Link href="/projects" className={navLinkClass('/projects')} onClick={() => setMenuOpen(false)}>Projects</Link></li>
             </ul>
-            
+
             <div className="mt-4 pt-4 border-t border-gray-100">
               {user ? (
                 <div className="space-y-2">
                   <p className="text-sm text-gray-500">Signed in as {user.email}</p>
-                  <Link href="/account" className="block text-sm text-blue-600" onClick={() => setMenuOpen(false)}>Account Settings</Link>
-                  {(user.role === 'analyst' || user.role === 'admin' || user.role === 'editor') && (
-                    <Link href="/dashboard" className="block text-sm text-blue-600" onClick={() => setMenuOpen(false)}>Dashboard</Link>
-                  )}
+                  <Link href="/projects" className="block text-sm text-blue-600" onClick={() => setMenuOpen(false)}>My Projects</Link>
                   <button onClick={handleLogout} className="text-sm text-red-600">Sign Out</button>
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">
-                  <Link href="/auth/login" className="text-sm text-gray-700" onClick={() => setMenuOpen(false)}>Sign In</Link>
-                  <Link href="/submit" className="text-sm text-blue-600 font-medium" onClick={() => setMenuOpen(false)}>Submit Report</Link>
+                  <Link href="/api/auth/signin" className="text-sm text-gray-700" onClick={() => setMenuOpen(false)}>Sign In</Link>
+                  <Link href="/api/auth/signin" className="text-sm text-blue-600 font-medium" onClick={() => setMenuOpen(false)}>Get Started</Link>
                 </div>
               )}
             </div>
