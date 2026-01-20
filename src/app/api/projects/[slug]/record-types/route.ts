@@ -145,8 +145,13 @@ export async function POST(
     return NextResponse.json({ recordType: result.rows[0] }, { status: 201 });
   } catch (error) {
     console.error('Error creating record type:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to create record type' },
+      { 
+        error: 'Failed to create record type',
+        detail: errorMessage,
+        stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
+      },
       { status: 500 }
     );
   }
