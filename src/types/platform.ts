@@ -130,6 +130,13 @@ export interface FieldConfig {
   // Display options
   prefix?: string;
   suffix?: string;
+
+  // Conditional visibility
+  show_when?: {
+    field: string;  // slug of field to check
+    operator: 'equals' | 'not_equals' | 'contains' | 'not_contains' | 'exists' | 'not_exists';
+    value?: unknown; // value to compare (not needed for exists/not_exists)
+  };
 }
 
 export interface ValidationRules {

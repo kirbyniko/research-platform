@@ -6,6 +6,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FieldDefinition, FieldType, FieldConfig, SelectOption } from '@/types/platform';
 
+interface FieldGroup {
+  id: number;
+  name: string;
+  slug: string;
+  sort_order: number;
+}
+
 const FIELD_TYPES: { value: FieldType; label: string; description: string }[] = [
   { value: 'text', label: 'Text', description: 'Single line text input' },
   { value: 'textarea', label: 'Text Area', description: 'Multi-line text input' },
@@ -27,11 +34,12 @@ interface FieldEditorModalProps {
   projectSlug: string;
   recordTypeSlug: string;
   field?: FieldDefinition;
+  groups: FieldGroup[];
   onSave: () => void;
   onClose: () => void;
 }
 
-function FieldEditorModal({ projectSlug, recordTypeSlug, field, onSave, onClose }: FieldEditorModalProps) {
+function FieldEditorModal({ projectSlug, recordTypeSlug, field, groups, onSave, onClose }: FieldEditorModalProps) {
   const isEditing = !!field;
   
   const [slug, setSlug] = useState(field?.slug || '');
@@ -39,6 +47,7 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, onSave, onClose 
   const [description, setDescription] = useState(field?.description || '');
   const [placeholder, setPlaceholder] = useState(field?.placeholder || '');
   const [fieldType, setFieldType] = useState<FieldType>(field?.field_type || 'text');
+  const [fieldGroupId, setFieldGroupId] = useState<number | null>(field?.field_group_id || null);
   const [isRequired, setIsRequired] = useState(field?.is_required || false);
   const [requiresQuote, setRequiresQuote] = useState(field?.requires_quote || false);
   const [showInGuestForm, setShowInGuestForm] = useState(field?.show_in_guest_form || false);
@@ -52,8 +61,13 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, onSave, onClose 
   const [options, setOptions] = useState<SelectOption[]>(
     (field?.config?.options as SelectOption[]) || []
   );
-  const [newOptionValue, setNewOptionValue] = useState('');
   const [newOptionLabel, setNewOptionLabel] = useState('');
+  
+  // Conditional visibility
+  const [showWhenEnabled, setShowWhenEnabled] = useState(!!field?.config?.show_when);
+  const [showWhenField, setShowWhenField] = useState(field?.config?.show_when?.field || '');
+  const [showWhenOperator, setShowWhenOperator] = useState<string>(field?.config?.show_when?.operator || 'contains');
+  const [showWhenValue, setShowWhenValue] = useState(field?.config?.show_when?.value?.toString() || '');
   
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +81,15 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, onSave, onClose 
       .substring(0, 100);
   }
 
+  function generateOptionValue(label: string): string {
+    return label
+      .toLowerCase()
+      .replace(/[^a-z0-9\s/-]/g, '')
+      .replace(/[\s/-]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '');
+  }
+
   function handleNameChange(value: string) {
     setName(value);
     if (autoSlug && !isEditing) {
@@ -75,12 +98,15 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, onSave, onClose 
   }
 
   function addOption() {
-    if (!newOptionValue.trim()) return;
-    setOptions([...options, { 
-      value: newOptionValue.trim(), 
-      label: newOptionLabel.trim() || newOptionValue.trim() 
-    }]);
-    setNewOptionValue('');
+    if (!newOptionLabel.trim()) return;
+    const label = newOptionLabel.trim();
+    const value = generateOptionValue(label);
+    // Check for duplicate values
+    if (options.some(opt => opt.value === value)) {
+      alert(`Option with value "${value}" already exists`);
+      return;
+    }
+    setOptions([...options, { value, label }]);
     setNewOptionLabel('');
   }
 
@@ -114,6 +140,13 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, onSave, onClose 
     if (needsOptions) {
       config.options = options;
     }
+    if (showWhenEnabled && showWhenField) {
+      config.show_when = {
+        field: showWhenField,
+        operator: showWhenOperator as 'equals' | 'not_equals' | 'contains' | 'not_contains' | 'exists' | 'not_exists',
+        value: ['exists', 'not_exists'].includes(showWhenOperator) ? undefined : showWhenValue,
+      };
+    }
     
     const payload = {
       slug,
@@ -121,6 +154,7 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, onSave, onClose 
       description: description.trim() || null,
       placeholder: placeholder.trim() || null,
       field_type: fieldType,
+      field_group_id: fieldGroupId,
       config,
       is_required: isRequired,
       requires_quote: requiresQuote,
@@ -209,6 +243,26 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, onSave, onClose 
             />
           </div>
 
+          {/* Field Group */}
+          {groups.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Section/Group</label>
+              <select
+                value={fieldGroupId ?? ''}
+                onChange={(e) => setFieldGroupId(e.target.value ? parseInt(e.target.value) : null)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">No group (ungrouped)</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Fields are displayed grouped by section in forms
+              </p>
+            </div>
+          )}
+
           {/* Field Type */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Field Type *</label>
@@ -244,40 +298,38 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, onSave, onClose 
               <div className="border rounded-lg p-3 space-y-2">
                 {options.map((opt, idx) => (
                   <div key={idx} className="flex items-center gap-2 bg-gray-50 p-2 rounded">
-                    <span className="font-mono text-sm text-gray-600">{opt.value}</span>
-                    <span className="text-gray-400">→</span>
+                    <span className="font-mono text-xs text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded">{opt.value}</span>
                     <span className="text-sm flex-1">{opt.label}</span>
                     <button
                       type="button"
                       onClick={() => removeOption(idx)}
-                      className="text-red-500 hover:text-red-700"
+                      className="text-red-500 hover:text-red-700 text-lg leading-none"
                     >
                       ×
                     </button>
                   </div>
                 ))}
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newOptionValue}
-                    onChange={(e) => setNewOptionValue(e.target.value)}
-                    placeholder="Value (e.g., yes)"
-                    className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
-                  />
-                  <input
-                    type="text"
-                    value={newOptionLabel}
-                    onChange={(e) => setNewOptionLabel(e.target.value)}
-                    placeholder="Label (e.g., Yes)"
-                    className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={addOption}
-                    className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm"
-                  >
-                    Add
-                  </button>
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <p className="text-xs text-gray-500 mb-2">
+                    💡 Just type the label - value is auto-generated (e.g., &quot;Death in Custody&quot; → death_in_custody)
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newOptionLabel}
+                      onChange={(e) => setNewOptionLabel(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addOption())}
+                      placeholder="Type option label (e.g., Death in Custody)"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={addOption}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                    >
+                      Add
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -306,6 +358,66 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, onSave, onClose 
                 <span className="text-sm">Requires supporting quote to verify</span>
               </label>
             </div>
+          </div>
+
+          {/* Conditional Visibility */}
+          <div className="border-t pt-4">
+            <h3 className="font-medium text-gray-900 mb-3">Conditional Visibility</h3>
+            <label className="flex items-center gap-2 cursor-pointer mb-3">
+              <input
+                type="checkbox"
+                checked={showWhenEnabled}
+                onChange={(e) => setShowWhenEnabled(e.target.checked)}
+                className="rounded border-gray-300 text-blue-600"
+              />
+              <span className="text-sm">Only show this field when another field has a specific value</span>
+            </label>
+            
+            {showWhenEnabled && (
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                <p className="text-xs text-gray-500 mb-2">
+                  💡 Example: Show &quot;Shooting Details&quot; only when &quot;incident_types&quot; contains &quot;shooting&quot;
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Field slug</label>
+                    <input
+                      type="text"
+                      value={showWhenField}
+                      onChange={(e) => setShowWhenField(e.target.value)}
+                      placeholder="e.g., incident_types"
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Condition</label>
+                    <select
+                      value={showWhenOperator}
+                      onChange={(e) => setShowWhenOperator(e.target.value)}
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                    >
+                      <option value="contains">contains</option>
+                      <option value="not_contains">does not contain</option>
+                      <option value="equals">equals</option>
+                      <option value="not_equals">does not equal</option>
+                      <option value="exists">has any value</option>
+                      <option value="not_exists">is empty</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Value</label>
+                    <input
+                      type="text"
+                      value={showWhenValue}
+                      onChange={(e) => setShowWhenValue(e.target.value)}
+                      placeholder="e.g., shooting"
+                      disabled={['exists', 'not_exists'].includes(showWhenOperator)}
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Form Visibility */}
@@ -409,6 +521,7 @@ export default function FieldEditorPage({ params }: { params: Promise<{ slug: st
   const router = useRouter();
   
   const [fields, setFields] = useState<FieldDefinition[]>([]);
+  const [groups, setGroups] = useState<FieldGroup[]>([]);
   const [recordType, setRecordType] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -431,6 +544,7 @@ export default function FieldEditorPage({ params }: { params: Promise<{ slug: st
       const typeData = await typeRes.json();
       setRecordType(typeData.recordType);
       setFields(typeData.fields);
+      setGroups(typeData.groups || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
@@ -514,53 +628,108 @@ export default function FieldEditorPage({ params }: { params: Promise<{ slug: st
               </button>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200">
-              {fields.map((field) => (
-                <div key={field.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">{field.name}</span>
-                      <span className="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                        {field.slug}
-                      </span>
-                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                        {field.field_type}
-                      </span>
+            <div>
+              {/* Group fields by their field_group_id */}
+              {(() => {
+                // Separate fields into groups
+                const ungroupedFields = fields.filter(f => !f.field_group_id);
+                const groupedFieldsMap = new Map<number, FieldDefinition[]>();
+                
+                fields.forEach(f => {
+                  if (f.field_group_id) {
+                    const existing = groupedFieldsMap.get(f.field_group_id) || [];
+                    existing.push(f);
+                    groupedFieldsMap.set(f.field_group_id, existing);
+                  }
+                });
+
+                const renderFieldRow = (field: FieldDefinition) => (
+                  <div key={field.id} className="p-4 flex items-center justify-between hover:bg-gray-50 border-b border-gray-100 last:border-b-0">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-gray-900">{field.name}</span>
+                        <span className="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                          {field.slug}
+                        </span>
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                          {field.field_type}
+                        </span>
+                      </div>
+                      {field.description && (
+                        <p className="text-sm text-gray-500 mt-1">{field.description}</p>
+                      )}
+                      <div className="flex gap-2 mt-2 flex-wrap">
+                        {field.is_required && (
+                          <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">Required</span>
+                        )}
+                        {field.requires_quote && (
+                          <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded">Needs Quote</span>
+                        )}
+                        {field.show_in_guest_form && (
+                          <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">Guest</span>
+                        )}
+                        {field.show_in_list_view && (
+                          <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">In List</span>
+                        )}
+                      </div>
                     </div>
-                    {field.description && (
-                      <p className="text-sm text-gray-500 mt-1">{field.description}</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setEditingField(field)}
+                        className="text-blue-600 hover:text-blue-800 px-3 py-1"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(field.id)}
+                        className="text-red-600 hover:text-red-800 px-3 py-1"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                );
+
+                return (
+                  <>
+                    {/* Ungrouped fields first */}
+                    {ungroupedFields.length > 0 && (
+                      <div className="border-b border-gray-200">
+                        <div className="px-4 py-2 bg-gray-50 text-sm font-medium text-gray-600">
+                          Ungrouped Fields
+                        </div>
+                        {ungroupedFields.map(renderFieldRow)}
+                      </div>
                     )}
-                    <div className="flex gap-2 mt-2">
-                      {field.is_required && (
-                        <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">Required</span>
-                      )}
-                      {field.requires_quote && (
-                        <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded">Needs Quote</span>
-                      )}
-                      {field.show_in_guest_form && (
-                        <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">Guest</span>
-                      )}
-                      {field.show_in_list_view && (
-                        <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">In List</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setEditingField(field)}
-                      className="text-blue-600 hover:text-blue-800 px-3 py-1"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(field.id)}
-                      className="text-red-600 hover:text-red-800 px-3 py-1"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
+
+                    {/* Grouped fields by section */}
+                    {groups.map(group => {
+                      const groupFields = groupedFieldsMap.get(group.id) || [];
+                      if (groupFields.length === 0) return null;
+                      
+                      return (
+                        <div key={group.id} className="border-b border-gray-200 last:border-b-0">
+                          <div className="px-4 py-3 bg-blue-50 border-b border-blue-100">
+                            <div className="font-medium text-blue-900">{group.name}</div>
+                            <div className="text-xs text-blue-600">{groupFields.length} field{groupFields.length !== 1 ? 's' : ''}</div>
+                          </div>
+                          {groupFields.map(renderFieldRow)}
+                        </div>
+                      );
+                    })}
+
+                    {/* Empty groups at the end */}
+                    {groups.filter(g => !(groupedFieldsMap.get(g.id) || []).length).length > 0 && (
+                      <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
+                        <div className="text-sm text-gray-500">
+                          <strong>Empty groups:</strong>{' '}
+                          {groups.filter(g => !(groupedFieldsMap.get(g.id) || []).length).map(g => g.name).join(', ')}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           )}
         </div>
@@ -587,6 +756,7 @@ export default function FieldEditorPage({ params }: { params: Promise<{ slug: st
           projectSlug={resolvedParams.slug}
           recordTypeSlug={resolvedParams.type}
           field={editingField}
+          groups={groups}
           onSave={() => {
             setShowAddModal(false);
             setEditingField(undefined);
