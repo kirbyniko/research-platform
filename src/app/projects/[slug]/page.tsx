@@ -24,6 +24,7 @@ interface Project {
   name: string;
   description?: string;
   is_public: boolean;
+  guest_submissions_public: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -175,6 +176,42 @@ export default function ProjectDashboard({ params }: { params: Promise<{ slug: s
             <p className="text-sm text-gray-600">Validate reviewed records</p>
           </Link>
         </div>
+
+        {/* Guest Submission Link (if enabled) */}
+        {project.guest_submissions_public && canManage && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
+            <div className="flex items-start gap-4">
+              <div className="text-3xl">🔗</div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-1">
+                  Guest Submission Form
+                </h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Share this link to allow public submissions
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={`${window.location.origin}/projects/${project.slug}/submit`}
+                    className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded text-sm font-mono"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        `${window.location.origin}/projects/${project.slug}/submit`
+                      );
+                      alert('Link copied to clipboard!');
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm"
+                  >
+                    Copy Link
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Record Types */}
         <div className="bg-white rounded-lg shadow">
