@@ -190,6 +190,214 @@ export default function RecordDetailPage({
     return <div className="p-8">Record not found</div>;
   }
 
+  // Article-style view for verified/published records
+  const isPublished = record.status === 'verified';
+  const showArticleView = isPublished && !isEditing;
+
+  if (showArticleView) {
+    return (
+      <article className="max-w-3xl mx-auto px-6 py-12 bg-white">
+        {/* Header */}
+        <div className="mb-8">
+          <Link href={`/projects/${projectSlug}/records`} className="text-sm text-gray-500 hover:text-gray-700">
+            ← Back to Records
+          </Link>
+        </div>
+
+        {/* Title/Summary Section */}
+        <header className="mb-12 border-b border-gray-200 pb-8">
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+            <span className="uppercase tracking-wide">{record.record_type_name}</span>
+            <span>•</span>
+            <span>{new Date(record.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+          </div>
+          
+          {record.data['title'] !== undefined && record.data['title'] !== null && (
+            <h1 className="text-4xl font-bold text-gray-900 mb-4 leading-tight">
+              {String(record.data['title'])}
+            </h1>
+          )}
+          
+          {record.data['summary'] !== undefined && record.data['summary'] !== null && (
+            <div className="text-xl text-gray-700 leading-relaxed">
+              {String(record.data['summary'])}
+            </div>
+          )}
+        </header>
+
+        {/* Main Content - Render fields as narrative */}
+        <div className="prose prose-lg max-w-none mb-16">
+          {fields
+            .filter(field => !['title', 'summary'].includes(field.slug)) // Already shown above
+            .filter(field => record.data[field.slug]) // Only show populated fields
+            .map((field, idx) => {
+              const value = record.data[field.slug];
+              const quotesForField = quotes.filter(q => q.linked_fields?.includes(field.slug));
+              
+              return (
+                <section key={field.slug} className="mb-8">
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                    {field.name}
+                  </h2>
+                  <div className="text-gray-800 leading-relaxed">
+                    {/* Render field value based on type */}
+                    {field.field_type === 'textarea' || field.field_type === 'text' ? (
+                      <p className="whitespace-pre-wrap">{String(value)}</p>
+                    ) : Array.isArray(value) ? (
+                      <ul className="list-disc list-inside space-y-1">
+                        {value.map((item, i) => (
+                          <li key={i}>{String(item)}</li>
+                        ))}
+                      </ul>
+                    ) : typeof value === 'object' ? (
+                      <pre className="bg-gray-50 p-4 rounded text-sm overflow-x-auto">
+                        {JSON.stringify(value, null, 2)}
+                      </pre>
+                    ) : (
+                      <p>{String(value)}</p>
+                    )}
+                    
+                    {/* Inline footnote references for this field */}
+                    {quotesForField.length > 0 && (
+                      <span className="text-sm">
+                        {quotesForField.map((quote, qIdx) => (
+                          <a
+                            key={quote.id}
+                            href={`#quote-${quote.id}`}
+                            className="inline-block ml-1 text-blue-600 hover:text-blue-800 font-medium"
+                            title={quote.quote_text.slice(0, 100) + '...'}
+                          >
+                            [{quotes.findIndex(q => q.id === quote.id) + 1}]
+                          </a>
+                        ))}
+                      </span>
+                    )}
+                  </div>
+                </section>
+              );
+            })}
+        </div>
+
+        {/* Footnotes Section - Quotes */}
+        {quotes.length > 0 && (
+          <section className="border-t-2 border-gray-300 pt-8 mt-12">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">References</h2>
+            <ol className="space-y-6">
+              {quotes.map((quote, idx) => (
+                <li
+                  key={quote.id}
+                  id={`quote-${quote.id}`}
+                  className="text-sm leading-relaxed scroll-mt-8"
+                >
+                  <div className="flex gap-4">
+                    <span className="font-bold text-gray-500 flex-shrink-0">[{idx + 1}]</span>
+                    <div className="flex-1">
+                      <blockquote className="italic text-gray-700 mb-2">
+                        &ldquo;{quote.quote_text}&rdquo;
+                      </blockquote>
+                      {quote.source && (
+                        <p className="text-gray-600">— {quote.source}</p>
+                      )}
+                      {quote.source_url && (
+                        <a
+                          href={quote.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline text-xs"
+                        >
+                          View Source →
+                        </a>
+                      )}
+                      {quote.linked_fields && quote.linked_fields.length > 0 && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Related to: {quote.linked_fields.map(f => fields.find(field => field.slug === f)?.name || f).join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
+
+        {/* Sources Section */}
+        {sources.length > 0 && (
+          <section className="mt-12 pt-8 border-t border-gray-200">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Sources</h2>
+            <ul className="space-y-3">
+              {sources.map((source, idx) => (
+                <li key={source.id} className="text-sm">
+                  <div className="flex items-start gap-3">
+                    <span className="text-gray-400 flex-shrink-0">•</span>
+                    <div>
+                      <a
+                        href={source.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline font-medium"
+                      >
+                        {source.title || source.url}
+                      </a>
+                      {source.source_type && (
+                        <span className="ml-2 text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-600">
+                          {source.source_type}
+                        </span>
+                      )}
+                      {source.notes && (
+                        <p className="text-gray-600 mt-1">{source.notes}</p>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* Metadata Footer */}
+        <footer className="mt-16 pt-8 border-t border-gray-200 text-sm text-gray-500">
+          <dl className="grid grid-cols-2 gap-4">
+            <div>
+              <dt className="font-medium text-gray-700">Verification Status</dt>
+              <dd className="mt-1">{getStatusBadge(record.status)}</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-gray-700">Last Updated</dt>
+              <dd className="mt-1">{new Date(record.updated_at).toLocaleDateString()}</dd>
+            </div>
+            {record.validated_by_name && record.validated_at && (
+              <div className="col-span-2">
+                <dt className="font-medium text-gray-700">Validated By</dt>
+                <dd className="mt-1">
+                  {record.validated_by_name} on {new Date(record.validated_at).toLocaleDateString()}
+                </dd>
+              </div>
+            )}
+          </dl>
+          
+          {canEdit && (
+            <div className="mt-6 flex gap-2">
+              <button
+                onClick={() => setIsEditing(true)}
+                className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+              >
+                Edit Record
+              </button>
+              <Link
+                href={`/projects/${projectSlug}/records/${recordId}/review`}
+                className="px-4 py-2 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 inline-block"
+              >
+                Review Mode
+              </Link>
+            </div>
+          )}
+        </footer>
+      </article>
+    );
+  }
+
+  // Standard editing/workflow view
   return (
     <div className="max-w-4xl mx-auto p-6">
       {/* Header */}
