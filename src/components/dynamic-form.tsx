@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { FieldDefinition, FieldGroup, SelectOption, RecordQuote } from '@/types/platform';
 import { ViolationsField, DEFAULT_VIOLATIONS, ViolationValue } from './violation-card';
 import { DuplicateChecker } from './duplicate-checker';
+import { TriStateField, IncidentTypesField, MediaField, CustomFieldsField } from './field-types';
 
 interface DynamicFormProps {
   fields: FieldDefinition[];
@@ -51,20 +52,84 @@ export function DynamicForm({
   const isViewMode = mode === 'view';
   const isDisabled = disabled || isViewMode;
 
-  // Filter fields based on mode
+  // Check if a field should be visible based on show_when config
+  const isFieldVisible = (field: FieldDefinition): boolean => {
+    const config = field.config as Record<string, any> || {};
+    const showWhen = config.show_when;
+    
+    if (!showWhen) return true; // No condition = always visible
+    
+    const { field: dependentField, value: requiredValue, operator = 'equals' } = showWhen;
+    const currentValue = values[dependentField];
+    
+    // Handle incident_types which can be an object with selected array
+    const effectiveValue = typeof currentValue === 'object' && currentValue?.selected
+      ? currentValue.selected
+      : currentValue;
+    
+    switch (operator) {
+      case 'equals':
+        return effectiveValue === requiredValue;
+      case 'not_equals':
+        return effectiveValue !== requiredValue;
+      case 'contains':
+        // Check if array contains the value
+        if (Array.isArray(effectiveValue)) {
+          return effectiveValue.includes(requiredValue);
+        }
+        return effectiveValue === requiredValue;
+      case 'contains_any':
+        // Check if array contains any of the required values
+        if (Array.isArray(effectiveValue) && Array.isArray(requiredValue)) {
+          return requiredValue.some(v => effectiveValue.includes(v));
+        }
+        if (Array.isArray(effectiveValue)) {
+          return effectiveValue.includes(requiredValue);
+        }
+        if (Array.isArray(requiredValue)) {
+          return requiredValue.includes(effectiveValue);
+        }
+        return effectiveValue === requiredValue;
+      case 'is_empty':
+        return !effectiveValue || (Array.isArray(effectiveValue) && effectiveValue.length === 0);
+      case 'is_not_empty':
+        return !!effectiveValue && (!Array.isArray(effectiveValue) || effectiveValue.length > 0);
+      default:
+        // Legacy format: { field, value } without operator
+        if (Array.isArray(effectiveValue)) {
+          if (Array.isArray(requiredValue)) {
+            return requiredValue.some(v => effectiveValue.includes(v));
+          }
+          return effectiveValue.includes(requiredValue);
+        }
+        return effectiveValue === requiredValue;
+    }
+  };
+
+  // Filter fields based on mode and conditional visibility
   const visibleFields = fields.filter(field => {
+    // First check mode-based visibility
+    let modeVisible = true;
     switch (mode) {
       case 'guest':
-        return field.show_in_guest_form;
+        modeVisible = field.show_in_guest_form;
+        break;
       case 'review':
-        return field.show_in_review_form;
+        modeVisible = field.show_in_review_form;
+        break;
       case 'validation':
-        return field.show_in_validation_form;
+        modeVisible = field.show_in_validation_form;
+        break;
       case 'view':
       case 'edit':
       default:
-        return true;
+        modeVisible = true;
     }
+    
+    if (!modeVisible) return false;
+    
+    // Then check conditional visibility (show_when)
+    return isFieldVisible(field);
   });
 
   // Group fields
@@ -390,6 +455,45 @@ export function DynamicForm({
             onChange={(newVal) => handleChange(field.slug, newVal)}
             violations={config.violations || DEFAULT_VIOLATIONS}
             disabled={isDisabled}
+          />
+        )}
+        
+        {/* Tri-state - Yes/No/Unknown dropdown */}
+        {field.field_type === 'tri_state' && (
+          <TriStateField
+            value={value}
+            onChange={(newVal) => handleChange(field.slug, newVal)}
+            disabled={isDisabled}
+          />
+        )}
+        
+        {/* Incident Types - Checkboxes with per-option [src] buttons */}
+        {field.field_type === 'incident_types' && (
+          <IncidentTypesField
+            value={value}
+            onChange={(newVal) => handleChange(field.slug, newVal)}
+            options={config.options || []}
+            disabled={isDisabled}
+          />
+        )}
+        
+        {/* Media - Image/Video URLs with preview */}
+        {field.field_type === 'media' && (
+          <MediaField
+            value={value}
+            onChange={(newVal) => handleChange(field.slug, newVal)}
+            disabled={isDisabled}
+            description={config.description}
+          />
+        )}
+        
+        {/* Custom Fields - User-defined arbitrary fields */}
+        {field.field_type === 'custom_fields' && (
+          <CustomFieldsField
+            value={value}
+            onChange={(newVal) => handleChange(field.slug, newVal)}
+            disabled={isDisabled}
+            description={config.description}
           />
         )}
         

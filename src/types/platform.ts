@@ -77,7 +77,11 @@ export type FieldType =
   | 'rich_text'
   | 'record_link'
   | 'user_link'
-  | 'violations';
+  | 'violations'
+  | 'incident_types'    // Checkbox group with per-option source linking
+  | 'tri_state'         // Yes/No/Unknown dropdown
+  | 'media'             // Image/video URLs with preview
+  | 'custom_fields';    // User-defined arbitrary fields
 
 export interface SelectOption {
   value: string;
