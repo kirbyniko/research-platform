@@ -39,15 +39,15 @@ export async function GET(
     const projectId = projectResult.rows[0].id;
     
     // Search records by name (case-insensitive)
-    // First try to find records where 'name' or 'victim_name' fields match
+    // Records don't have a 'name' column - search in data JSONB for common name fields
     let sqlQuery = `
       SELECT DISTINCT 
         r.id,
-        r.name,
         r.status,
         r.created_at,
         rt.name as record_type,
         rt.slug as record_type_slug,
+        COALESCE(r.data->>'name', r.data->>'victim_name', r.data->>'subject_name', 'Unnamed') as name,
         r.data->>'incident_date' as incident_date,
         r.data->>'city' as city,
         r.data->>'state' as state
@@ -55,8 +55,7 @@ export async function GET(
       JOIN record_types rt ON r.record_type_id = rt.id
       WHERE rt.project_id = $1
         AND (
-          r.name ILIKE $2
-          OR r.data->>'name' ILIKE $2
+          r.data->>'name' ILIKE $2
           OR r.data->>'victim_name' ILIKE $2
           OR r.data->>'subject_name' ILIKE $2
         )
@@ -83,8 +82,8 @@ export async function GET(
     sqlQuery += `
       ORDER BY 
         CASE 
-          WHEN r.name ILIKE $2 THEN 1
-          WHEN r.data->>'name' ILIKE $2 THEN 2
+          WHEN r.data->>'name' ILIKE $2 THEN 1
+          WHEN r.data->>'victim_name' ILIKE $2 THEN 2
           ELSE 3
         END,
         r.created_at DESC
@@ -104,10 +103,9 @@ export async function GET(
         city: string;
         state: string;
         created_at: string;
-        data?: { name?: string };
       }) => ({
         id: row.id,
-        name: row.name || row.data?.name || 'Unnamed Record',
+        name: row.name || 'Unnamed Record',
         status: row.status,
         record_type: row.record_type,
         record_type_slug: row.record_type_slug,
