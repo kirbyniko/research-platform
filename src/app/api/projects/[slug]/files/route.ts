@@ -3,9 +3,23 @@ import { requireServerAuth } from '@/lib/server-auth';
 import pool from '@/lib/db';
 import { getProjectBySlug, hasProjectPermission } from '@/lib/project-permissions';
 import { v4 as uuidv4 } from 'uuid';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 interface RouteParams {
   params: Promise<{ slug: string }>;
+}
+
+// Initialize R2 client
+function getR2Client() {
+  return new S3Client({
+    region: 'auto',
+    credentials: {
+      accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+    },
+    endpoint: process.env.R2_ENDPOINT,
+  });
 }
 
 // Helper to check if user can upload
@@ -208,16 +222,30 @@ export async function POST(
     
     const file = insertResult.rows[0];
     
-    // TODO: Generate presigned URL for R2
-    // For now, we return the file record and expect a separate upload mechanism
-    // In production, this would use @aws-sdk/client-s3 to create presigned URL
-    
-    return NextResponse.json({
-      file,
-      uploadUrl: null, // Would be presigned URL in production
-      message: 'File record created. Direct upload to R2 not yet configured.',
-      instructions: 'Configure R2_BUCKET_NAME, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT environment variables to enable direct uploads.'
-    }, { status: 201 });
+    // Generate presigned URL for R2
+    try {
+      const client = getR2Client();
+      const command = new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME || 'research-bucket',
+        Key: storageKey,
+        ContentType: mimeType,
+      });
+      
+      const uploadUrl = await getSignedUrl(client, command, { expiresIn: 3600 }); // 1 hour
+      
+      return NextResponse.json({
+        file,
+        uploadUrl,
+        expires: 3600
+      }, { status: 201 });
+    } catch (error) {
+      console.error('Error generating presigned URL:', error);
+      return NextResponse.json({
+        file,
+        uploadUrl: null,
+        error: 'Could not generate presigned URL'
+      }, { status: 201 });
+    }
   } catch (error) {
     console.error('Error creating file upload:', error);
     return NextResponse.json(

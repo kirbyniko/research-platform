@@ -11,8 +11,8 @@
     "export-data": "node scripts/export-data.js"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.971.0",
-    "@aws-sdk/s3-request-presigner": "^3.971.0",
+    "@aws-sdk/client-s3": "^3.972.0",
+    "@aws-sdk/s3-request-presigner": "^3.972.0",
     "@descope/nextjs-sdk": "^0.15.7",
     "@descope/react-sdk": "^2.25.7",
     "@mlc-ai/web-llm": "^0.2.80",
