@@ -40,7 +40,7 @@ export async function GET(
         pm.invited_by, pm.invited_at, pm.accepted_at, 
         COALESCE(pm.can_upload, false) as can_upload, 
         pm.upload_quota_bytes,
-        u.name, u.email, u.image,
+        u.name, u.email,
         inviter.name as invited_by_name
        FROM project_members pm
        JOIN users u ON pm.user_id = u.id
@@ -74,8 +74,7 @@ export async function GET(
       user: {
         id: row.user_id,
         name: row.name,
-        email: row.email,
-        image: row.image
+        email: row.email
       }
     }));
     
