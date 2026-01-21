@@ -45,6 +45,11 @@ export default function ProjectSettings({
   const [storageInfo, setStorageInfo] = useState<any>(null);
   const [subscriptionInfo, setSubscriptionInfo] = useState<any>(null);
   const [loadingStorage, setLoadingStorage] = useState(false);
+  const [guestUploadSettings, setGuestUploadSettings] = useState({
+    guest_upload_enabled: false,
+    guest_upload_quota_bytes: 10485760, // 10MB
+    guest_upload_max_file_size: 5242880 // 5MB
+  });
   const [saving, setSaving] = useState(false);
   
   // Form state for general settings
@@ -72,6 +77,11 @@ export default function ProjectSettings({
         name: data.project.name || '',
         description: data.project.description || '',
         tags_enabled: data.project.tags_enabled ?? true
+      });
+      setGuestUploadSettings({
+        guest_upload_enabled: data.project.guest_upload_enabled ?? false,
+        guest_upload_quota_bytes: data.project.guest_upload_quota_bytes ?? 10485760,
+        guest_upload_max_file_size: data.project.guest_upload_max_file_size ?? 5242880
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load project');
@@ -418,15 +428,121 @@ export default function ProjectSettings({
 
         {/* Permissions Settings */}
         {activeTab === 'permissions' && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-6">Permissions</h2>
-            <p className="text-gray-500">
-              Permission settings coming soon. 
-              For team management, visit the{' '}
-              <a href={`/projects/${slug}/team`} className="text-blue-600 hover:underline">
-                Team page
-              </a>.
-            </p>
+          <div className="space-y-6">
+            {/* Guest Upload Settings */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-lg font-semibold mb-4">Guest Upload Settings</h2>
+              <p className="text-sm text-gray-600 mb-6">
+                Control whether guests (non-members) can upload files to this project.
+              </p>
+              
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="guest_upload_enabled"
+                    checked={guestUploadSettings.guest_upload_enabled}
+                    onChange={async (e) => {
+                      const enabled = e.target.checked;
+                      setGuestUploadSettings({ ...guestUploadSettings, guest_upload_enabled: enabled });
+                      try {
+                        await fetch(`/api/projects/${slug}`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ guest_upload_enabled: enabled })
+                        });
+                      } catch (err) {
+                        alert('Failed to update setting');
+                      }
+                    }}
+                    className="w-4 h-4 rounded border-gray-300"
+                  />
+                  <label htmlFor="guest_upload_enabled" className="text-sm text-gray-700 font-medium">
+                    Allow guests to upload files
+                  </label>
+                </div>
+                
+                {guestUploadSettings.guest_upload_enabled && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Guest Upload Quota
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={Math.round(guestUploadSettings.guest_upload_quota_bytes / (1024 * 1024))}
+                          onChange={async (e) => {
+                            const mb = parseInt(e.target.value) || 10;
+                            const bytes = mb * 1024 * 1024;
+                            setGuestUploadSettings({ ...guestUploadSettings, guest_upload_quota_bytes: bytes });
+                          }}
+                          onBlur={async () => {
+                            try {
+                              await fetch(`/api/projects/${slug}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ guest_upload_quota_bytes: guestUploadSettings.guest_upload_quota_bytes })
+                              });
+                            } catch (err) {
+                              alert('Failed to update quota');
+                            }
+                          }}
+                          className="w-32 px-3 py-2 border rounded text-sm"
+                          min="1"
+                        />
+                        <span className="text-sm text-gray-600">MB total per guest</span>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Max File Size
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={Math.round(guestUploadSettings.guest_upload_max_file_size / (1024 * 1024))}
+                          onChange={async (e) => {
+                            const mb = parseInt(e.target.value) || 5;
+                            const bytes = mb * 1024 * 1024;
+                            setGuestUploadSettings({ ...guestUploadSettings, guest_upload_max_file_size: bytes });
+                          }}
+                          onBlur={async () => {
+                            try {
+                              await fetch(`/api/projects/${slug}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ guest_upload_max_file_size: guestUploadSettings.guest_upload_max_file_size })
+                              });
+                            } catch (err) {
+                              alert('Failed to update file size limit');
+                            }
+                          }}
+                          className="w-32 px-3 py-2 border rounded text-sm"
+                          min="1"
+                        />
+                        <span className="text-sm text-gray-600">MB per file</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+            
+            {/* Team Upload Settings */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-lg font-semibold mb-4">Team Upload Permissions</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Manage which team members can upload files and their individual quotas.
+              </p>
+              <a 
+                href={`/projects/${slug}/team`} 
+                className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+              >
+                Manage Team Permissions →
+              </a>
+            </div>
           </div>
         )}
       </main>

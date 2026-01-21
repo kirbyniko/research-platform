@@ -55,6 +55,7 @@ export default function ProjectTeam({
   const [inviteRole, setInviteRole] = useState<ProjectRole>('viewer');
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [editingUploadPerms, setEditingUploadPerms] = useState<number | null>(null);
 
   useEffect(() => {
     params.then(p => setProjectSlug(p.slug));
@@ -151,6 +152,46 @@ export default function ProjectTeam({
     }
   }
 
+  async function handleToggleUpload(memberId: number, currentValue: boolean) {
+    try {
+      const response = await fetch(`/api/projects/${projectSlug}/members/${memberId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ can_upload: !currentValue }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update upload permission');
+      }
+
+      fetchMembers();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update upload permission');
+    }
+  }
+
+  async function handleUpdateQuota(memberId: number, quotaMB: number) {
+    try {
+      const quotaBytes = quotaMB > 0 ? quotaMB * 1024 * 1024 : null;
+      const response = await fetch(`/api/projects/${projectSlug}/members/${memberId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ upload_quota_bytes: quotaBytes }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update quota');
+      }
+
+      fetchMembers();
+      setEditingUploadPerms(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update quota');
+    }
+  }
+
   if (status === 'loading' || loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
@@ -211,8 +252,8 @@ export default function ProjectTeam({
           <div className="divide-y divide-gray-200">
             {members.map(member => (
               <div key={member.id} className="p-6 hover:bg-gray-50">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-4">
                     {member.user?.image ? (
                       <img
                         src={member.user.image}
@@ -224,7 +265,7 @@ export default function ProjectTeam({
                         {member.user?.name?.charAt(0) || '?'}
                       </div>
                     )}
-                    <div>
+                    <div className="flex-1">
                       <div className="font-medium text-gray-900">{member.user?.name}</div>
                       <div className="text-sm text-gray-500">{member.user?.email}</div>
                       {member.invited_at && (
@@ -232,6 +273,72 @@ export default function ProjectTeam({
                           Joined {new Date(member.invited_at).toLocaleDateString()}
                         </div>
                       )}
+                      
+                      {/* Upload Permissions */}
+                      <div className="mt-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id={`upload-${member.id}`}
+                            checked={member.can_upload || false}
+                            onChange={() => handleToggleUpload(member.id, member.can_upload || false)}
+                            disabled={member.role === 'owner'}
+                            className="w-4 h-4 rounded border-gray-300"
+                          />
+                          <label htmlFor={`upload-${member.id}`} className="text-sm text-gray-700">
+                            Can upload files
+                          </label>
+                        </div>
+                        
+                        {member.can_upload && (
+                          <div className="ml-6">
+                            {editingUploadPerms === member.id ? (
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  placeholder="MB (0 = unlimited)"
+                                  defaultValue={member.upload_quota_bytes ? Math.round(member.upload_quota_bytes / (1024 * 1024)) : 0}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      const mb = parseInt((e.target as HTMLInputElement).value) || 0;
+                                      handleUpdateQuota(member.id, mb);
+                                    } else if (e.key === 'Escape') {
+                                      setEditingUploadPerms(null);
+                                    }
+                                  }}
+                                  className="w-24 px-2 py-1 border rounded text-sm"
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={() => {
+                                    const input = document.querySelector(`input[type="number"]`) as HTMLInputElement;
+                                    const mb = parseInt(input?.value) || 0;
+                                    handleUpdateQuota(member.id, mb);
+                                  }}
+                                  className="text-xs text-blue-600 hover:text-blue-800"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingUploadPerms(null)}
+                                  className="text-xs text-gray-600 hover:text-gray-800"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setEditingUploadPerms(member.id)}
+                                className="text-xs text-gray-600 hover:text-blue-600"
+                              >
+                                Quota: {member.upload_quota_bytes 
+                                  ? `${Math.round(member.upload_quota_bytes / (1024 * 1024))} MB`
+                                  : 'Unlimited'} (click to edit)
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">

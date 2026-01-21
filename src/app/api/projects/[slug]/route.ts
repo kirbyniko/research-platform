@@ -139,6 +139,21 @@ export async function PATCH(
       values.push(body.tags_enabled);
     }
     
+    if (body.guest_upload_enabled !== undefined) {
+      updates.push(`guest_upload_enabled = $${paramIndex++}`);
+      values.push(body.guest_upload_enabled);
+    }
+    
+    if (body.guest_upload_quota_bytes !== undefined) {
+      updates.push(`guest_upload_quota_bytes = $${paramIndex++}`);
+      values.push(body.guest_upload_quota_bytes);
+    }
+    
+    if (body.guest_upload_max_file_size !== undefined) {
+      updates.push(`guest_upload_max_file_size = $${paramIndex++}`);
+      values.push(body.guest_upload_max_file_size);
+    }
+    
     if (updates.length === 0) {
       return NextResponse.json({ error: 'No updates provided' }, { status: 400 });
     }
