@@ -142,9 +142,22 @@ interface MediaFieldProps {
   accept?: string[];
   maxFileSize?: { image: number; video: number };
   description?: string;
+  projectSlug?: string;
+  recordId?: number;
+  fieldSlug?: string;
+  canUpload?: boolean; // Whether upload is enabled for this user/project
 }
 
-export function MediaField({ value = [], onChange, disabled, description }: MediaFieldProps) {
+export function MediaField({ 
+  value = [], 
+  onChange, 
+  disabled, 
+  description,
+  projectSlug,
+  recordId,
+  fieldSlug,
+  canUpload = false 
+}: MediaFieldProps) {
   const [showAddUrl, setShowAddUrl] = useState(false);
   const [newUrl, setNewUrl] = useState('');
   
@@ -297,14 +310,18 @@ export function MediaField({ value = [], onChange, disabled, description }: Medi
               >
                 + Add URL
               </button>
-              <button
-                type="button"
-                className="flex-1 px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-                disabled
-                title="File upload not yet implemented"
-              >
-                📤 Upload File
-              </button>
+              {canUpload && projectSlug && (
+                <button
+                  type="button"
+                  className="flex-1 px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                  onClick={() => {
+                    // Trigger file upload - would need to integrate FileUpload component
+                    alert('File upload coming soon. For now, please use Add URL to link to externally hosted media.');
+                  }}
+                >
+                  📤 Upload File
+                </button>
+              )}
             </div>
           )}
         </>

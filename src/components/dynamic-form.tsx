@@ -24,6 +24,7 @@ interface DynamicFormProps {
   recordId?: number;
   quotes?: RecordQuote[];
   verifiedFields?: Record<string, any>;
+  canUpload?: boolean; // Whether user has upload permission
 }
 
 export function DynamicForm({
@@ -42,6 +43,7 @@ export function DynamicForm({
   recordId,
   quotes = [],
   verifiedFields = {},
+  canUpload = false,
 }: DynamicFormProps) {
   // Use initialData if initialValues not provided (backward compatibility)
   const startValues = initialValues || initialData || {};
@@ -498,6 +500,10 @@ export function DynamicForm({
             onChange={(newVal) => handleChange(field.slug, newVal)}
             disabled={isDisabled}
             description={config.description}
+            projectSlug={projectSlug}
+            recordId={recordId}
+            fieldSlug={field.slug}
+            canUpload={canUpload}
           />
         )}
         
