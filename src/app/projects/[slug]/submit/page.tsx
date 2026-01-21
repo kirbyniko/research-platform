@@ -262,8 +262,6 @@ export default function GuestSubmitPage({ params }: { params: Promise<{ slug: st
                 groups={groups}
                 onSubmit={handleSubmit}
                 onCancel={() => setSelectedType(null)}
-                submitLabel="Submit"
-                cancelLabel="Back"
               />
             )}
           </div>
