@@ -100,8 +100,16 @@ export async function GET(
     });
   } catch (error) {
     console.error('Error fetching record:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      error: error
+    });
     return NextResponse.json(
-      { error: 'Failed to fetch record' },
+      { 
+        error: 'Failed to fetch record',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

@@ -2788,7 +2788,17 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>ICE Incident Documentation</h1>
+      <h1>Research Platform</h1>
+    </div>
+    
+    <!-- Project Context Bar -->
+    <div class="project-context-bar" id="projectContextBar" style="background: #f0f4f8; padding: 8px 16px; border-bottom: 1px solid #e0e0e0; display: flex; gap: 8px; align-items: center;">
+      <select id="projectSelector" class="form-input" style="flex: 1; padding: 6px 8px; font-size: 12px;">
+        <option value="">-- Select Project --</option>
+      </select>
+      <select id="recordTypeSelector" class="form-input" style="flex: 1; padding: 6px 8px; font-size: 12px;" disabled>
+        <option value="">-- Select Type --</option>
+      </select>
     </div>
     
     <div class="status-bar">
@@ -5254,7 +5264,7 @@
         
         <div class="form-group">
           <p class="help-text" style="font-size: 11px; color: #666; margin-bottom: 8px;">
-            Connected to: <strong id="apiUrlDisplay">https://ice-deaths.vercel.app</strong>
+            Connected to: <strong id="apiUrlDisplay">https://research-platform-beige.vercel.app</strong>
           </p>
         </div>
         
@@ -5262,7 +5272,7 @@
           <label class="form-label">API Key</label>
           <input type="password" class="form-input" id="apiKey" placeholder="Enter your API key">
           <p class="help-text" style="font-size: 11px; color: #666; margin-top: 4px;">
-            Required for saving incidents. 
+            Required for saving records. 
             <a href="#" id="getApiKeyLink" style="color: #3b82f6;">Get your API key →</a>
           </p>
         </div>
@@ -5596,6 +5606,11 @@
     </div>
   </div>
   
+  <!-- Multi-project API module (must load first) -->
+  <script src="project-api.js"></script>
+  <script src="dynamic-form.js"></script>
+  
+  <!-- Legacy field definitions (for backwards compatibility) -->
   <script src="field-registry.js"></script>
   <script src="type-field-definitions.js"></script>
   <script src="content-types.js"></script>

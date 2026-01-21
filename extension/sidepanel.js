@@ -311,7 +311,7 @@ let sources = [];
 let media = [];  // Array of {url, media_type, title?, description?}
 let customFields = [];  // Array of custom fields for current incident
 let isConnected = false;
-let apiUrl = 'https://ice-deaths.vercel.app';
+let apiUrl = 'https://research-platform-beige.vercel.app';
 let apiKey = '';
 let currentSelectors = {};
 let isExtracting = false;
@@ -328,6 +328,13 @@ let reviewIncidentId = null;  // ID of incident being reviewed
 let isNewIncidentFromGuest = false;  // Are we creating a new incident from guest submission?
 let currentGuestSubmissionId = null;  // ID of guest submission being reviewed
 let verifiedFields = {};  // Track which fields have been verified in review mode
+
+// Multi-project state
+let projectsLoaded = false;
+let currentProjectSlug = null;
+let currentRecordTypeSlug = null;
+let dynamicFieldDefinitions = [];
+let dynamicFieldGroups = [];
 let verifiedMedia = {};  // Track which media items have been verified
 let reviewTimeline = []; // Timeline entries loaded during review
 
@@ -655,6 +662,9 @@ async function init() {
   updatePageInfo();
   loadQuoteAssociations();
   
+  // Initialize project selector
+  await initProjectContext();
+  
   // Initialize violation case law dropdowns
   initializeAllCaseLawDropdowns();
   updateViolationCount();
@@ -956,6 +966,219 @@ async function loadState() {
       resolve();
     });
   });
+}
+
+// Initialize project context - fetch projects and set up selectors
+async function initProjectContext() {
+  const projectSelector = document.getElementById('projectSelector');
+  const recordTypeSelector = document.getElementById('recordTypeSelector');
+  
+  if (!projectSelector || !recordTypeSelector) {
+    console.warn('[ProjectContext] Selectors not found');
+    return;
+  }
+  
+  // Set up change handlers
+  projectSelector.addEventListener('change', async (e) => {
+    const slug = e.target.value;
+    if (slug) {
+      await selectProject(slug);
+    } else {
+      recordTypeSelector.innerHTML = '<option value="">-- Select Type --</option>';
+      recordTypeSelector.disabled = true;
+      currentProjectSlug = null;
+      currentRecordTypeSlug = null;
+    }
+  });
+  
+  recordTypeSelector.addEventListener('change', async (e) => {
+    const slug = e.target.value;
+    if (slug) {
+      await selectRecordType(slug);
+    } else {
+      currentRecordTypeSlug = null;
+      dynamicFieldDefinitions = [];
+      dynamicFieldGroups = [];
+    }
+  });
+  
+  // If we have an API key, try to load projects
+  if (apiKey) {
+    await loadProjects();
+  } else {
+    // Show guest mode - hide project selector
+    const contextBar = document.getElementById('projectContextBar');
+    if (contextBar) {
+      contextBar.innerHTML = '<span style="color: #666; font-size: 12px;">🔑 Add API key in Settings to access projects</span>';
+    }
+  }
+}
+
+// Load available projects
+async function loadProjects() {
+  const projectSelector = document.getElementById('projectSelector');
+  
+  try {
+    const response = await fetch(`${apiUrl}/api/projects`, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        console.warn('[ProjectContext] Not authenticated');
+        return;
+      }
+      throw new Error(`Failed to fetch projects: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    const projects = data.projects || [];
+    
+    // Populate selector
+    projectSelector.innerHTML = '<option value="">-- Select Project --</option>';
+    
+    for (const project of projects) {
+      const option = document.createElement('option');
+      option.value = project.slug;
+      option.textContent = project.name;
+      projectSelector.appendChild(option);
+    }
+    
+    projectsLoaded = true;
+    console.log('[ProjectContext] Loaded', projects.length, 'projects');
+    
+    // Restore saved project selection
+    chrome.storage.local.get(['currentProjectSlug', 'currentRecordTypeSlug'], async (result) => {
+      if (result.currentProjectSlug) {
+        projectSelector.value = result.currentProjectSlug;
+        await selectProject(result.currentProjectSlug);
+        
+        if (result.currentRecordTypeSlug) {
+          const recordTypeSelector = document.getElementById('recordTypeSelector');
+          recordTypeSelector.value = result.currentRecordTypeSlug;
+          await selectRecordType(result.currentRecordTypeSlug);
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('[ProjectContext] Error loading projects:', error);
+    projectSelector.innerHTML = '<option value="">Error loading projects</option>';
+  }
+}
+
+// Select a project and load its record types
+async function selectProject(projectSlug) {
+  currentProjectSlug = projectSlug;
+  chrome.storage.local.set({ currentProjectSlug: projectSlug });
+  
+  const recordTypeSelector = document.getElementById('recordTypeSelector');
+  recordTypeSelector.innerHTML = '<option value="">Loading...</option>';
+  recordTypeSelector.disabled = true;
+  
+  try {
+    const response = await fetch(`${apiUrl}/api/projects/${projectSlug}/record-types`, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch record types: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    const recordTypes = data.recordTypes || [];
+    
+    // Populate selector
+    recordTypeSelector.innerHTML = '<option value="">-- Select Type --</option>';
+    
+    for (const rt of recordTypes) {
+      const option = document.createElement('option');
+      option.value = rt.slug;
+      option.textContent = `${rt.icon || '📄'} ${rt.name}`;
+      recordTypeSelector.appendChild(option);
+    }
+    
+    recordTypeSelector.disabled = false;
+    console.log('[ProjectContext] Loaded', recordTypes.length, 'record types for', projectSlug);
+    
+    // Notify background script of project change
+    chrome.runtime.sendMessage({
+      type: 'PROJECT_CHANGED',
+      projectSlug: projectSlug
+    });
+    
+  } catch (error) {
+    console.error('[ProjectContext] Error loading record types:', error);
+    recordTypeSelector.innerHTML = '<option value="">Error loading types</option>';
+  }
+}
+
+// Select a record type and load its field definitions
+async function selectRecordType(recordTypeSlug) {
+  currentRecordTypeSlug = recordTypeSlug;
+  chrome.storage.local.set({ currentRecordTypeSlug: recordTypeSlug });
+  
+  try {
+    const response = await fetch(
+      `${apiUrl}/api/projects/${currentProjectSlug}/record-types/${recordTypeSlug}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch field definitions: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    dynamicFieldDefinitions = data.fields || [];
+    dynamicFieldGroups = data.groups || [];
+    
+    console.log('[ProjectContext] Loaded', dynamicFieldDefinitions.length, 'fields in', dynamicFieldGroups.length, 'groups');
+    
+    // Notify background script to rebuild context menus
+    chrome.runtime.sendMessage({
+      type: 'RECORD_TYPE_CHANGED',
+      projectSlug: currentProjectSlug,
+      recordTypeSlug: recordTypeSlug,
+      fields: dynamicFieldDefinitions,
+      groups: dynamicFieldGroups
+    });
+    
+    // Update the form with dynamic fields if DynamicForm is available
+    if (typeof window.DynamicForm !== 'undefined') {
+      updateFormWithDynamicFields();
+    }
+    
+  } catch (error) {
+    console.error('[ProjectContext] Error loading field definitions:', error);
+    dynamicFieldDefinitions = [];
+    dynamicFieldGroups = [];
+  }
+}
+
+// Update the form container with dynamically generated fields
+function updateFormWithDynamicFields() {
+  // For now, we'll use legacy forms - in Phase 2 we'll generate dynamic forms
+  // This is a placeholder for future full dynamic form generation
+  console.log('[ProjectContext] Would update form with', dynamicFieldDefinitions.length, 'fields');
+  
+  // TODO: Replace the static form sections with dynamic ones
+  // const formContainer = document.getElementById('dynamicFormContainer');
+  // if (formContainer) {
+  //   const form = window.DynamicForm.render(dynamicFieldDefinitions, dynamicFieldGroups, currentCase);
+  //   formContainer.innerHTML = '';
+  //   formContainer.appendChild(form);
+  // }
 }
 
 // Setup tab navigation
@@ -1712,11 +1935,15 @@ function setupEventListeners() {
   const resetApiUrlBtn = document.getElementById('resetApiUrlBtn');
   if (resetApiUrlBtn) {
     resetApiUrlBtn.addEventListener('click', () => {
-      apiUrl = 'https://ice-deaths.vercel.app';
+      apiUrl = 'https://research-platform-beige.vercel.app';
       chrome.storage.local.set({ apiUrl }, () => {
         document.getElementById('apiUrlDisplay').textContent = apiUrl;
         showAlert('API URL reset to production: ' + apiUrl, '✅ Success');
         checkConnection();
+        // Reload projects with new URL
+        if (apiKey) {
+          loadProjects();
+        }
       });
     });
   }
@@ -1728,9 +1955,16 @@ function setupEventListeners() {
     // Re-check role when API key changes
     if (apiKey) {
       await checkUserRole();
+      // Also load projects when API key is set
+      await loadProjects();
     } else {
       userRole = null;
       updateUserStatus();
+      // Reset project context
+      const contextBar = document.getElementById('projectContextBar');
+      if (contextBar) {
+        contextBar.innerHTML = '<span style="color: #666; font-size: 12px;">🔑 Add API key in Settings to access projects</span>';
+      }
     }
   });
   

@@ -1,6 +1,7 @@
-// ICE Incident Tracker - Background Service Worker
+// Research Platform - Background Service Worker
 
-const API_BASE = 'https://ice-deaths.vercel.app/api';
+// Default API URL - can be configured per-project
+let API_BASE = 'https://research-platform-beige.vercel.app/api';
 
 // Extension state
 let currentCase = null;
@@ -12,10 +13,16 @@ let currentContentMode = 'incident'; // 'incident' or 'statement' - controls con
 let isValidateMode = false; // True when validating existing cases
 let currentStatementType = ''; // Current statement type (for conditional menu sections)
 
+// Multi-project state
+let currentProjectSlug = null;
+let currentRecordTypeSlug = null;
+let dynamicFieldDefinitions = [];
+let dynamicFieldGroups = [];
+
 // ===========================================
 // FIELD MENU DEFINITIONS
 // Hierarchical menu structure for quote-to-field linking
-// These match EXACTLY what's shown in the extension forms
+// These are DEFAULT fields - will be replaced when project is selected
 // ===========================================
 
 const FIELD_MENU_CATEGORIES = [
@@ -320,6 +327,130 @@ function buildContextMenus() {
   });
 }
 
+// Build context menus from dynamically fetched field definitions
+function buildContextMenusFromDynamicFields() {
+  console.log('[Background] Building context menus from dynamic fields...');
+  console.log('[Background] Fields:', dynamicFieldDefinitions.length, 'Groups:', dynamicFieldGroups.length);
+  
+  // If no dynamic fields, fall back to default menus
+  if (dynamicFieldDefinitions.length === 0) {
+    console.log('[Background] No dynamic fields, using default menus');
+    buildContextMenus();
+    return;
+  }
+  
+  // Clear existing menus first
+  chrome.contextMenus.removeAll(() => {
+    console.log('[Background] Cleared existing menus, creating from dynamic fields...');
+    
+    try {
+      // Root menu: Add Quote to Record
+      chrome.contextMenus.create({
+        id: 'add-quote-root',
+        title: 'Add Quote to Record',
+        contexts: ['selection']
+      });
+      
+      // Add "General (uncategorized)" option
+      chrome.contextMenus.create({
+        id: 'add-quote-general',
+        parentId: 'add-quote-root',
+        title: '📝 General (no field link)',
+        contexts: ['selection']
+      });
+      
+      // Separator
+      chrome.contextMenus.create({
+        id: 'separator-1',
+        parentId: 'add-quote-root',
+        type: 'separator',
+        contexts: ['selection']
+      });
+      
+      // Organize fields by group
+      const groupedFields = {};
+      const ungroupedFields = [];
+      
+      for (const group of dynamicFieldGroups) {
+        groupedFields[group.id] = {
+          group: group,
+          fields: []
+        };
+      }
+      
+      for (const field of dynamicFieldDefinitions) {
+        if (field.field_group_id && groupedFields[field.field_group_id]) {
+          groupedFields[field.field_group_id].fields.push(field);
+        } else {
+          ungroupedFields.push(field);
+        }
+      }
+      
+      // Create menu items for each group
+      for (const [groupId, { group, fields }] of Object.entries(groupedFields)) {
+        if (fields.length === 0) continue;
+        
+        // Group submenu
+        chrome.contextMenus.create({
+          id: `group-${groupId}`,
+          parentId: 'add-quote-root',
+          title: group.name,
+          contexts: ['selection']
+        });
+        
+        // Fields within group
+        for (const field of fields) {
+          chrome.contextMenus.create({
+            id: `field-${field.key}`,
+            parentId: `group-${groupId}`,
+            title: field.name,
+            contexts: ['selection']
+          });
+        }
+      }
+      
+      // Add ungrouped fields if any
+      if (ungroupedFields.length > 0) {
+        chrome.contextMenus.create({
+          id: 'group-ungrouped',
+          parentId: 'add-quote-root',
+          title: '📋 Other Fields',
+          contexts: ['selection']
+        });
+        
+        for (const field of ungroupedFields) {
+          chrome.contextMenus.create({
+            id: `field-${field.key}`,
+            parentId: 'group-ungrouped',
+            title: field.name,
+            contexts: ['selection']
+          });
+        }
+      }
+      
+      // Separator before timeline
+      chrome.contextMenus.create({
+        id: 'separator-3',
+        parentId: 'add-quote-root',
+        type: 'separator',
+        contexts: ['selection']
+      });
+      
+      // Timeline event option
+      chrome.contextMenus.create({
+        id: 'add-quote-timeline',
+        parentId: 'add-quote-root',
+        title: '📅 Add as Timeline Event',
+        contexts: ['selection']
+      });
+      
+      console.log('[Background] Dynamic context menus created successfully');
+    } catch (error) {
+      console.error('[Background] Error building dynamic menus:', error);
+    }
+  });
+}
+
 // Update custom fields menu with incident's custom fields
 async function updateCustomFieldsMenu(incidentId) {
   console.log('Updating custom fields menu for incident:', incidentId);
@@ -597,9 +728,35 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sources: sources,
         customFields: customFields,
         currentContentMode: currentContentMode,
-        isValidateMode: isValidateMode
+        isValidateMode: isValidateMode,
+        // Include project context
+        currentProjectSlug: currentProjectSlug,
+        currentRecordTypeSlug: currentRecordTypeSlug
       });
       return true;
+    
+    case 'PROJECT_CHANGED':
+      // Update project context
+      currentProjectSlug = message.projectSlug;
+      console.log('[Background] Project changed to:', currentProjectSlug);
+      saveState();
+      sendResponse({ success: true });
+      break;
+    
+    case 'RECORD_TYPE_CHANGED':
+      // Update record type and rebuild context menus from dynamic fields
+      currentProjectSlug = message.projectSlug;
+      currentRecordTypeSlug = message.recordTypeSlug;
+      dynamicFieldDefinitions = message.fields || [];
+      dynamicFieldGroups = message.groups || [];
+      console.log('[Background] Record type changed to:', currentRecordTypeSlug);
+      console.log('[Background] Received', dynamicFieldDefinitions.length, 'fields,', dynamicFieldGroups.length, 'groups');
+      
+      // Rebuild context menus with dynamic fields
+      buildContextMenusFromDynamicFields();
+      saveState();
+      sendResponse({ success: true });
+      break;
     
     case 'SET_CONTENT_MODE':
       // Update content mode and rebuild context menus

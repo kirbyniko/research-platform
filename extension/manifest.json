@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "ICE Incident Tracker",
-  "version": "1.0",
-  "description": "Extract and validate case data from news articles and documents for the ICE Incident Tracker project",
+  "name": "Research Platform",
+  "version": "2.0",
+  "description": "Multi-project research data collection from news articles, documents, and PDFs. Supports quote extraction, source tracking, and field verification.",
   "permissions": [
     "activeTab",
     "storage",
@@ -19,7 +19,9 @@
     "matches": [
       "http://localhost:3000/*",
       "http://localhost:3001/*",
-      "http://localhost:3002/*"
+      "http://localhost:3002/*",
+      "https://research-platform-beige.vercel.app/*",
+      "https://*.vercel.app/*"
     ]
   },
   "side_panel": {
@@ -31,7 +33,7 @@
       "48": "icons/icon48.svg",
       "128": "icons/icon128.svg"
     },
-    "default_title": "ICE Deaths Research"
+    "default_title": "Research Platform"
   },
   "background": {
     "service_worker": "background.js"

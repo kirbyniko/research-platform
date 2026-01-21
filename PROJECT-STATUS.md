@@ -1,9 +1,9 @@
 # Research Platform - Project Overview & Current State
 
-**Last Updated:** January 20, 2026  
+**Last Updated:** January 21, 2026  
 **Production URL:** https://research-platform-beige.vercel.app  
 **Repository:** https://github.com/kirbyniko/research-platform  
-**Latest Commit:** e7e2a55 - "Add DynamicForm component, record type API, and queue pages"
+**Latest Status:** Browser extension Phase 1 complete - multi-project infrastructure in place
 
 ---
 
@@ -198,6 +198,73 @@ node run-migration.js
 
 ---
 
+---
+
+## 🔥 BROWSER EXTENSION STATUS
+
+### ✅ Phase 1 Complete (January 21, 2026)
+**Goal:** Add multi-project infrastructure to extension
+
+**Completed:**
+- ✅ Created `extension/project-api.js` - API module for multi-project operations
+- ✅ Created `extension/dynamic-form.js` - Form renderer from field definitions  
+- ✅ Updated `extension/manifest.json` - Renamed to "Research Platform", version 2.0
+- ✅ Updated `extension/sidepanel.html` - Added project/record-type selectors
+- ✅ Updated `extension/sidepanel.js` - Added project context functions
+- ✅ Updated `extension/background.js` - Dynamic context menu building
+- ✅ All files copied to `c:\Users\nikow\research-platform\extension\`
+
+**How Extension Works Now:**
+1. User opens extension sidepanel
+2. User adds API key in Settings tab
+3. Extension fetches available projects from `/api/projects`
+4. User selects a project → record types load
+5. User selects record type → field definitions load
+6. Context menus rebuild dynamically with that type's fields
+7. User can right-click selected text → see field groups from selected record type
+
+### 🔄 Phase 2 - Next Steps
+**Goal:** Replace hard-coded forms with dynamic rendering
+
+**Priority Tasks:**
+
+#### 1. Dynamic Form Rendering (HIGH)
+Currently the form still shows hard-coded ICE Deaths fields. Need to:
+- [ ] Replace static form HTML with dynamic container in `sidepanel.html`
+- [ ] Call `DynamicForm.render()` when record type is selected
+- [ ] Update `updateFormWithDynamicFields()` in `sidepanel.js`
+- [ ] Test with multiple field types
+
+**File:** `extension/sidepanel.js` line ~450
+
+#### 2. Update Save Functions (HIGH)
+- [ ] Update `saveCase()` to use `POST /api/projects/[slug]/records`
+- [ ] Use `DynamicForm.collectValues()` to get form data
+- [ ] Update quote operations to use `/api/projects/[slug]/records/[id]/quotes`
+- [ ] Update source operations to use `/api/projects/[slug]/records/[id]/sources`
+
+**File:** `extension/sidepanel.js` line ~350
+
+#### 3. Review & Validation Queues (MEDIUM)
+- [ ] Update `loadReviewQueue()` to use `/api/projects/[slug]/records?status=pending_review`
+- [ ] Update `loadValidationQueue()` to use `/api/projects/[slug]/records?status=pending_validation`
+- [ ] Filter by current project
+- [ ] Update approve/reject functions
+
+**File:** `extension/sidepanel.js` lines ~500-600
+
+#### 4. Testing (CRITICAL)
+- [ ] Load extension in Chrome: `chrome://extensions/` → Load unpacked → Select `c:\Users\nikow\research-platform\extension`
+- [ ] Test with ICE Deaths project (if it exists in platform)
+- [ ] Test with a new custom project
+- [ ] Verify quote capture from web pages
+- [ ] Verify PDF analysis
+- [ ] Test full workflow: capture → save → review → validate
+
+**Extension Location:** `c:\Users\nikow\research-platform\extension\`
+
+---
+
 ## API ENDPOINTS STATUS
 
 ### Working ✅
@@ -315,14 +382,20 @@ node check-test-form.js        # Check record type exists
 
 ## IMMEDIATE NEXT STEPS
 
-1. ~~**Create missing API route:**~~ ✅ DONE - `/api/projects/[slug]/record-types/[type]`
-2. ~~**Build Field Configuration UI:**~~ ✅ EXISTS - Full field builder interface
-3. ~~**Test Record Creation:**~~ ✅ DynamicForm component created
-4. ~~**Implement Review Queue:**~~ ✅ DONE - Shows pending submissions
-5. ~~**Implement Validation Queue:**~~ ✅ DONE - Shows pending validations
+### Extension Phase 2 (START HERE) 🔥
+1. **Dynamic Form Rendering** - Replace static ICE Deaths form with `DynamicForm.render()`
+   - File: `extension/sidepanel.js` function `updateFormWithDynamicFields()`
+   - Goal: Form fields should come from API, not hard-coded
 
-### Remaining Work
+2. **Update Save Function** - Use new `/api/projects/[slug]/records` endpoint
+   - File: `extension/sidepanel.js` function `saveCase()`
+   - Goal: Records save to correct project
 
+3. **Test Extension** - Load in Chrome and verify end-to-end
+   - Location: `c:\Users\nikow\research-platform\extension`
+   - Test: Project selector → form render → save → review
+
+### Platform Enhancements (LOWER PRIORITY)
 1. **Full test of end-to-end workflow** - Create fields, create record, review it
 2. **Implement project settings page** - Allow editing project name, description, etc.
 3. **Implement team management page** - Add/remove team members
