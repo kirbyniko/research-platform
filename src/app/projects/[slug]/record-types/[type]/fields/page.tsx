@@ -223,11 +223,12 @@ interface FieldEditorModalProps {
   recordTypeSlug: string;
   field?: FieldDefinition;
   groups: FieldGroup[];
+  allFields: FieldDefinition[];
   onSave: () => void;
   onClose: () => void;
 }
 
-function FieldEditorModal({ projectSlug, recordTypeSlug, field, groups, onSave, onClose }: FieldEditorModalProps) {
+function FieldEditorModal({ projectSlug, recordTypeSlug, field, groups, allFields, onSave, onClose }: FieldEditorModalProps) {
   const isEditing = !!field;
   
   const [slug, setSlug] = useState(field?.slug || '');
@@ -259,7 +260,13 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, groups, onSave, 
   
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [autoSlug, setAutoSlug] = useState(!isEditing);
+  
+  // Auto-generate slug from name
+  useEffect(() => {
+    if (!isEditing && name) {
+      setSlug(generateSlug(name));
+    }
+  }, [name, isEditing]);
 
   function generateSlug(name: string): string {
     return name
@@ -954,6 +961,7 @@ export default function FieldEditorPage({ params }: { params: Promise<{ slug: st
           recordTypeSlug={resolvedParams.type}
           field={editingField}
           groups={groups}
+          allFields={fields}
           onSave={() => {
             setShowAddModal(false);
             setEditingField(undefined);
