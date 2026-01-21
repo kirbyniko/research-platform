@@ -46,9 +46,10 @@ export async function GET(
          CASE pm.role 
            WHEN 'owner' THEN 1 
            WHEN 'admin' THEN 2 
-           WHEN 'editor' THEN 3
-           WHEN 'reviewer' THEN 4
-           WHEN 'viewer' THEN 5
+           WHEN 'analyst' THEN 3
+           WHEN 'validator' THEN 4
+           WHEN 'reviewer' THEN 5
+           WHEN 'viewer' THEN 6
          END,
          pm.invited_at DESC`,
       [project.id]
