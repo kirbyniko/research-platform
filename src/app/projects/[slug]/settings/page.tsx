@@ -117,6 +117,58 @@ useEffect(() => {
     }
   };
 
+  const fetchStorageInfo = async () => {
+    setLoadingStorage(true);
+    try {
+      const [storageRes, subRes] = await Promise.all([
+        fetch(`/api/projects/${slug}/storage`),
+        fetch(`/api/projects/${slug}/subscription`)
+      ]);
+      if (storageRes.ok) {
+        const data = await storageRes.json();
+        setStorageInfo(data);
+      }
+      if (subRes.ok) {
+        const data = await subRes.json();
+        setSubscriptionInfo(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch storage info:', err);
+    } finally {
+      setLoadingStorage(false);
+    }
+  };
+
+  const handleChangePlan = async (planSlug: string) => {
+    try {
+      const res = await fetch(`/api/projects/${slug}/subscription`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planSlug })
+      });
+      if (res.ok) {
+        await fetchStorageInfo();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to change plan');
+      }
+    } catch (err) {
+      alert('Failed to change plan');
+    }
+  };
+
+  useEffect(() => {
+    fetchProject();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug]);
+
+  useEffect(() => {
+    if (activeTab === 'storage' && !storageInfo) {
+      fetchStorageInfo();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -148,53 +200,6 @@ useEffect(() => {
     { id: 'storage' as const, label: 'Storage' },
     { id: 'permissions' as const, label: 'Permissions' }
   ];
-
-  const fetchStorageInfo = async () => {
-    setLoadingStorage(true);
-    try {
-      const [storageRes, subRes] = await Promise.all([
-        fetch(`/api/projects/${slug}/storage`),
-        fetch(`/api/projects/${slug}/subscription`)
-      ]);
-      if (storageRes.ok) {
-        const data = await storageRes.json();
-        setStorageInfo(data);
-      }
-      if (subRes.ok) {
-        const data = await subRes.json();
-        setSubscriptionInfo(data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch storage info:', err);
-    } finally {
-      setLoadingStorage(false);
-    }
-  };
-
-  const handleChangePlan = async (planSlug: string) => {
-    if (!confirm(`Change to ${planSlug} plan?`)) return;
-    try {
-      const res = await fetch(`/api/projects/${slug}/subscription`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planSlug })
-      });
-      if (res.ok) {
-        await fetchStorageInfo();
-      } else {
-        const data = await res.json();
-        alert(data.error || 'Failed to change plan');
-      }
-    } catch (err) {
-      alert('Failed to change plan');
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'storage' && !storageInfo) {
-      fetchStorageInfo();
-    }
-  }, [activeTab]);
 
   return (
     <div className="min-h-screen bg-gray-50">
