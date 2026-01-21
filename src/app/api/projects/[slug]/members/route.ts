@@ -36,7 +36,9 @@ export async function GET(
     
     // Get all project members
     const membersResult = await pool.query(
-      `SELECT pm.*, u.name, u.email, u.image,
+      `SELECT pm.id, pm.project_id, pm.user_id, pm.role, pm.permissions, 
+        pm.invited_by, pm.invited_at, pm.accepted_at, pm.can_upload, pm.upload_quota_bytes,
+        u.name, u.email, u.image,
         inviter.name as invited_by_name
        FROM project_members pm
        JOIN users u ON pm.user_id = u.id
@@ -55,7 +57,27 @@ export async function GET(
       [project.id]
     );
     
-    return NextResponse.json({ members: membersResult.rows });
+    // Format members with nested user object
+    const members = membersResult.rows.map(row => ({
+      id: row.id,
+      project_id: row.project_id,
+      user_id: row.user_id,
+      role: row.role,
+      permissions: row.permissions || {},
+      invited_by: row.invited_by,
+      invited_at: row.invited_at,
+      accepted_at: row.accepted_at,
+      can_upload: row.can_upload,
+      upload_quota_bytes: row.upload_quota_bytes,
+      user: {
+        id: row.user_id,
+        name: row.name,
+        email: row.email,
+        image: row.image
+      }
+    }));
+    
+    return NextResponse.json({ members });
   } catch (error) {
     console.error('Error fetching project members:', error);
     return NextResponse.json(

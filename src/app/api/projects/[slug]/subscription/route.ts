@@ -37,16 +37,18 @@ export async function GET(
     const subResult = await pool.query(
       `SELECT ps.*, sp.name as plan_name, sp.slug as plan_slug, 
               sp.storage_limit_bytes, sp.bandwidth_limit_bytes, 
-              sp.max_file_size_bytes, sp.price_cents, sp.features
+              sp.max_file_size_bytes, sp.price_cents as price_monthly_cents, sp.features
        FROM project_subscriptions ps
        JOIN storage_plans sp ON ps.plan_id = sp.id
        WHERE ps.project_id = $1`,
       [project.id]
     );
     
-    // Get available plans
+    // Get available plans (rename price_cents to price_monthly_cents for frontend)
     const plansResult = await pool.query(
-      `SELECT * FROM storage_plans WHERE is_active = true ORDER BY sort_order`
+      `SELECT id, name, slug, storage_limit_bytes, bandwidth_limit_bytes, 
+              max_file_size_bytes, price_cents as price_monthly_cents, features, is_active, sort_order
+       FROM storage_plans WHERE is_active = true ORDER BY sort_order`
     );
     
     return NextResponse.json({

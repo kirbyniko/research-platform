@@ -124,7 +124,12 @@ export async function GET(
     const bytesUsed = usageResult.rows.length > 0 ? Number(usageResult.rows[0].bytes_used) : 0;
     const fileCount = usageResult.rows.length > 0 ? Number(usageResult.rows[0].file_count) : 0;
     const bytesLimit = subscription.storage_limit_override_bytes || subscription.plan.storage_limit_bytes;
-    const uploadsEnabled = subscription.plan.features?.uploads_enabled === true && bytesLimit > 0;
+    
+    // Parse features if it's a string
+    const features = typeof subscription.plan.features === 'string' 
+      ? JSON.parse(subscription.plan.features) 
+      : (subscription.plan.features || {});
+    const uploadsEnabled = features.uploads_enabled === true && bytesLimit > 0;
     
     const usage: StorageUsage = {
       bytes_used: bytesUsed,
@@ -172,7 +177,11 @@ export async function GET(
       usage,
       bandwidth,
       canUpload,
-      maxFileSize: subscription.plan.max_file_size_bytes
+      maxFileSize: subscription.plan.max_file_size_bytes,
+      // Convenience fields for UI
+      usedBytes: bytesUsed,
+      quotaBytes: bytesLimit,
+      fileCount
     });
   } catch (error) {
     console.error('Error fetching storage info:', error);
