@@ -164,6 +164,11 @@ export async function PATCH(
       values.push(body.guest_submissions_public);
     }
     
+    if (body.public_validated_records !== undefined) {
+      updates.push(`public_validated_records = $${paramIndex++}`);
+      values.push(body.public_validated_records);
+    }
+    
     if (updates.length === 0) {
       return NextResponse.json({ error: 'No updates provided' }, { status: 400 });
     }
