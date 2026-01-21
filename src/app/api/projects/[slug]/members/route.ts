@@ -37,7 +37,9 @@ export async function GET(
     // Get all project members
     const membersResult = await pool.query(
       `SELECT pm.id, pm.project_id, pm.user_id, pm.role, pm.permissions, 
-        pm.invited_by, pm.invited_at, pm.accepted_at, pm.can_upload, pm.upload_quota_bytes,
+        pm.invited_by, pm.invited_at, pm.accepted_at, 
+        COALESCE(pm.can_upload, false) as can_upload, 
+        pm.upload_quota_bytes,
         u.name, u.email, u.image,
         inviter.name as invited_by_name
        FROM project_members pm
