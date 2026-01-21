@@ -3,7 +3,7 @@
 **Last Updated:** January 21, 2026  
 **Production URL:** https://research-platform-beige.vercel.app  
 **Repository:** https://github.com/kirbyniko/research-platform  
-**Latest Status:** Browser extension Phase 1 complete - multi-project infrastructure in place
+**Latest Status:** Field configuration UX improved + Team management RBAC fully implemented
 
 ---
 
@@ -181,20 +181,20 @@ node run-migration.js
 - `/projects/new` - Create project form
 - `/projects/[slug]` - Project dashboard
 - `/projects/[slug]/record-types/new` - Create record type form
-- `/projects/[slug]/record-types/[type]` - Record type detail view ✅ FIXED
-- `/projects/[slug]/record-types/[type]/fields` - Field configuration UI ✅ EXISTS
+- `/projects/[slug]/record-types/[type]` - Record type detail view
+- `/projects/[slug]/record-types/[type]/fields` - Field configuration UI ✅ IMPROVED
 - `/projects/[slug]/records` - List records
 - `/projects/[slug]/records/new` - Create record form (uses DynamicForm)
-- `/projects/[slug]/records/[recordId]` - View record
+- `/projects/[slug]/records/[recordId]` - View record ✅ FIXED
 - `/projects/[slug]/records/[recordId]/review` - Review submission
 - `/projects/[slug]/records/[recordId]/validate` - Validate record
-- `/projects/[slug]/dashboard/review` - Review queue ✅ IMPLEMENTED
-- `/projects/[slug]/dashboard/validation` - Validation queue ✅ IMPLEMENTED
+- `/projects/[slug]/dashboard/review` - Review queue
+- `/projects/[slug]/dashboard/validation` - Validation queue
+- `/projects/[slug]/team` - Team management ✅ FULLY IMPLEMENTED
 - `/admin` - Admin dashboard
 
 ### Placeholder (Need Full Implementation) ⚠️
 - `/projects/[slug]/settings` - Project settings (basic placeholder)
-- `/projects/[slug]/team` - Team management (basic placeholder)
 
 ---
 
@@ -274,25 +274,47 @@ Currently the form still shows hard-coded ICE Deaths fields. Need to:
 - `GET /api/projects/[slug]` - Get project details
 - `GET /api/projects/[slug]/record-types` - List record types
 - `POST /api/projects/[slug]/record-types` - Create record type
-- `GET /api/projects/[slug]/record-types/[type]` - Get single record type ✅ FIXED
+- `GET /api/projects/[slug]/record-types/[type]` - Get single record type
 - `GET /api/projects/[slug]/record-types/[type]/fields` - List fields
 - `POST /api/projects/[slug]/record-types/[type]/fields` - Create field
 - `GET /api/projects/[slug]/records` - List records
 - `POST /api/projects/[slug]/records` - Create record
+- `GET /api/projects/[slug]/records/[recordId]` - Get single record ✅ FIXED
+- `GET /api/projects/[slug]/members` - List team members ✅ NEW
+- `POST /api/projects/[slug]/members` - Invite team member ✅ NEW
+- `PATCH /api/projects/[slug]/members/[memberId]` - Update member role ✅ NEW
+- `DELETE /api/projects/[slug]/members/[memberId]` - Remove member ✅ NEW
 - `GET /api/admin/users` - List users (admin only)
 
 ---
 
 ## KNOWN ISSUES (RESOLVED)
-
-### ~~1. Missing API Route~~ ✅ FIXED
-**Was:** `GET /api/projects/project-a/record-types/test-form` returns 500  
-**Fixed:** Created `src/app/api/projects/[slug]/record-types/[type]/route.ts`
-
-### ~~2. Field Configuration UI Not Built~~ ✅ EXISTS
+IMPROVED
 **Path:** `/projects/[slug]/record-types/[type]/fields`  
-**Status:** Page exists with full field builder interface (300+ lines)
+**Status:** Full field builder with improved UX:
+- Slugs auto-generated from field names
+- Dropdown menus for conditional visibility (no manual slug entry)
+- Smart field selector with dropdown options for select/radio/checkbox fields
 
+### ~~3. Record Creation May Not Work~~ ✅ FIXED
+**Path:** `/projects/[slug]/records/new`  
+**Fixed:** Created DynamicForm component (`src/components/dynamic-form.tsx`) that handles all field types
+
+### ~~4. Record Fetch API Error~~ ✅ FIXED (January 21, 2026)
+**Was:** `GET /api/projects/[slug]/records/[recordId]` returns 500  
+**Issue:** SQL queries referenced non-existent columns (`workflow_config`, `group_id` instead of `field_group_id`)  
+**Fixed:** Updated column names in route.ts to match actual database schema
+
+### ~~5. Team Management Placeholder~~ ✅ IMPLEMENTED (January 21, 2026)
+**Was:** Team page showed "Coming soon..."  
+**Implemented:** Full team management system with:
+- List all project members with roles
+- Invite new members by email
+- Change member roles (Viewer, Reviewer, Editor, Admin)
+- Remove members (except Owner)
+- Full RBAC enforcement via API endpoints
+
+### 6
 ### ~~3. Record Creation May Not Work~~ ✅ FIXED
 **Path:** `/projects/[slug]/records/new`  
 **Fixed:** Created DynamicForm component (`src/components/dynamic-form.tsx`) that handles all field types
@@ -378,12 +400,24 @@ node check-project.js          # Check project membership
 node check-test-form.js        # Check record type exists
 ```
 
----
+---✅ COMPLETED (January 21, 2026)
+1. ✅ **Field Configuration UX Improvements**
+   - Slugs now auto-generate from field names (hidden from user)
+   - Conditional visibility uses dropdown menus instead of text slugs
+   - Field selector shows grouped fields with smart value dropdowns
 
-## IMMEDIATE NEXT STEPS
+2. ✅ **Team Management System**
+   - Full RBAC implementation with 5 roles (Owner, Admin, Editor, Reviewer, Viewer)
+   - Invite members by email
+   - Change roles and remove members
+   - API endpoints for all team operations
 
-### Extension Phase 2 (START HERE) 🔥
-1. **Dynamic Form Rendering** - Replace static ICE Deaths form with `DynamicForm.render()`
+### Platform Enhancements (LOWER PRIORITY)
+1. **Full test of end-to-end workflow** - Create fields, create record, review it
+2. **Implement project settings page** - Allow editing project name, description, etc.
+3. **Guest form functionality** - Public submission forms
+4. **Source and quote linking** - Attach evidence to field values
+5. **Conditional visibility for field groups** - Show/hide entire sections based on conditionith `DynamicForm.render()`
    - File: `extension/sidepanel.js` function `updateFormWithDynamicFields()`
    - Goal: Form fields should come from API, not hard-coded
 
