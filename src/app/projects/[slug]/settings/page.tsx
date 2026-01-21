@@ -58,7 +58,8 @@ export default function ProjectSettings({
     description: '',
     tags_enabled: true,
     require_different_validator: false,
-    guest_submissions_public: false
+    guest_submissions_public: false,
+    public_validated_records: false
   });
 
   const fetchProject = async () => {
@@ -76,7 +77,8 @@ export default function ProjectSettings({
         description: data.project.description || '',
         tags_enabled: data.project.tags_enabled ?? true,
         require_different_validator: data.project.require_different_validator ?? false,
-        guest_submissions_public: data.project.guest_submissions_public ?? false
+        guest_submissions_public: data.project.guest_submissions_public ?? false,
+        public_validated_records: data.project.public_validated_records ?? false
       });
       setGuestUploadSettings({
         guest_upload_enabled: data.project.guest_upload_enabled ?? false,
@@ -343,6 +345,55 @@ useEffect(() => {
                     >
                       Copy
                     </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3 mt-6">
+                <input
+                  type="checkbox"
+                  id="public_validated_records"
+                  checked={formData.public_validated_records}
+                  onChange={e => setFormData({ ...formData, public_validated_records: e.target.checked })}
+                  className="w-4 h-4 rounded border-gray-300"
+                />
+                <label htmlFor="public_validated_records" className="text-sm text-gray-700">
+                  Enable public gallery of validated records
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 ml-7 -mt-2">
+                When enabled, verified records will be publicly accessible with tag filtering
+              </p>
+              
+              {formData.public_validated_records && (
+                <div className="ml-7 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <label className="block text-xs font-medium text-gray-700 mb-2">Public gallery URL:</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={`${typeof window !== 'undefined' ? window.location.origin : ''}/projects/${slug}/validated`}
+                      readOnly
+                      className="flex-1 px-3 py-2 text-sm border rounded-md bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = `${window.location.origin}/projects/${slug}/validated`;
+                        navigator.clipboard.writeText(url);
+                        alert('Link copied to clipboard!');
+                      }}
+                      className="px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                    >
+                      Copy
+                    </button>
+                    <a
+                      href={`/projects/${slug}/validated`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-2 bg-white border border-gray-300 text-gray-700 text-sm rounded hover:bg-gray-50"
+                    >
+                      Preview
+                    </a>
                   </div>
                 </div>
               )}
