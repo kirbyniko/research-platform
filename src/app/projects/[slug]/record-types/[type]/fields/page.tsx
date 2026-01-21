@@ -285,13 +285,6 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, groups, allField
       .replace(/^_|_$/g, '');
   }
 
-  function handleNameChange(value: string) {
-    setName(value);
-    if (autoSlug && !isEditing) {
-      setSlug(generateSlug(value));
-    }
-  }
-
   function addOption() {
     if (!newOptionLabel.trim()) return;
     const label = newOptionLabel.trim();
@@ -406,7 +399,7 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, groups, allField
               <input
                 type="text"
                 value={name}
-                onChange={(e) => handleNameChange(e.target.value)}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., Subject Name"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
@@ -417,7 +410,6 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, groups, allField
                 type="text"
                 value={slug}
                 onChange={(e) => {
-                  setAutoSlug(false);
                   setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''));
                 }}
                 placeholder="e.g., subject_name"

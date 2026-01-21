@@ -17,15 +17,20 @@ const ROLE_INFO: Record<ProjectRole, { label: string; description: string; color
     description: 'Manage all aspects except project deletion',
     color: 'bg-blue-100 text-blue-800'
   },
-  editor: {
-    label: 'Editor',
-    description: 'Create and edit records and fields',
-    color: 'bg-green-100 text-green-800'
-  },
   reviewer: {
     label: 'Reviewer',
     description: 'Review guest submissions',
     color: 'bg-yellow-100 text-yellow-800'
+  },
+  validator: {
+    label: 'Validator',
+    description: 'Validate and verify records',
+    color: 'bg-orange-100 text-orange-800'
+  },
+  analyst: {
+    label: 'Analyst',
+    description: 'Create and edit records',
+    color: 'bg-green-100 text-green-800'
   },
   viewer: {
     label: 'Viewer',
@@ -243,7 +248,8 @@ export default function ProjectTeam({
                         >
                           <option value="viewer">Viewer</option>
                           <option value="reviewer">Reviewer</option>
-                          <option value="editor">Editor</option>
+                          <option value="analyst">Analyst</option>
+                          <option value="validator">Validator</option>
                           <option value="admin">Admin</option>
                         </select>
                         <button
@@ -312,7 +318,8 @@ export default function ProjectTeam({
                 >
                   <option value="viewer">Viewer - Read-only access</option>
                   <option value="reviewer">Reviewer - Review submissions</option>
-                  <option value="editor">Editor - Create & edit records</option>
+                  <option value="analyst">Analyst - Create & edit records</option>
+                  <option value="validator">Validator - Verify records</option>
                   <option value="admin">Admin - Full management access</option>
                 </select>
               </div>
