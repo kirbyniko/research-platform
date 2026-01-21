@@ -276,16 +276,58 @@ export const LEGAL_REFERENCES: Record<string, LegalReference> = {
 // Mapping from violation types used in the UI to LEGAL_REFERENCES keys
 export const VIOLATION_TO_LEGAL_KEY: Record<string, string> = {
   '1st': 'first_amendment',
+  '1st_amendment': 'first_amendment',
   '4th': 'fourth_amendment', 
+  '4th_amendment': 'fourth_amendment',
   '5th': 'fifth_amendment',
+  '5th_amendment': 'fifth_amendment',
   '6th': 'sixth_amendment',
+  '6th_amendment': 'sixth_amendment',
   '8th': 'eighth_amendment',
+  '8th_amendment': 'eighth_amendment',
   '14th': 'fourteenth_amendment',
+  '14th_amendment': 'fourteenth_amendment',
   'civil_rights': 'civil_rights',
+  'civil_rights_violation': 'civil_rights',
   'excessive_force': 'excessive_force',
   'wrongful_death': 'wrongful_death',
-  'medical_neglect': 'medical_neglect'
+  'medical_neglect': 'medical_neglect',
+  'false_imprisonment': 'civil_rights'
 };
+
+// Alias for backward compatibility
+export const VIOLATION_TYPE_TO_LEGAL_REF = VIOLATION_TO_LEGAL_KEY;
+
+// Classification options for violations
+export const VIOLATION_CLASSIFICATIONS = [
+  { value: 'alleged', label: 'Alleged' },
+  { value: 'potential', label: 'Potential' },
+  { value: 'possible', label: 'Possible' },
+  { value: 'confirmed', label: 'Confirmed' }
+];
+
+// Get case law options for a violation type (for dropdowns)
+export function getCaseLawOptions(violationType: string): { value: string; label: string; citation: string }[] {
+  const refKey = VIOLATION_TO_LEGAL_KEY[violationType];
+  if (!refKey || !LEGAL_REFERENCES[refKey]) {
+    return [];
+  }
+  
+  return LEGAL_REFERENCES[refKey].cases.map(c => ({
+    value: `${c.name} (${c.citation})`,
+    label: c.name,
+    citation: c.citation
+  }));
+}
+
+// Get the full legal reference for a violation type
+export function getLegalReference(violationType: string): LegalReference | null {
+  const refKey = VIOLATION_TO_LEGAL_KEY[violationType];
+  if (!refKey || !LEGAL_REFERENCES[refKey]) {
+    return null;
+  }
+  return LEGAL_REFERENCES[refKey];
+}
 
 // Get relevant case law for a violation type
 export function getCaseLawForViolation(violationType: string): LegalCase[] {

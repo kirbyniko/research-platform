@@ -76,7 +76,8 @@ export type FieldType =
   | 'file'
   | 'rich_text'
   | 'record_link'
-  | 'user_link';
+  | 'user_link'
+  | 'violations';
 
 export interface SelectOption {
   value: string;

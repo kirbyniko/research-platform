@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { FieldDefinition, FieldGroup, SelectOption, RecordQuote } from '@/types/platform';
+import { ViolationsField, DEFAULT_VIOLATIONS, ViolationValue } from './violation-card';
+import { DuplicateChecker } from './duplicate-checker';
 
 interface DynamicFormProps {
   fields: FieldDefinition[];
@@ -381,6 +383,16 @@ export function DynamicForm({
           </div>
         )}
         
+        {/* Violations - checkbox cards with case law dropdowns */}
+        {field.field_type === 'violations' && (
+          <ViolationsField
+            value={value as Record<string, ViolationValue> || {}}
+            onChange={(newVal) => handleChange(field.slug, newVal)}
+            violations={config.violations || DEFAULT_VIOLATIONS}
+            disabled={isDisabled}
+          />
+        )}
+        
         {/* Quote field indicator */}
         {showQuoteFields && field.requires_quote && (
           <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
@@ -456,8 +468,29 @@ export function DynamicForm({
     );
   };
 
+  // Find name field for duplicate checking (look for common name field slugs)
+  const nameFieldSlug = visibleFields.find(f => 
+    ['name', 'victim_name', 'subject_name', 'case_name'].includes(f.slug)
+  )?.slug;
+  const nameValue = nameFieldSlug ? values[nameFieldSlug] : '';
+
   return (
     <form onSubmit={handleSubmit}>
+      {/* Duplicate Checker - shown at top if name field exists */}
+      {projectSlug && nameFieldSlug && mode !== 'view' && (
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+          <h3 className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+            🔎 Duplicate & Related Cases
+          </h3>
+          <DuplicateChecker
+            nameValue={nameValue}
+            projectSlug={projectSlug}
+            recordTypeSlug={recordTypeSlug}
+            excludeRecordId={recordId}
+          />
+        </div>
+      )}
+      
       {/* Ungrouped fields */}
       {ungroupedFields.length > 0 && (
         <div className="flex flex-wrap gap-4 mb-6">
