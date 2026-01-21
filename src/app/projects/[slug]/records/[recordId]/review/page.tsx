@@ -76,6 +76,7 @@ export default function RecordReviewPage({
       const data = await response.json();
       setRecord(data.record);
       setFields(data.fields || []);
+      setGroups(data.groups || []);
       setQuotes(data.quotes || []);
       setSources(data.sources || []);
       setUserRole(data.role);

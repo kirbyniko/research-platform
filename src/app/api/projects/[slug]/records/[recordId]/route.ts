@@ -74,6 +74,14 @@ export async function GET(
       [record.record_type_id]
     );
     
+    // Get field groups for this record type
+    const groupsResult = await pool.query(
+      `SELECT * FROM field_groups 
+       WHERE record_type_id = $1 
+       ORDER BY sort_order, name`,
+      [record.record_type_id]
+    );
+    
     // Get quotes
     const quotesResult = await pool.query(
       `SELECT * FROM record_quotes 
@@ -93,6 +101,7 @@ export async function GET(
     return NextResponse.json({
       record,
       fields: fieldsResult.rows,
+      groups: groupsResult.rows,
       quotes: quotesResult.rows,
       sources: sourcesResult.rows,
       role
