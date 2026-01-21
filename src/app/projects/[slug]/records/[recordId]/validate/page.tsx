@@ -177,7 +177,14 @@ export default function RecordValidatePage({
 
   const isFieldVisible = (field: FieldDefinition): boolean => {
     // Use the show_in_validation_form flag
-    return field.show_in_validation_form !== false;
+    if (field.show_in_validation_form === false) return false;
+    
+    // Only show fields that have a value (not null, undefined, empty string, or empty array)
+    const value = record?.data[field.slug];
+    if (value === null || value === undefined || value === '') return false;
+    if (Array.isArray(value) && value.length === 0) return false;
+    
+    return true;
   };
 
   const getQuotesForField = (fieldSlug: string): RecordQuote[] => {

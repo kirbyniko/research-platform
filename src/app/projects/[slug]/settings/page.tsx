@@ -57,7 +57,8 @@ export default function ProjectSettings({
     name: '',
     description: '',
     tags_enabled: true,
-    require_different_validator: false
+    require_different_validator: false,
+    guest_submissions_public: false
   });
 
   const fetchProject = async () => {
@@ -74,7 +75,8 @@ export default function ProjectSettings({
         name: data.project.name || '',
         description: data.project.description || '',
         tags_enabled: data.project.tags_enabled ?? true,
-        require_different_validator: data.project.require_different_validator ?? false
+        require_different_validator: data.project.require_different_validator ?? false,
+        guest_submissions_public: data.project.guest_submissions_public ?? false
       });
       setGuestUploadSettings({
         guest_upload_enabled: data.project.guest_upload_enabled ?? false,
@@ -303,6 +305,47 @@ useEffect(() => {
               <p className="text-xs text-gray-500 ml-7 -mt-2">
                 When enabled, records must be validated by a different user than the one who reviewed them
               </p>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="guest_submissions_public"
+                  checked={formData.guest_submissions_public}
+                  onChange={e => setFormData({ ...formData, guest_submissions_public: e.target.checked })}
+                  className="w-4 h-4 rounded border-gray-300"
+                />
+                <label htmlFor="guest_submissions_public" className="text-sm text-gray-700">
+                  Enable public guest intake form
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 ml-7 -mt-2">
+                When enabled, anyone with the link can submit records
+              </p>
+              
+              {formData.guest_submissions_public && (
+                <div className="ml-7 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <label className="block text-xs font-medium text-gray-700 mb-2">Share this link:</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={`${typeof window !== 'undefined' ? window.location.origin : ''}/projects/${slug}/submit`}
+                      readOnly
+                      className="flex-1 px-3 py-2 text-sm border rounded-md bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = `${window.location.origin}/projects/${slug}/submit`;
+                        navigator.clipboard.writeText(url);
+                        alert('Link copied to clipboard!');
+                      }}
+                      className="px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="pt-4 border-t">
                 <button
