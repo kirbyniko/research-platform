@@ -5,6 +5,7 @@ import { FieldDefinition, FieldGroup, SelectOption, RecordQuote } from '@/types/
 import { ViolationsField, DEFAULT_VIOLATIONS, ViolationValue } from './violation-card';
 import { DuplicateChecker } from './duplicate-checker';
 import { TriStateField, IncidentTypesField, MediaField, CustomFieldsField } from './field-types';
+import { TagSelector, Tag } from './tags';
 
 interface DynamicFormProps {
   fields: FieldDefinition[];
@@ -355,23 +356,36 @@ export function DynamicForm({
           </select>
         )}
         
-        {/* Multi-select */}
-        {field.field_type === 'multi_select' && (
-          <select
-            multiple
-            value={Array.isArray(value) ? value : []}
-            onChange={e => {
-              const selected = Array.from(e.target.selectedOptions, option => option.value);
-              handleChange(field.slug, selected);
-            }}
-            disabled={isDisabled}
-            className={`${baseInputClass} min-h-[100px]`}
-          >
-            {(config.options as SelectOption[] || []).map((opt: SelectOption) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        )}
+        {/* Multi-select with chips UI */}
+        {field.field_type === 'multi_select' && (() => {
+          // Convert options to Tag format for TagSelector
+          const options = (config.options as (SelectOption & { category?: string })[] || []);
+          const hasCategories = options.some(opt => opt.category);
+          
+          // Use TagSelector for better UX (especially when options have categories)
+          const availableTags: Tag[] = options.map((opt, idx) => ({
+            id: idx + 1, // Use index as pseudo-ID for field options
+            name: opt.label,
+            slug: opt.value,
+            category: opt.category,
+            color: '#6b7280'
+          }));
+          
+          const selectedValues = Array.isArray(value) ? value : [];
+          const selectedTags = availableTags.filter(t => selectedValues.includes(t.slug));
+          
+          return (
+            <TagSelector
+              availableTags={availableTags}
+              selectedTags={selectedTags}
+              onChange={(tags) => {
+                handleChange(field.slug, tags.map(t => t.slug));
+              }}
+              disabled={isDisabled}
+              placeholder={field.placeholder || 'Select options...'}
+            />
+          );
+        })()}
         
         {/* Radio */}
         {field.field_type === 'radio' && (

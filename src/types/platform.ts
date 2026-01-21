@@ -366,6 +366,7 @@ export interface UpdateProjectRequest {
   description?: string;
   is_public?: boolean;
   settings?: ProjectSettings;
+  tags_enabled?: boolean;
 }
 
 export interface CreateRecordTypeRequest {

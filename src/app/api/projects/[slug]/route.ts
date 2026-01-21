@@ -134,6 +134,11 @@ export async function PATCH(
       values.push(JSON.stringify(body.settings));
     }
     
+    if (body.tags_enabled !== undefined) {
+      updates.push(`tags_enabled = $${paramIndex++}`);
+      values.push(body.tags_enabled);
+    }
+    
     if (updates.length === 0) {
       return NextResponse.json({ error: 'No updates provided' }, { status: 400 });
     }
