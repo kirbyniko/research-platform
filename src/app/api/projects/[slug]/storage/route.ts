@@ -162,15 +162,20 @@ export async function GET(
     };
     
     // Check if current user can upload
+    // First check if user is project owner (owners always can upload if uploads enabled)
+    const isOwner = project.created_by === userId;
+    
+    // Then check member permission
     const memberResult = await pool.query(
       `SELECT can_upload, upload_quota_bytes FROM project_members 
        WHERE project_id = $1 AND user_id = $2`,
       [project.id, userId]
     );
     
-    const canUpload = uploadsEnabled && (
-      memberResult.rows.length > 0 && memberResult.rows[0].can_upload === true
-    );
+    const memberCanUpload = memberResult.rows.length > 0 && memberResult.rows[0].can_upload === true;
+    
+    // User can upload if uploads are enabled AND (they're owner OR they have member permission)
+    const canUpload = uploadsEnabled && (isOwner || memberCanUpload);
     
     return NextResponse.json({
       subscription,
