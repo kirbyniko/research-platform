@@ -465,7 +465,19 @@ export default function RecordReviewPage({
                   <div key={quote.id} className="border-l-2 border-blue-300 pl-3 py-1 text-sm">
                     <p className="italic">&ldquo;{quote.quote_text}&rdquo;</p>
                     {quote.source && (
-                      <p className="text-gray-500 text-xs mt-1">— {quote.source}</p>
+                      <p className="text-gray-500 text-xs mt-1">
+                        — {quote.source}
+                        {quote.source_url && (
+                          <a 
+                            href={quote.source_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="ml-2 text-blue-600 hover:underline"
+                          >
+                            [link]
+                          </a>
+                        )}
+                      </p>
                     )}
                     {quote.linked_fields && quote.linked_fields.length > 0 && (
                       <p className="text-xs text-blue-600 mt-1">

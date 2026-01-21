@@ -388,6 +388,67 @@ export function DynamicForm({
           </div>
         )}
         
+        {/* Show linked quotes in review/validation mode */}
+        {(mode === 'review' || mode === 'validation') && quotes && quotes.length > 0 && (
+          <div className="mt-2">
+            {quotes
+              .filter(q => q.linked_fields?.includes(field.slug))
+              .map(quote => (
+                <div key={quote.id} className="mb-2 border-l-2 border-blue-300 pl-2 py-1 text-xs bg-blue-50 rounded-r">
+                  <p className="italic">&ldquo;{quote.quote_text}&rdquo;</p>
+                  {quote.source && (
+                    <p className="text-gray-500 mt-0.5">
+                      — {quote.source}
+                      {quote.source_url && (
+                        <a 
+                          href={quote.source_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="ml-1 text-blue-600 hover:underline"
+                        >
+                          [link]
+                        </a>
+                      )}
+                    </p>
+                  )}
+                  {onLinkQuote && (
+                    <button
+                      type="button"
+                      onClick={() => onLinkQuote(field.slug, quote.id)}
+                      className="text-red-500 hover:underline mt-0.5"
+                    >
+                      Unlink
+                    </button>
+                  )}
+                </div>
+              ))}
+            
+            {/* Show button to link available quotes */}
+            {onLinkQuote && quotes.filter(q => !q.linked_fields?.includes(field.slug)).length > 0 && (
+              <details className="mt-2">
+                <summary className="text-xs text-blue-600 cursor-pointer hover:underline">
+                  + Link quote to this field
+                </summary>
+                <div className="mt-1 space-y-1 max-h-40 overflow-y-auto">
+                  {quotes
+                    .filter(q => !q.linked_fields?.includes(field.slug))
+                    .map(quote => (
+                      <button
+                        key={quote.id}
+                        type="button"
+                        onClick={() => onLinkQuote(field.slug, quote.id)}
+                        className="block w-full text-left text-xs p-2 hover:bg-gray-100 rounded border border-gray-200"
+                      >
+                        <p className="italic truncate">&ldquo;{quote.quote_text}&rdquo;</p>
+                        {quote.source && <p className="text-gray-500 text-xs">— {quote.source}</p>}
+                      </button>
+                    ))}
+                </div>
+              </details>
+            )}
+          </div>
+        )}
+        
         {error && (
           <p className="mt-1 text-sm text-red-500">{error}</p>
         )}
