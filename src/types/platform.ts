@@ -372,6 +372,7 @@ export interface UpdateProjectRequest {
   guest_upload_enabled?: boolean;
   guest_upload_quota_bytes?: number;
   guest_upload_max_file_size?: number;
+  require_different_validator?: boolean;
 }
 
 export interface CreateRecordTypeRequest {

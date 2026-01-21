@@ -56,12 +56,9 @@ export default function ProjectSettings({
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    tags_enabled: true
+    tags_enabled: true,
+    require_different_validator: false
   });
-
-  useEffect(() => {
-    fetchProject();
-  }, [slug]);
 
   const fetchProject = async () => {
     try {
@@ -76,7 +73,8 @@ export default function ProjectSettings({
       setFormData({
         name: data.project.name || '',
         description: data.project.description || '',
-        tags_enabled: data.project.tags_enabled ?? true
+        tags_enabled: data.project.tags_enabled ?? true,
+        require_different_validator: data.project.require_different_validator ?? false
       });
       setGuestUploadSettings({
         guest_upload_enabled: data.project.guest_upload_enabled ?? false,
@@ -89,7 +87,12 @@ export default function ProjectSettings({
       setLoading(false);
     }
   };
+useEffect(() => {
+    fetchProject();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug]);
 
+  
   const handleSaveGeneral = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -279,6 +282,22 @@ export default function ProjectSettings({
                   Enable tags for this project
                 </label>
               </div>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="require_different_validator"
+                  checked={formData.require_different_validator}
+                  onChange={e => setFormData({ ...formData, require_different_validator: e.target.checked })}
+                  className="w-4 h-4 rounded border-gray-300"
+                />
+                <label htmlFor="require_different_validator" className="text-sm text-gray-700">
+                  Require different user for validation than review
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 ml-7 -mt-2">
+                When enabled, records must be validated by a different user than the one who reviewed them
+              </p>
 
               <div className="pt-4 border-t">
                 <button

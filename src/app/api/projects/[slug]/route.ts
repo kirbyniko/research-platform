@@ -154,6 +154,11 @@ export async function PATCH(
       values.push(body.guest_upload_max_file_size);
     }
     
+    if (body.require_different_validator !== undefined) {
+      updates.push(`require_different_validator = $${paramIndex++}`);
+      values.push(body.require_different_validator);
+    }
+    
     if (updates.length === 0) {
       return NextResponse.json({ error: 'No updates provided' }, { status: 400 });
     }
