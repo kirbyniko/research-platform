@@ -291,6 +291,8 @@ export interface ProjectMember {
   invited_by?: number;
   invited_at: string;
   accepted_at?: string;
+  can_upload?: boolean;
+  upload_quota_bytes?: number | null;
   
   // Joined fields
   user?: {
@@ -367,6 +369,9 @@ export interface UpdateProjectRequest {
   is_public?: boolean;
   settings?: ProjectSettings;
   tags_enabled?: boolean;
+  guest_upload_enabled?: boolean;
+  guest_upload_quota_bytes?: number;
+  guest_upload_max_file_size?: number;
 }
 
 export interface CreateRecordTypeRequest {

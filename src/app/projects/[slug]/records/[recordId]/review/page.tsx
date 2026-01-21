@@ -41,6 +41,7 @@ export default function RecordReviewPage({
   const [error, setError] = useState<string | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [canUpload, setCanUpload] = useState(false);
 
   // New quote form state
   const [showQuoteForm, setShowQuoteForm] = useState(false);
@@ -65,21 +66,31 @@ export default function RecordReviewPage({
     if (!projectSlug || !recordId) return;
     
     try {
-      const response = await fetch(`/api/projects/${projectSlug}/records/${recordId}`);
-      if (!response.ok) {
-        if (response.status === 404) {
+      const [recordResponse, storageResponse] = await Promise.all([
+        fetch(`/api/projects/${projectSlug}/records/${recordId}`),
+        fetch(`/api/projects/${projectSlug}/storage`)
+      ]);
+      
+      if (!recordResponse.ok) {
+        if (recordResponse.status === 404) {
           throw new Error('Record not found');
         }
         throw new Error('Failed to fetch record');
       }
       
-      const data = await response.json();
+      const data = await recordResponse.json();
       setRecord(data.record);
       setFields(data.fields || []);
       setGroups(data.groups || []);
       setQuotes(data.quotes || []);
       setSources(data.sources || []);
       setUserRole(data.role);
+      
+      // Check if user can upload
+      if (storageResponse.ok) {
+        const storageData = await storageResponse.json();
+        setCanUpload(storageData.canUpload && storageData.usage?.uploads_enabled);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -368,6 +379,7 @@ export default function RecordReviewPage({
               verifiedFields={record.verified_fields}
               onSubmit={handleSaveData}
               onLinkQuote={handleLinkQuote}
+              canUpload={canUpload}
             />
           </div>
 

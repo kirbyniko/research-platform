@@ -324,8 +324,8 @@ export default function ProjectSettings({
                   <div>
                     <h3 className="text-sm font-medium text-gray-700 mb-3">Current Usage</h3>
                     <StorageUsageBar
-                      usedBytes={storageInfo.usedBytes || 0}
-                      totalBytes={storageInfo.quotaBytes || 0}
+                      bytesUsed={storageInfo.usedBytes || 0}
+                      bytesLimit={storageInfo.quotaBytes || 0}
                     />
                     <div className="mt-2 text-sm text-gray-600">
                       <span className="font-medium">{storageInfo.fileCount || 0}</span> files uploaded
