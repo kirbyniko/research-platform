@@ -167,7 +167,7 @@ export async function GET(
     
     // Then check member permission
     const memberResult = await pool.query(
-      `SELECT can_upload, upload_quota_bytes FROM project_members 
+      `SELECT COALESCE(can_upload, false) as can_upload, upload_quota_bytes FROM project_members 
        WHERE project_id = $1 AND user_id = $2`,
       [project.id, userId]
     );
