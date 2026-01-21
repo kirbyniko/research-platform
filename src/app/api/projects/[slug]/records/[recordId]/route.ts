@@ -40,7 +40,6 @@ export async function GET(
       `SELECT r.*, 
         rt.slug as record_type_slug,
         rt.name as record_type_name,
-        rt.workflow_config,
         u.name as submitted_by_name,
         u.email as submitted_by_email,
         rev.name as reviewed_by_name,
@@ -69,7 +68,7 @@ export async function GET(
     const fieldsResult = await pool.query(
       `SELECT fd.*, fg.name as group_name, fg.sort_order as group_sort_order
        FROM field_definitions fd
-       LEFT JOIN field_groups fg ON fd.group_id = fg.id
+       LEFT JOIN field_groups fg ON fd.field_group_id = fg.id
        WHERE fd.record_type_id = $1
        ORDER BY fg.sort_order NULLS FIRST, fd.sort_order, fd.name`,
       [record.record_type_id]
