@@ -35,10 +35,33 @@ export async function PATCH(
     }
     
     const body = await request.json();
-    const { role } = body;
+    const { role, can_upload, upload_quota_bytes } = body;
     
-    if (!['viewer', 'reviewer', 'editor', 'admin'].includes(role)) {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+    // Build update query dynamically
+    const updates: string[] = [];
+    const values: any[] = [];
+    let idx = 1;
+    
+    if (role !== undefined) {
+      if (!['viewer', 'reviewer', 'editor', 'admin'].includes(role)) {
+        return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+      }
+      updates.push(`role = $${idx++}`);
+      values.push(role);
+    }
+    
+    if (can_upload !== undefined) {
+      updates.push(`can_upload = $${idx++}`);
+      values.push(can_upload);
+    }
+    
+    if (upload_quota_bytes !== undefined) {
+      updates.push(`upload_quota_bytes = $${idx++}`);
+      values.push(upload_quota_bytes);
+    }
+    
+    if (updates.length === 0) {
+      return NextResponse.json({ error: 'No updates provided' }, { status: 400 });
     }
     
     // Check if member exists
@@ -54,16 +77,17 @@ export async function PATCH(
     const member = memberResult.rows[0];
     
     // Prevent changing owner role
-    if (member.role === 'owner') {
+    if (member.role === 'owner' && role !== undefined) {
       return NextResponse.json({ 
         error: 'Cannot change owner role' 
       }, { status: 403 });
     }
     
-    // Update role
+    // Update member
+    values.push(parseInt(memberId));
     const updateResult = await pool.query(
-      'UPDATE project_members SET role = $1 WHERE id = $2 RETURNING *',
-      [role, parseInt(memberId)]
+      `UPDATE project_members SET ${updates.join(', ')} WHERE id = $${idx} RETURNING *`,
+      values
     );
     
     return NextResponse.json({ member: updateResult.rows[0] });

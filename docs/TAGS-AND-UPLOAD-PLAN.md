@@ -1,7 +1,43 @@
 # Tags System & File Upload Feature Plan
 
 **Created:** January 21, 2026  
-**Status:** Planning  
+**Last Updated:** January 21, 2026  
+**Status:** In Progress  
+
+---
+
+## Implementation Progress
+
+### ✅ COMPLETED: Tags System
+- [x] Database schema (project_tags, record_tags tables)
+- [x] API endpoints (CRUD for project tags, record tags)
+- [x] TagSelector component (dropdown + chips UI)
+- [x] TagManager component (CRUD interface in settings)
+- [x] Updated dynamic-form.tsx to use TagSelector
+- [x] Project settings page with Tags tab
+- [x] Deployed to production
+
+### ✅ COMPLETED: Upload Infrastructure  
+- [x] Database schema (storage_plans, project_subscriptions, storage_usage, bandwidth_usage, project_files)
+- [x] Storage plans seeded (Free/Starter/Pro/Enterprise tiers)
+- [x] Storage API endpoint (/api/projects/[slug]/storage)
+- [x] Files API endpoints (list, upload, get, update, delete)
+- [x] Subscription API endpoint (GET/POST/DELETE)
+- [x] Member upload permission columns (can_upload, upload_quota_bytes)
+- [x] Member API updated for upload permissions
+- [x] FileUpload, FileList, StorageUsageBar UI components
+- [x] Storage tab in project settings (view plan, usage, upgrade)
+
+### 🔄 PENDING: R2 Integration
+- [ ] Configure R2 environment variables
+- [ ] Generate presigned URLs for direct upload
+- [ ] Upload confirmation and CDN URL generation
+- [ ] Test actual file upload flow
+
+### 🔄 PENDING: Billing Integration (Future)
+- [ ] Stripe integration
+- [ ] Self-service subscription management
+- [ ] Payment processing
 
 ---
 
@@ -311,31 +347,31 @@ PATCH  /api/projects/[slug]/members/[id]/upload - Update member upload permissio
 
 #### 7. Implementation Priority
 
-**Phase 1: Foundation (Must have first)**
-- [ ] Database schema for subscriptions, files, usage
-- [ ] Storage plan seeding
-- [ ] Basic subscription assignment (manual via admin)
-- [ ] Storage usage tracking
+**Phase 1: Foundation (Must have first)** ✅ COMPLETED
+- [x] Database schema for subscriptions, files, usage
+- [x] Storage plan seeding
+- [x] Basic subscription assignment (manual via admin)
+- [x] Storage usage tracking
 
-**Phase 2: Upload Flow**
-- [ ] R2 presigned URL generation
+**Phase 2: Upload Flow** 🔄 IN PROGRESS
+- [ ] R2 presigned URL generation (needs env vars)
 - [ ] Upload confirmation endpoint
-- [ ] File metadata storage
-- [ ] Usage counter updates
+- [x] File metadata storage
+- [x] Usage counter updates
 
-**Phase 3: RBAC & Quotas**
-- [ ] Member upload permissions
-- [ ] Quota enforcement
-- [ ] Guest upload settings
-- [ ] Per-user quotas
+**Phase 3: RBAC & Quotas** ✅ COMPLETED
+- [x] Member upload permissions
+- [x] Quota enforcement
+- [x] Guest upload settings
+- [x] Per-user quotas
 
-**Phase 4: UI**
-- [ ] Upload component (replaces current disabled button)
-- [ ] Project storage dashboard
-- [ ] Admin subscription management
-- [ ] Team upload permission UI
+**Phase 4: UI** ✅ COMPLETED
+- [x] Upload component (FileUpload, StorageUsageBar, FileList)
+- [x] Project storage dashboard (Storage tab in settings)
+- [x] Admin subscription management (plan selection UI)
+- [x] Team upload permission UI (via members API)
 
-**Phase 5: Billing (Future)**
+**Phase 5: Billing (Future)** ❌ NOT STARTED
 - [ ] Stripe integration
 - [ ] Self-service subscription management
 - [ ] Usage-based billing

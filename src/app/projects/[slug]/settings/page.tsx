@@ -3,6 +3,25 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { TagManager } from '@/components/tags';
+import { StorageUsageBar } from '@/components/uploads';
+
+// Format bytes to human readable (e.g., 1.5 GB)
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 GB';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  const value = bytes / Math.pow(1024, i);
+  return `${value.toFixed(value < 10 ? 1 : 0)} ${units[i]}`;
+}
+
+// Format file size with more precision for smaller files
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
 
 interface Project {
   id: number;
@@ -22,7 +41,10 @@ export default function ProjectSettings({
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'general' | 'tags' | 'permissions'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'tags' | 'storage' | 'permissions'>('general');
+  const [storageInfo, setStorageInfo] = useState<any>(null);
+  const [subscriptionInfo, setSubscriptionInfo] = useState<any>(null);
+  const [loadingStorage, setLoadingStorage] = useState(false);
   const [saving, setSaving] = useState(false);
   
   // Form state for general settings
@@ -110,8 +132,56 @@ export default function ProjectSettings({
   const tabs = [
     { id: 'general' as const, label: 'General' },
     { id: 'tags' as const, label: 'Tags' },
+    { id: 'storage' as const, label: 'Storage' },
     { id: 'permissions' as const, label: 'Permissions' }
   ];
+
+  const fetchStorageInfo = async () => {
+    setLoadingStorage(true);
+    try {
+      const [storageRes, subRes] = await Promise.all([
+        fetch(`/api/projects/${slug}/storage`),
+        fetch(`/api/projects/${slug}/subscription`)
+      ]);
+      if (storageRes.ok) {
+        const data = await storageRes.json();
+        setStorageInfo(data);
+      }
+      if (subRes.ok) {
+        const data = await subRes.json();
+        setSubscriptionInfo(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch storage info:', err);
+    } finally {
+      setLoadingStorage(false);
+    }
+  };
+
+  const handleChangePlan = async (planSlug: string) => {
+    if (!confirm(`Change to ${planSlug} plan?`)) return;
+    try {
+      const res = await fetch(`/api/projects/${slug}/subscription`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planSlug })
+      });
+      if (res.ok) {
+        await fetchStorageInfo();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to change plan');
+      }
+    } catch (err) {
+      alert('Failed to change plan');
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'storage' && !storageInfo) {
+      fetchStorageInfo();
+    }
+  }, [activeTab]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -226,6 +296,123 @@ export default function ProjectSettings({
                 </p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Storage Settings */}
+        {activeTab === 'storage' && (
+          <div className="space-y-6">
+            {/* Current Plan */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-lg font-semibold mb-6">Storage & Files</h2>
+              
+              {loadingStorage ? (
+                <div className="text-center py-8 text-gray-500">Loading...</div>
+              ) : storageInfo ? (
+                <div className="space-y-6">
+                  {/* Current Usage */}
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 mb-3">Current Usage</h3>
+                    <StorageUsageBar
+                      usedBytes={storageInfo.usedBytes || 0}
+                      totalBytes={storageInfo.quotaBytes || 0}
+                    />
+                    <div className="mt-2 text-sm text-gray-600">
+                      <span className="font-medium">{storageInfo.fileCount || 0}</span> files uploaded
+                    </div>
+                  </div>
+
+                  {/* Current Plan */}
+                  <div className="pt-4 border-t">
+                    <h3 className="text-sm font-medium text-gray-700 mb-3">Current Plan</h3>
+                    {subscriptionInfo?.subscription ? (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold text-blue-900">{subscriptionInfo.subscription.name}</p>
+                            <p className="text-sm text-blue-700">
+                              {formatBytes(subscriptionInfo.subscription.storage_limit_bytes)} storage
+                              {subscriptionInfo.subscription.price_monthly_cents > 0 && (
+                                <span> · ${(subscriptionInfo.subscription.price_monthly_cents / 100).toFixed(0)}/month</span>
+                              )}
+                            </p>
+                          </div>
+                          <span className="px-3 py-1 bg-blue-600 text-white text-sm rounded-full">
+                            Active
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <p className="text-gray-600">No active storage plan</p>
+                        <p className="text-sm text-gray-500">Subscribe to a plan to enable file uploads</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  Failed to load storage info
+                </div>
+              )}
+            </div>
+
+            {/* Available Plans */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-lg font-semibold mb-6">Available Plans</h2>
+              
+              {subscriptionInfo?.availablePlans ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {subscriptionInfo.availablePlans.map((plan: any) => {
+                    const isCurrentPlan = subscriptionInfo.subscription?.plan_slug === plan.slug;
+                    return (
+                      <div
+                        key={plan.id}
+                        className={`border rounded-lg p-4 ${
+                          isCurrentPlan ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                        }`}
+                      >
+                        <h3 className="font-semibold text-lg">{plan.name}</h3>
+                        <p className="text-2xl font-bold my-2">
+                          {plan.price_monthly_cents === 0 ? (
+                            'Free'
+                          ) : (
+                            <>${(plan.price_monthly_cents / 100).toFixed(0)}<span className="text-sm font-normal">/mo</span></>
+                          )}
+                        </p>
+                        <ul className="text-sm text-gray-600 space-y-1 mb-4">
+                          <li>✓ {formatBytes(plan.storage_limit_bytes)} storage</li>
+                          <li>✓ {formatBytes(plan.bandwidth_limit_bytes)}/mo bandwidth</li>
+                          <li>✓ {formatFileSize(plan.max_file_size_bytes)} max file size</li>
+                        </ul>
+                        {isCurrentPlan ? (
+                          <span className="block w-full text-center py-2 bg-blue-600 text-white rounded text-sm">
+                            Current Plan
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleChangePlan(plan.slug)}
+                            className="w-full py-2 border border-blue-600 text-blue-600 rounded hover:bg-blue-50 text-sm"
+                          >
+                            {plan.price_monthly_cents === 0 ? 'Select' : 'Upgrade'}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : loadingStorage ? (
+                <div className="text-center py-8 text-gray-500">Loading plans...</div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  Failed to load available plans
+                </div>
+              )}
+              
+              <p className="text-xs text-gray-500 mt-4">
+                * Billing integration coming soon. Plans can currently be assigned by administrators.
+              </p>
+            </div>
           </div>
         )}
 
