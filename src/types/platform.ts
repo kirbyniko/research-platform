@@ -419,6 +419,8 @@ export interface CreateFieldDefinitionRequest {
   placeholder?: string;
   help_text?: string;
   field_type: FieldType;
+  config?: FieldConfig;
+  width?: 'full' | 'half' | 'third';
   is_required?: boolean;
   is_array?: boolean;
   default_value?: unknown;
@@ -427,6 +429,13 @@ export interface CreateFieldDefinitionRequest {
   display_config?: object;
   visibility?: FieldVisibility;
   requires_quote?: boolean;
+  requires_source_for_quote?: boolean;
+  require_verified_for_publish?: boolean;
+  show_in_guest_form?: boolean;
+  show_in_review_form?: boolean;
+  show_in_validation_form?: boolean;
+  show_in_public_view?: boolean;
+  field_group_id?: number;
   group_id?: number;
   sort_order?: number;
 }
@@ -443,6 +452,8 @@ export interface UpdateFieldDefinitionRequest {
   options?: FieldOption[];
   display_config?: object;
   visibility?: FieldVisibility;
+  config?: FieldConfig;
+  width?: 'full' | 'half' | 'third';
   requires_quote?: boolean;
   requires_source_for_quote?: boolean;
   require_verified_for_publish?: boolean;
@@ -451,6 +462,7 @@ export interface UpdateFieldDefinitionRequest {
   show_in_validation_form?: boolean;
   show_in_public_view?: boolean;
   show_in_list_view?: boolean;
+  field_group_id?: number | null;
   group_id?: number | null;
   sort_order?: number;
 }

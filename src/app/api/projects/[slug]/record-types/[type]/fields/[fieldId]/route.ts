@@ -202,6 +202,16 @@ export async function PATCH(
       values.push(body.requires_quote);
     }
     
+    if (body.requires_source_for_quote !== undefined) {
+      updates.push(`requires_source_for_quote = $${paramIndex++}`);
+      values.push(body.requires_source_for_quote);
+    }
+    
+    if (body.require_verified_for_publish !== undefined) {
+      updates.push(`require_verified_for_publish = $${paramIndex++}`);
+      values.push(body.require_verified_for_publish);
+    }
+    
     // Visibility settings
     if (body.show_in_guest_form !== undefined) {
       updates.push(`show_in_guest_form = $${paramIndex++}`);
@@ -228,9 +238,19 @@ export async function PATCH(
       values.push(body.show_in_list_view);
     }
     
-    if (body.group_id !== undefined) {
-      updates.push(`group_id = $${paramIndex++}`);
-      values.push(body.group_id);
+    if (body.field_group_id !== undefined) {
+      updates.push(`field_group_id = $${paramIndex++}`);
+      values.push(body.field_group_id);
+    }
+    
+    if (body.width !== undefined) {
+      updates.push(`width = $${paramIndex++}`);
+      values.push(body.width);
+    }
+    
+    if (body.config !== undefined) {
+      updates.push(`config = $${paramIndex++}`);
+      values.push(JSON.stringify(body.config));
     }
     
     if (body.sort_order !== undefined) {

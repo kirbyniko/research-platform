@@ -239,11 +239,12 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, groups, allField
   const [fieldGroupId, setFieldGroupId] = useState<number | null>(field?.field_group_id || null);
   const [isRequired, setIsRequired] = useState(field?.is_required || false);
   const [requiresQuote, setRequiresQuote] = useState(field?.requires_quote || false);
+  const [requiresSourceForQuote, setRequiresSourceForQuote] = useState(field?.requires_source_for_quote || false);
+  const [requireVerifiedForPublish, setRequireVerifiedForPublish] = useState(field?.require_verified_for_publish ?? true);
   const [showInGuestForm, setShowInGuestForm] = useState(field?.show_in_guest_form || false);
   const [showInReviewForm, setShowInReviewForm] = useState(field?.show_in_review_form ?? true);
   const [showInValidationForm, setShowInValidationForm] = useState(field?.show_in_validation_form ?? true);
   const [showInPublicView, setShowInPublicView] = useState(field?.show_in_public_view ?? true);
-  const [showInListView, setShowInListView] = useState(field?.show_in_list_view || false);
   const [width, setWidth] = useState(field?.width || 'full');
   
   // Config for select/multi_select
@@ -346,11 +347,12 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, groups, allField
       config,
       is_required: isRequired,
       requires_quote: requiresQuote,
+      requires_source_for_quote: requiresSourceForQuote,
+      require_verified_for_publish: requireVerifiedForPublish,
       show_in_guest_form: showInGuestForm,
       show_in_review_form: showInReviewForm,
       show_in_validation_form: showInValidationForm,
       show_in_public_view: showInPublicView,
-      show_in_list_view: showInListView,
       width,
     };
     
@@ -544,6 +546,26 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, groups, allField
                 />
                 <span className="text-sm">Requires supporting quote to verify</span>
               </label>
+              {requiresQuote && (
+                <label className="flex items-center gap-2 cursor-pointer ml-6">
+                  <input
+                    type="checkbox"
+                    checked={requiresSourceForQuote}
+                    onChange={(e) => setRequiresSourceForQuote(e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600"
+                  />
+                  <span className="text-sm text-gray-600">Quote must have a source</span>
+                </label>
+              )}
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={requireVerifiedForPublish}
+                  onChange={(e) => setRequireVerifiedForPublish(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600"
+                />
+                <span className="text-sm">Must be verified before publish</span>
+              </label>
             </div>
           </div>
 
@@ -646,15 +668,6 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, groups, allField
                   className="rounded border-gray-300 text-blue-600"
                 />
                 <span className="text-sm">Public View</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showInListView}
-                  onChange={(e) => setShowInListView(e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600"
-                />
-                <span className="text-sm">List View (table column)</span>
               </label>
             </div>
           </div>

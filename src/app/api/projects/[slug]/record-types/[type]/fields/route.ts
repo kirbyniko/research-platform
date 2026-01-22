@@ -170,11 +170,12 @@ export async function POST(
     // Create field
     const result = await pool.query(
       `INSERT INTO field_definitions (
-        record_type_id, name, key, description, field_type,
-        is_required, is_array, default_value, placeholder,
-        help_text, validation_rules, options, display_config,
-        visibility, requires_quote, group_id, sort_order
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+        record_type_id, name, slug, description, field_type, field_group_id,
+        is_required, config, default_value, placeholder, validation_rules,
+        requires_quote, requires_source_for_quote, require_verified_for_publish,
+        show_in_guest_form, show_in_review_form, show_in_validation_form, 
+        show_in_public_view, sort_order, width
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
       RETURNING *`,
       [
         recordType.id,
@@ -182,23 +183,21 @@ export async function POST(
         body.slug,
         body.description || null,
         body.field_type,
+        body.field_group_id || null,
         body.is_required ?? false,
-        body.is_array ?? false,
+        body.config ? JSON.stringify(body.config) : '{}',
         body.default_value ?? null,
         body.placeholder || null,
-        body.help_text || null,
-        body.validation_rules ? JSON.stringify(body.validation_rules) : null,
-        body.options ? JSON.stringify(body.options) : null,
-        body.display_config ? JSON.stringify(body.display_config) : null,
-        body.visibility ? JSON.stringify(body.visibility) : JSON.stringify({
-          guest_form: true,
-          review_form: true,
-          validation_form: true,
-          public_view: true
-        }),
+        body.validation_rules ? JSON.stringify(body.validation_rules) : '{}',
         body.requires_quote ?? false,
-        body.group_id || null,
-        sortOrder
+        body.requires_source_for_quote ?? false,
+        body.require_verified_for_publish ?? true,
+        body.show_in_guest_form ?? false,
+        body.show_in_review_form ?? true,
+        body.show_in_validation_form ?? true,
+        body.show_in_public_view ?? true,
+        sortOrder,
+        body.width || 'full'
       ]
     );
     
