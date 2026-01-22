@@ -98,12 +98,13 @@ export default function NewRecordPage({ params }: { params: Promise<{ slug: stri
     
     const data = await response.json();
     
-    // Show success message for guests, redirect for users
+    // Show success message for guests, redirect analysts to review page
     if (isGuest) {
       alert(data.message || 'Thank you for your submission!');
       router.push(`/projects/${projectSlug}`);
     } else {
-      router.push(`/projects/${projectSlug}/records/${data.record.id}`);
+      // Analysts go to review page to add quotes/sources/media
+      router.push(`/projects/${projectSlug}/records/${data.record.id}/review`);
     }
   };
 
@@ -210,7 +211,45 @@ export default function NewRecordPage({ params }: { params: Promise<{ slug: stri
             )}
           </div>
 
-          {fields.length === 0 ? (
+          {fields.length === 0 && !isGuest ? (
+            <div>
+              <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded mb-4">
+                <p className="text-sm">
+                  No fields defined yet, but you can still create a record and add quotes, sources, and media in the review page.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={async () => {
+                    const response = await fetch(`/api/projects/${projectSlug}/records`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        record_type_slug: selectedType.slug,
+                        data: {},
+                      }),
+                    });
+                    if (!response.ok) {
+                      const data = await response.json();
+                      alert(data.error || 'Failed to create record');
+                      return;
+                    }
+                    const data = await response.json();
+                    router.push(`/projects/${projectSlug}/records/${data.record.id}/review`);
+                  }}
+                  className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
+                >
+                  Create Empty Record
+                </button>
+                <Link 
+                  href={`/projects/${projectSlug}/record-types/${selectedType.slug}/fields`}
+                  className="px-4 py-2 border rounded hover:bg-gray-50"
+                >
+                  Add Fields First
+                </Link>
+              </div>
+            </div>
+          ) : fields.length === 0 ? (
             <p className="text-gray-500">
               No fields defined for this record type.{' '}
               <Link 

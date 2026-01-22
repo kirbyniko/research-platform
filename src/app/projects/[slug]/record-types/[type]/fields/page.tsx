@@ -813,7 +813,25 @@ export default function FieldEditorPage({ params }: { params: Promise<{ slug: st
             <div className="p-12 text-center">
               <div className="text-5xl mb-4">📝</div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No fields yet</h3>
-              <p className="text-gray-600 mb-4">Add fields to define what data to collect.</p>
+              <p className="text-gray-600 mb-6">Add fields to define what data to collect.</p>
+              
+              <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded mb-6 mx-auto max-w-2xl text-sm text-left">
+                <strong className="block mb-1">💡 About Quotes, Sources & Media:</strong>
+                <p className="mb-2">
+                  These are managed separately from fields and don't need field definitions. Enable them in{' '}
+                  <Link 
+                    href={`/projects/${resolvedParams.slug}/record-types/${resolvedParams.type}/settings`}
+                    className="underline font-medium"
+                  >
+                    Settings → Default Data Types
+                  </Link>
+                  .
+                </p>
+                <p>
+                  When enabled, you can add quotes, sources, and media when creating or reviewing records.
+                </p>
+              </div>
+              
               <button
                 onClick={() => setShowAddModal(true)}
                 className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
