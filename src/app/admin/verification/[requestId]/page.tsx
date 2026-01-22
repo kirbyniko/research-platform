@@ -106,6 +106,12 @@ export default function VerificationDetailPage({
       setSources(data.sources || []);
       setFieldDefinitions(data.field_definitions || []);
       
+      console.log('Verification request data:', {
+        fieldDefinitionsCount: (data.field_definitions || []).length,
+        recordDataKeys: Object.keys(data.request.record_data || {}),
+        hasRecordData: !!data.request.record_data
+      });
+      
       // Initialize results based on scope
       if (data.request.verification_scope === 'record') {
         setResults([{
@@ -329,9 +335,18 @@ export default function VerificationDetailPage({
               </div>
               
               <div className="space-y-6">
+                {fieldDefinitions.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No field definitions found</p>
+                    <p className="text-xs mt-2">Debug: Check console for details</p>
+                  </div>
+                )}
+                
                 {fieldDefinitions.map(field => {
                   const value = request.record_data[field.slug];
-                  if (value === undefined || value === null || value === '') return null;
+                  
+                  // Show all fields, even empty ones for debugging
+                  const isEmpty = value === undefined || value === null || value === '';
                   
                   // Get quotes for this field
                   const fieldQuotes = quotes.filter(q => q.linked_fields?.includes(field.slug));
@@ -386,7 +401,9 @@ export default function VerificationDetailPage({
                       </div>
                       
                       <div className="mt-2 text-gray-900 bg-white p-3 rounded">
-                        {field.field_type === 'textarea' ? (
+                        {isEmpty ? (
+                          <p className="text-gray-400 italic text-sm">No value provided</p>
+                        ) : field.field_type === 'textarea' ? (
                           <p className="whitespace-pre-wrap">{String(value)}</p>
                         ) : Array.isArray(value) ? (
                           <ul className="list-disc list-inside space-y-1">

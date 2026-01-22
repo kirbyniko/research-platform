@@ -33,6 +33,7 @@ export async function GET(
         r.data as record_data,
         r.status as record_status,
         r.verified_fields,
+        r.record_type_id,
         rt.name as record_type_name,
         rt.slug as record_type_slug,
         p.name as project_name,
