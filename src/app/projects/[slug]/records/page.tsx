@@ -36,6 +36,8 @@ export default function RecordsPage({ params }: { params: Promise<{ slug: string
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState<string>('');
   
   // Filters
   const [selectedType, setSelectedType] = useState<string>('');
@@ -62,6 +64,8 @@ export default function RecordsPage({ params }: { params: Promise<{ slug: string
       const data = await response.json();
       setRecords(data.records);
       setPagination(data.pagination);
+      setUserRole(data.role || null);
+      setProjectName(data.projectName || projectSlug);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -131,71 +135,82 @@ export default function RecordsPage({ params }: { params: Promise<{ slug: string
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <Link href={`/projects/${projectSlug}`} className="text-blue-600 hover:underline text-sm">
-            ← Back to Project
-          </Link>
-          <h1 className="text-2xl font-bold mt-2">Records</h1>
+          {userRole ? (
+            <Link href={`/projects/${projectSlug}`} className="text-blue-600 hover:underline text-sm">
+              ← Back to Project
+            </Link>
+          ) : (
+            <h1 className="text-3xl font-bold">{projectName || 'Verified Records'}</h1>
+          )}
+          {userRole && <h1 className="text-2xl font-bold mt-2">Records</h1>}
+          {!userRole && (
+            <p className="text-gray-600 mt-2">Browse all independently verified records</p>
+          )}
         </div>
         
-        <div className="flex space-x-2">
-          {recordTypes.map(rt => (
-            <Link
-              key={rt.id}
-              href={`/projects/${projectSlug}/records/new?type=${rt.slug}`}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-            >
-              + New {rt.name}
-            </Link>
-          ))}
-        </div>
+        {userRole && (
+          <div className="flex space-x-2">
+            {recordTypes.map(rt => (
+              <Link
+                key={rt.id}
+                href={`/projects/${projectSlug}/records/new?type=${rt.slug}`}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+              >
+                + New {rt.name}
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Record Type</label>
-            <select
-              value={selectedType}
-              onChange={(e) => { setSelectedType(e.target.value); setCurrentPage(1); }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="">All Types</option>
-              {recordTypes.map(rt => (
-                <option key={rt.id} value={rt.slug}>{rt.name}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select
-              value={selectedStatus}
-              onChange={(e) => { setSelectedStatus(e.target.value); setCurrentPage(1); }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="">All Statuses</option>
-              <option value="pending_review">Pending Review</option>
-              <option value="pending_validation">Pending Validation</option>
-              <option value="verified">Verified</option>
-              <option value="rejected">Rejected</option>
-              <option value="archived">Archived</option>
-            </select>
-          </div>
-          
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && fetchRecords()}
-              placeholder="Search records..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            />
+      {/* Filters - Only show for authenticated users */}
+      {userRole && (
+        <div className="bg-white rounded-lg shadow p-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Record Type</label>
+              <select
+                value={selectedType}
+                onChange={(e) => { setSelectedType(e.target.value); setCurrentPage(1); }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="">All Types</option>
+                {recordTypes.map(rt => (
+                  <option key={rt.id} value={rt.slug}>{rt.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select
+                value={selectedStatus}
+                onChange={(e) => { setSelectedStatus(e.target.value); setCurrentPage(1); }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="">All Statuses</option>
+                <option value="pending_review">Pending Review</option>
+                <option value="pending_validation">Pending Validation</option>
+                <option value="verified">Verified</option>
+                <option value="rejected">Rejected</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+            
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && fetchRecords()}
+                placeholder="Search records..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Error */}
       {error && (
@@ -210,7 +225,7 @@ export default function RecordsPage({ params }: { params: Promise<{ slug: string
       ) : records.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg shadow">
           <p className="text-gray-500 mb-4">No records found</p>
-          {recordTypes.length > 0 && (
+          {userRole && recordTypes.length > 0 && (
             <Link
               href={`/projects/${projectSlug}/records/new?type=${recordTypes[0].slug}`}
               className="text-blue-600 hover:underline"
@@ -219,7 +234,8 @@ export default function RecordsPage({ params }: { params: Promise<{ slug: string
             </Link>
           )}
         </div>
-      ) : (
+      ) : userRole ? (
+        // Admin table view
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -299,31 +315,74 @@ export default function RecordsPage({ params }: { params: Promise<{ slug: string
               ))}
             </tbody>
           </table>
-          
-          {/* Pagination */}
-          {pagination && pagination.totalPages > 1 && (
-            <div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t">
-              <p className="text-sm text-gray-500">
-                Showing {((currentPage - 1) * pagination.limit) + 1} to {Math.min(currentPage * pagination.limit, pagination.total)} of {pagination.total} records
-              </p>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 border rounded text-sm disabled:opacity-50"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
-                  disabled={currentPage === pagination.totalPages}
-                  className="px-3 py-1 border rounded text-sm disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
+        </div>
+      ) : (
+        // Public card view
+        <div className="space-y-6">
+          {records.map(record => {
+            const title = getRecordTitle(record);
+            const summary = record.data['summary'] || record.data['description'] || '';
+            
+            return (
+              <Link
+                key={record.id}
+                href={`/projects/${projectSlug}/records/${record.id}`}
+                className="block bg-white border border-gray-200 rounded-lg p-6 hover:border-gray-300 hover:shadow-md transition-all"
+              >
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div className="flex-1">
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                      {title}
+                    </h2>
+                    <div className="flex items-center gap-3 text-sm text-gray-500">
+                      <span className="uppercase tracking-wide">{record.record_type_name}</span>
+                      <span>•</span>
+                      <span>{new Date(record.created_at).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex-shrink-0 px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded text-xs font-medium">
+                    ✓ Verified
+                  </div>
+                </div>
+                
+                {summary && (
+                  <p className="text-gray-600 line-clamp-2 mt-3">
+                    {String(summary)}
+                  </p>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+      
+      {/* Pagination */}
+      {!loading && pagination && pagination.totalPages > 1 && (
+        <div className={`${userRole ? 'bg-gray-50 px-6 py-3 border-t' : 'mt-8'} flex items-center justify-between`}>
+          <p className="text-sm text-gray-500">
+            Showing {((currentPage - 1) * pagination.limit) + 1} to {Math.min(currentPage * pagination.limit, pagination.total)} of {pagination.total} records
+          </p>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 border rounded text-sm disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
+              disabled={currentPage === pagination.totalPages}
+              className="px-3 py-1 border rounded text-sm disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </div>

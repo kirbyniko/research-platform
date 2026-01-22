@@ -31,6 +31,20 @@ interface RecordData {
   verification_date?: string;
 }
 
+interface VerificationResult {
+  id: number;
+  request_id: number;
+  item_type: 'field' | 'quote' | 'source';
+  item_id?: number;
+  field_slug?: string;
+  verified: boolean;
+  notes?: string;
+  caveats?: string;
+  issues?: string[];
+  completed_at?: string;
+  verifier_name?: string;
+}
+
 export default function RecordDetailPage({ 
   params 
 }: { 
@@ -45,6 +59,7 @@ export default function RecordDetailPage({
   const [quotes, setQuotes] = useState<RecordQuote[]>([]);
   const [sources, setSources] = useState<RecordSource[]>([]);
   const [verificationRequests, setVerificationRequests] = useState<any[]>([]);
+  const [verificationResults, setVerificationResults] = useState<VerificationResult[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +82,7 @@ export default function RecordDetailPage({
       setQuotes(data.quotes || []);
       setSources(data.sources || []);
       setVerificationRequests(data.verificationRequests || []);
+      setVerificationResults(data.verificationResults || []);
       setUserRole(data.role);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -205,14 +221,25 @@ export default function RecordDetailPage({
     return <div className="p-8">Record not found</div>;
   }
 
+  // Determine back link based on user role
+  const backLink = userRole ? `/projects/${projectSlug}` : `/projects/${projectSlug}/records`;
+  const backText = userRole ? '← Back to Dashboard' : '← Back to Records';
+  
   // Always show article-style view
   return (
     <article className="max-w-3xl mx-auto px-6 py-12 bg-white">
         {/* Header */}
-        <div className="mb-8">
-          <Link href={`/projects/${projectSlug}`} className="text-sm text-gray-500 hover:text-gray-700">
-            ← Back to Dashboard
+        <div className="mb-8 flex items-center justify-between">
+          <Link href={backLink} className="text-sm text-gray-500 hover:text-gray-700">
+            {backText}
           </Link>
+          
+          {/* Verification Level Badge */}
+          {record.verification_level === 3 && (
+            <div className="px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded text-sm font-medium">
+              ✓✓✓ Independently Verified
+            </div>
+          )}
         </div>
 
         {/* Title/Summary Section */}
@@ -244,11 +271,19 @@ export default function RecordDetailPage({
             .map((field, idx) => {
               const value = record.data[field.slug];
               const quotesForField = quotes.filter(q => q.linked_fields?.includes(field.slug));
+              const fieldVerification = verificationResults.find(
+                vr => vr.item_type === 'field' && vr.field_slug === field.slug && vr.verified
+              );
               
               return (
                 <section key={field.slug} className="mb-8">
-                  <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     {field.name}
+                    {fieldVerification && (
+                      <span className="text-sm font-normal text-emerald-600" title={`Verified by ${fieldVerification.verifier_name} on ${fieldVerification.completed_at ? new Date(fieldVerification.completed_at).toLocaleDateString() : 'N/A'}`}>
+                        ✓ Verified
+                      </span>
+                    )}
                   </h2>
                   <div className="text-gray-800 leading-relaxed">
                     {/* Render field value based on type */}
@@ -292,9 +327,31 @@ export default function RecordDetailPage({
         {/* Footnotes Section - Quotes */}
         {quotes.length > 0 && (
           <section className="border-t-2 border-gray-300 pt-8 mt-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">References</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">References</h2>
+              <div className="flex items-center gap-4 text-xs text-gray-600">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-blue-100 border border-blue-300"></div>
+                  <span>Primary Source</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-amber-50 border border-amber-200"></div>
+                  <span>Secondary Source</span>
+                </div>
+              </div>
+            </div>
             <ol className="space-y-6">
-              {quotes.map((quote, idx) => (
+              {quotes.map((quote, idx) => {
+                const quoteVerification = verificationResults.find(
+                  vr => vr.item_type === 'quote' && vr.item_id === quote.id && vr.verified
+                );
+                
+                // Determine source type for color coding
+                const isPrimarySource = quote.source_type === 'primary';
+                const cardBgColor = isPrimarySource ? 'bg-blue-50' : 'bg-amber-50';
+                const cardBorderColor = isPrimarySource ? 'border-blue-200' : 'border-amber-200';
+                
+                return (
                 <li
                   key={quote.id}
                   id={`quote-${quote.id}`}
@@ -302,32 +359,40 @@ export default function RecordDetailPage({
                 >
                   <div className="flex gap-4">
                     <span className="font-bold text-gray-500 flex-shrink-0">[{idx + 1}]</span>
-                    <div className="flex-1">
-                      <blockquote className="italic text-gray-700 mb-2">
-                        &ldquo;{quote.quote_text}&rdquo;
-                      </blockquote>
+                    <div className={`flex-1 p-4 rounded-lg border ${cardBgColor} ${cardBorderColor}`}>
+                      <div className="flex items-start gap-2">
+                        <blockquote className="italic text-gray-700 mb-2 flex-1">
+                          &ldquo;{quote.quote_text}&rdquo;
+                        </blockquote>
+                        {quoteVerification && (
+                          <span className="text-emerald-600 text-xs" title={`Verified by ${quoteVerification.verifier_name}`}>
+                            ✓
+                          </span>
+                        )}
+                      </div>
                       {quote.source && (
-                        <p className="text-gray-600">— {quote.source}</p>
+                        <p className="text-gray-600 mt-2">— {quote.source}</p>
                       )}
                       {quote.source_url && (
                         <a
                           href={quote.source_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline text-xs"
+                          className="text-blue-600 hover:underline text-xs font-medium"
                         >
                           View Source →
                         </a>
                       )}
                       {quote.linked_fields && quote.linked_fields.length > 0 && (
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 mt-2">
                           Related to: {quote.linked_fields.map(f => fields.find(field => field.slug === f)?.name || f).join(', ')}
                         </p>
                       )}
                     </div>
                   </div>
                 </li>
-              ))}
+                );
+              })}
             </ol>
           </section>
         )}
@@ -337,19 +402,31 @@ export default function RecordDetailPage({
           <section className="mt-12 pt-8 border-t border-gray-200">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Sources</h2>
             <ul className="space-y-3">
-              {sources.map((source, idx) => (
+              {sources.map((source, idx) => {
+                const sourceVerification = verificationResults.find(
+                  vr => vr.item_type === 'source' && vr.item_id === source.id && vr.verified
+                );
+                
+                return (
                 <li key={source.id} className="text-sm">
                   <div className="flex items-start gap-3">
                     <span className="text-gray-400 flex-shrink-0">•</span>
-                    <div>
-                      <a
-                        href={source.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline font-medium"
-                      >
-                        {source.title || source.url}
-                      </a>
+                    <div className="flex-1">
+                      <div className="flex items-start gap-2">
+                        <a
+                          href={source.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline font-medium flex-1"
+                        >
+                          {source.title || source.url}
+                        </a>
+                        {sourceVerification && (
+                          <span className="text-emerald-600 text-xs" title={`Verified by ${sourceVerification.verifier_name}`}>
+                            ✓
+                          </span>
+                        )}
+                      </div>
                       {source.source_type && (
                         <span className="ml-2 text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-600">
                           {source.source_type}
@@ -361,8 +438,134 @@ export default function RecordDetailPage({
                     </div>
                   </div>
                 </li>
-              ))}
+                );
+              })}
             </ul>
+          </section>
+        )}
+
+        {/* Verification Activity Section */}
+        {verificationResults.length > 0 && (
+          <section className="mt-12 pt-8 border-t border-gray-200">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Verification Activity</h2>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-6">
+              <div className="text-sm text-emerald-900 mb-4">
+                <strong>Third-party verification completed</strong>
+                {verificationResults[0]?.completed_at && (
+                  <span className="text-emerald-700 ml-2">
+                    on {new Date(verificationResults[0].completed_at).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </span>
+                )}
+                {verificationResults[0]?.verifier_name && (
+                  <span className="text-emerald-700"> by {verificationResults[0].verifier_name}</span>
+                )}
+              </div>
+              
+              <div className="space-y-4">
+                {/* Verified Fields */}
+                {verificationResults.filter(vr => vr.item_type === 'field' && vr.verified).length > 0 && (
+                  <div>
+                    <div className="font-medium text-emerald-900 mb-2">Verified Fields:</div>
+                    <ul className="list-disc list-inside text-sm text-emerald-800 space-y-1">
+                      {verificationResults
+                        .filter(vr => vr.item_type === 'field' && vr.verified)
+                        .map(vr => (
+                          <li key={`field-${vr.field_slug}`}>
+                            {fields.find(f => f.slug === vr.field_slug)?.name || vr.field_slug}
+                            {vr.notes && <span className="text-emerald-700 ml-2">— {vr.notes}</span>}
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {/* Verified Quotes */}
+                {verificationResults.filter(vr => vr.item_type === 'quote' && vr.verified).length > 0 && (
+                  <div>
+                    <div className="font-medium text-emerald-900 mb-2">Verified Quotes:</div>
+                    <ul className="list-disc list-inside text-sm text-emerald-800 space-y-1">
+                      {verificationResults
+                        .filter(vr => vr.item_type === 'quote' && vr.verified)
+                        .map(vr => {
+                          const quote = quotes.find(q => q.id === vr.item_id);
+                          return (
+                            <li key={`quote-${vr.item_id}`}>
+                              {quote ? `"${quote.quote_text.slice(0, 60)}..."` : `Quote #${vr.item_id}`}
+                            </li>
+                          );
+                        })}
+                    </ul>
+                  </div>
+                )}
+                
+                {/* Verified Sources */}
+                {verificationResults.filter(vr => vr.item_type === 'source' && vr.verified).length > 0 && (
+                  <div>
+                    <div className="font-medium text-emerald-900 mb-2">Verified Sources:</div>
+                    <ul className="list-disc list-inside text-sm text-emerald-800 space-y-1">
+                      {verificationResults
+                        .filter(vr => vr.item_type === 'source' && vr.verified)
+                        .map(vr => {
+                          const source = sources.find(s => s.id === vr.item_id);
+                          return (
+                            <li key={`source-${vr.item_id}`}>
+                              <a
+                                href={source?.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline"
+                              >
+                                {source?.title || source?.url || `Source #${vr.item_id}`}
+                              </a>
+                            </li>
+                          );
+                        })}
+                    </ul>
+                  </div>
+                )}
+                
+                {/* Items with Issues */}
+                {verificationResults.filter(vr => !vr.verified || (vr.issues && vr.issues.length > 0)).length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-emerald-300">
+                    <div className="font-medium text-yellow-900 mb-2">Items with Issues or Not Verified:</div>
+                    <ul className="list-disc list-inside text-sm text-yellow-800 space-y-2">
+                      {verificationResults
+                        .filter(vr => !vr.verified || (vr.issues && vr.issues.length > 0))
+                        .map((vr, idx) => {
+                          let itemLabel = '';
+                          if (vr.item_type === 'field') {
+                            itemLabel = fields.find(f => f.slug === vr.field_slug)?.name || vr.field_slug || '';
+                          } else if (vr.item_type === 'quote') {
+                            const quote = quotes.find(q => q.id === vr.item_id);
+                            itemLabel = quote ? `"${quote.quote_text.slice(0, 40)}..."` : `Quote #${vr.item_id}`;
+                          } else if (vr.item_type === 'source') {
+                            const source = sources.find(s => s.id === vr.item_id);
+                            itemLabel = source?.title || source?.url || `Source #${vr.item_id}`;
+                          }
+                          
+                          return (
+                            <li key={`issue-${idx}`}>
+                              <strong>{itemLabel}</strong>
+                              {vr.issues && vr.issues.length > 0 && (
+                                <ul className="ml-6 mt-1 list-disc text-xs text-yellow-700">
+                                  {vr.issues.map((issue, i) => (
+                                    <li key={i}>{issue}</li>
+                                  ))}
+                                </ul>
+                              )}
+                              {vr.notes && <div className="ml-6 text-xs text-yellow-700 mt-1">{vr.notes}</div>}
+                            </li>
+                          );
+                        })}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
           </section>
         )}
 

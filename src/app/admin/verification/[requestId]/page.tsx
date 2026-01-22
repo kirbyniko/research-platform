@@ -422,11 +422,47 @@ export default function VerificationDetailPage({
                       {fieldQuotes.length > 0 && (
                         <div className="mt-3 space-y-2">
                           <div className="text-xs font-medium text-gray-600 uppercase">Supporting Quotes:</div>
-                          {fieldQuotes.map(quote => (
+                          {fieldQuotes.map(quote => {
+                            const quoteResult = results.find(r => r.item_type === 'quote' && r.item_id === quote.id);
+                            const isQuoteVerified = quoteResult?.verified || false;
+                            
+                            return (
                             <div key={quote.id} className="bg-blue-50 border border-blue-200 rounded p-3">
-                              <blockquote className="text-sm italic text-gray-700 mb-2">
-                                &ldquo;{quote.quote_text}&rdquo;
-                              </blockquote>
+                              <div className="flex items-start justify-between gap-3 mb-2">
+                                <blockquote className="text-sm italic text-gray-700 flex-1">
+                                  &ldquo;{quote.quote_text}&rdquo;
+                                </blockquote>
+                                {isAssignedToMe && (
+                                  <label className="flex items-center gap-1 cursor-pointer flex-shrink-0">
+                                    <input
+                                      type="checkbox"
+                                      checked={isQuoteVerified}
+                                      onChange={(e) => {
+                                        const checked = e.target.checked;
+                                        const existing = results.find(r => r.item_type === 'quote' && r.item_id === quote.id);
+                                        if (existing) {
+                                          setResults(results.map(r => 
+                                            r.item_type === 'quote' && r.item_id === quote.id
+                                              ? { ...r, verified: checked }
+                                              : r
+                                          ));
+                                        } else {
+                                          setResults([...results, {
+                                            item_type: 'quote',
+                                            item_id: quote.id,
+                                            verified: checked,
+                                            notes: '',
+                                            caveats: '',
+                                            issues: []
+                                          }]);
+                                        }
+                                      }}
+                                      className="rounded text-green-600"
+                                    />
+                                    <span className="text-xs text-gray-600">✓</span>
+                                  </label>
+                                )}
+                              </div>
                               {quote.source && (
                                 <div className="flex items-center justify-between text-xs">
                                   <span className="text-gray-600">— {quote.source}</span>
@@ -443,7 +479,8 @@ export default function VerificationDetailPage({
                                 </div>
                               )}
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -457,8 +494,41 @@ export default function VerificationDetailPage({
               <div className="bg-white rounded-lg border p-6">
                 <h2 className="font-semibold mb-4">Sources ({sources.length})</h2>
                 <div className="space-y-3">
-                  {sources.map(source => (
+                  {sources.map(source => {
+                    const sourceResult = results.find(r => r.item_type === 'source' && r.item_id === source.id);
+                    const isSourceVerified = sourceResult?.verified || false;
+                    
+                    return (
                     <div key={source.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded">
+                      {isAssignedToMe && (
+                        <label className="flex items-center cursor-pointer pt-1">
+                          <input
+                            type="checkbox"
+                            checked={isSourceVerified}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              const existing = results.find(r => r.item_type === 'source' && r.item_id === source.id);
+                              if (existing) {
+                                setResults(results.map(r => 
+                                  r.item_type === 'source' && r.item_id === source.id
+                                    ? { ...r, verified: checked }
+                                    : r
+                                ));
+                              } else {
+                                setResults([...results, {
+                                  item_type: 'source',
+                                  item_id: source.id,
+                                  verified: checked,
+                                  notes: '',
+                                  caveats: '',
+                                  issues: []
+                                }]);
+                              }
+                            }}
+                            className="rounded text-green-600"
+                          />
+                        </label>
+                      )}
                       <div className="flex-1">
                         <p className="font-medium">{source.title || 'Untitled Source'}</p>
                         <a 
@@ -487,7 +557,8 @@ export default function VerificationDetailPage({
                         Open
                       </a>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

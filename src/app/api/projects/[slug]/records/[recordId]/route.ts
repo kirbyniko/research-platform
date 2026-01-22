@@ -108,6 +108,17 @@ export async function GET(
       [record.id]
     );
     
+    // Get completed verification results
+    const verificationResultsResult = await pool.query(
+      `SELECT vr.*, vreq.completed_at, u.name as verifier_name
+       FROM verification_results vr
+       JOIN verification_requests vreq ON vr.request_id = vreq.id
+       LEFT JOIN users u ON vreq.assigned_to = u.id
+       WHERE vreq.record_id = $1 AND vreq.status = 'completed'
+       ORDER BY vreq.completed_at DESC`,
+      [record.id]
+    );
+    
     return NextResponse.json({
       record,
       fields: fieldsResult.rows,
@@ -115,6 +126,7 @@ export async function GET(
       quotes: quotesResult.rows,
       sources: sourcesResult.rows,
       verificationRequests: verificationRequestsResult.rows,
+      verificationResults: verificationResultsResult.rows,
       role
     });
   } catch (error) {
