@@ -122,9 +122,8 @@ export async function POST(
     // Create record type
     const result = await pool.query(
       `INSERT INTO record_types (
-        project_id, name, slug, description, icon, color,
-        workflow_config, display_config, sort_order
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        project_id, name, slug, description, icon, color, sort_order
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *`,
       [
         project.id,
@@ -133,11 +132,6 @@ export async function POST(
         body.description || null,
         body.icon || null,
         body.color || null,
-        JSON.stringify(body.workflow_config || {
-          stages: ['submission', 'review', 'validation', 'published'],
-          default_stage: 'submission'
-        }),
-        JSON.stringify(body.display_config || {}),
         sortOrder
       ]
     );
