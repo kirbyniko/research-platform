@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 
@@ -13,7 +13,7 @@ import { useSearchParams } from 'next/navigation';
  * 3. We generate an extension token
  * 4. We send the token back to the extension
  */
-export default function ExtensionAuthPage() {
+function ExtensionAuthContent() {
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
   const [tokenStatus, setTokenStatus] = useState<'pending' | 'generating' | 'success' | 'error'>('pending');
@@ -147,5 +147,20 @@ export default function ExtensionAuthPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function ExtensionAuthPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-md text-center">
+          <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <ExtensionAuthContent />
+    </Suspense>
   );
 }
