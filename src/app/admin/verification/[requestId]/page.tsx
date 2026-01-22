@@ -319,93 +319,123 @@ export default function VerificationDetailPage({
               )}
             </div>
 
-            {/* Record Data */}
+            {/* Record Data - Full Inline View */}
             <div className="bg-white rounded-lg border p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-semibold">Record Data</h2>
-                <Link
-                  href={`/projects/${request.project_slug}/records/${request.record_id}`}
-                  target="_blank"
-                  className="text-sm text-blue-600 hover:underline"
-                >
-                  View Full Record →
-                </Link>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold">Record Data</h2>
+                {request.verification_scope === 'record' && (
+                  <span className="text-sm text-gray-500">Full record verification mode</span>
+                )}
               </div>
               
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {fieldDefinitions.map(field => {
                   const value = request.record_data[field.slug];
                   if (value === undefined || value === null || value === '') return null;
                   
+                  // Get quotes for this field
+                  const fieldQuotes = quotes.filter(q => q.linked_fields?.includes(field.slug));
+                  
+                  // Check if this field is verified (for data-level verification)
+                  const fieldResult = results.find(r => r.field_slug === field.slug);
+                  const isVerified = fieldResult?.verified || false;
+                  
                   return (
-                    <div key={field.slug} className="border-b pb-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-700">{field.name}</span>
-                        {request.verification_scope === 'data' && (
-                          <button
-                            className="text-xs text-blue-600 hover:underline"
-                            onClick={() => {
-                              // Toggle verification for this field
-                              const existing = results.find(r => r.field_slug === field.slug);
-                              if (existing) {
-                                setResults(results.map(r => 
-                                  r.field_slug === field.slug 
-                                    ? { ...r, verified: !r.verified }
-                                    : r
-                                ));
-                              }
-                            }}
-                          >
-                            Mark as verified
-                          </button>
+                    <div key={field.slug} className="border-l-4 border-gray-300 pl-4 py-3 bg-gray-50 rounded-r">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-gray-900">{field.name}</h3>
+                            {fieldQuotes.length > 0 && (
+                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                                {fieldQuotes.length} {fieldQuotes.length === 1 ? 'quote' : 'quotes'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {request.verification_scope === 'data' && isAssignedToMe && (
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={isVerified}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                const existing = results.find(r => r.field_slug === field.slug);
+                                if (existing) {
+                                  setResults(results.map(r => 
+                                    r.field_slug === field.slug 
+                                      ? { ...r, verified: checked }
+                                      : r
+                                  ));
+                                } else {
+                                  setResults([...results, {
+                                    item_type: 'field',
+                                    field_slug: field.slug,
+                                    verified: checked,
+                                    notes: '',
+                                    caveats: '',
+                                    issues: []
+                                  }]);
+                                }
+                              }}
+                              className="rounded text-green-600"
+                            />
+                            <span className="text-sm text-gray-600">Verified</span>
+                          </label>
                         )}
                       </div>
-                      <p className="mt-1 text-gray-900">
-                        {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                      </p>
+                      
+                      <div className="mt-2 text-gray-900 bg-white p-3 rounded">
+                        {field.field_type === 'textarea' ? (
+                          <p className="whitespace-pre-wrap">{String(value)}</p>
+                        ) : Array.isArray(value) ? (
+                          <ul className="list-disc list-inside space-y-1">
+                            {value.map((item, i) => (
+                              <li key={i}>{String(item)}</li>
+                            ))}
+                          </ul>
+                        ) : typeof value === 'object' ? (
+                          <pre className="text-xs overflow-x-auto">{JSON.stringify(value, null, 2)}</pre>
+                        ) : (
+                          <p>{String(value)}</p>
+                        )}
+                      </div>
+                      
+                      {/* Quotes supporting this field */}
+                      {fieldQuotes.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          <div className="text-xs font-medium text-gray-600 uppercase">Supporting Quotes:</div>
+                          {fieldQuotes.map(quote => (
+                            <div key={quote.id} className="bg-blue-50 border border-blue-200 rounded p-3">
+                              <blockquote className="text-sm italic text-gray-700 mb-2">
+                                &ldquo;{quote.quote_text}&rdquo;
+                              </blockquote>
+                              {quote.source && (
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-gray-600">— {quote.source}</span>
+                                  {quote.source_url && (
+                                    <a 
+                                      href={quote.source_url} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 hover:underline font-medium"
+                                    >
+                                      View Source →
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
             </div>
 
-            {/* Quotes */}
-            {quotes.length > 0 && (
-              <div className="bg-white rounded-lg border p-6">
-                <h2 className="font-semibold mb-4">Quotes ({quotes.length})</h2>
-                <div className="space-y-4">
-                  {quotes.map(quote => (
-                    <div key={quote.id} className="border-l-4 border-blue-300 pl-4 py-2">
-                      <blockquote className="italic text-gray-700">
-                        &ldquo;{quote.quote_text}&rdquo;
-                      </blockquote>
-                      {quote.source && (
-                        <p className="text-sm text-gray-500 mt-2">
-                          Source: {quote.source}
-                          {quote.source_url && (
-                            <a 
-                              href={quote.source_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="ml-2 text-blue-600 hover:underline"
-                            >
-                              [link]
-                            </a>
-                          )}
-                        </p>
-                      )}
-                      {quote.linked_fields?.length > 0 && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          Supports: {quote.linked_fields.map(getFieldName).join(', ')}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Sources */}
+            {/* Sources Reference List */}
             {sources.length > 0 && (
               <div className="bg-white rounded-lg border p-6">
                 <h2 className="font-semibold mb-4">Sources ({sources.length})</h2>

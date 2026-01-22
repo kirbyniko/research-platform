@@ -99,12 +99,22 @@ export async function GET(
       [record.id]
     );
     
+    // Get pending/active verification requests
+    const verificationRequestsResult = await pool.query(
+      `SELECT id, status, verification_scope, priority, requested_at, assigned_to
+       FROM verification_requests
+       WHERE record_id = $1 AND status IN ('pending', 'in_progress')
+       ORDER BY requested_at DESC`,
+      [record.id]
+    );
+    
     return NextResponse.json({
       record,
       fields: fieldsResult.rows,
       groups: groupsResult.rows,
       quotes: quotesResult.rows,
       sources: sourcesResult.rows,
+      verificationRequests: verificationRequestsResult.rows,
       role
     });
   } catch (error) {

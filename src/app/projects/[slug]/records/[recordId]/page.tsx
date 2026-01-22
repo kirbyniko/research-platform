@@ -44,6 +44,7 @@ export default function RecordDetailPage({
   const [groups, setGroups] = useState<FieldGroup[]>([]);
   const [quotes, setQuotes] = useState<RecordQuote[]>([]);
   const [sources, setSources] = useState<RecordSource[]>([]);
+  const [verificationRequests, setVerificationRequests] = useState<any[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +66,7 @@ export default function RecordDetailPage({
       setFields(data.fields || []);
       setQuotes(data.quotes || []);
       setSources(data.sources || []);
+      setVerificationRequests(data.verificationRequests || []);
       setUserRole(data.role);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -170,6 +172,7 @@ export default function RecordDetailPage({
       
       alert('Verification request submitted successfully. It will be reviewed by a third-party verifier.');
       setVerificationModalOpen(false);
+      fetchRecord(); // Refresh to show the request
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to request verification');
     } finally {
@@ -424,14 +427,21 @@ export default function RecordDetailPage({
               </Link>
             )}
             
-            {canRequestVerification && record.verification_level !== 3 && (
+            {verificationRequests.length > 0 ? (
+              <div className="px-4 py-2 text-sm bg-emerald-50 border border-emerald-200 text-emerald-800 rounded">
+                ✓ 3rd Party Verification Requested
+                <div className="text-xs mt-1">
+                  Status: {verificationRequests[0].status === 'in_progress' ? 'In Progress' : 'Pending Review'}
+                </div>
+              </div>
+            ) : canRequestVerification && record.verification_level !== 3 ? (
               <button
                 onClick={() => setVerificationModalOpen(true)}
                 className="px-4 py-2 text-sm bg-emerald-600 text-white rounded hover:bg-emerald-700"
               >
                 Request 3rd Party Verification
               </button>
-            )}
+            ) : null}
             
             {canDelete && (
               <button
