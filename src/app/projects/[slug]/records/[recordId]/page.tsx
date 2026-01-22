@@ -377,19 +377,13 @@ export default function RecordDetailPage({
             )}
           </dl>
           
-          {canEdit && (
-            <div className="mt-6 flex gap-2">
-              <button
-                onClick={() => setIsEditing(true)}
-                className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-              >
-                Edit Record
-              </button>
+          {canProposeEdit && (
+            <div className="mt-6">
               <Link
-                href={`/projects/${projectSlug}/records/${recordId}/review`}
-                className="px-4 py-2 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 inline-block"
+                href={`/projects/${projectSlug}/records/${recordId}/propose-edit`}
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 inline-block"
               >
-                Review Mode
+                Propose Edit
               </Link>
             </div>
           )}
