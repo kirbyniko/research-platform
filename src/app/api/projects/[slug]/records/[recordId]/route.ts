@@ -99,6 +99,14 @@ export async function GET(
       [record.id]
     );
     
+    // Get media
+    const mediaResult = await pool.query(
+      `SELECT * FROM record_media
+       WHERE record_id = $1
+       ORDER BY created_at`,
+      [record.id]
+    );
+    
     // Get pending/active verification requests
     const verificationRequestsResult = await pool.query(
       `SELECT id, status, verification_scope, priority, requested_at, assigned_to
@@ -125,6 +133,7 @@ export async function GET(
       groups: groupsResult.rows,
       quotes: quotesResult.rows,
       sources: sourcesResult.rows,
+      media: mediaResult.rows,
       verificationRequests: verificationRequestsResult.rows,
       verificationResults: verificationResultsResult.rows,
       role

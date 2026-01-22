@@ -262,6 +262,25 @@ export interface RecordSource {
   created_at: string;
 }
 
+export interface RecordMedia {
+  id: number;
+  record_id: number;
+  project_id: number;
+  media_type: 'video' | 'image' | 'audio' | 'document' | 'embed';
+  url: string;
+  embed_url?: string;
+  title?: string;
+  description?: string;
+  provider?: string;
+  thumbnail_url?: string;
+  duration_seconds?: number;
+  file_size_bytes?: number;
+  mime_type?: string;
+  linked_fields: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 export type ProposedChangeStatus = 
   | 'pending_review'
   | 'pending_validation'

@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { FieldDefinition, FieldGroup, RecordQuote, RecordSource } from '@/types/platform';
+import { FieldDefinition, FieldGroup, RecordQuote, RecordSource, RecordMedia } from '@/types/platform';
+import MediaEmbed from '@/components/MediaEmbed';
 
 interface RecordData {
   id: number;
@@ -58,6 +59,7 @@ export default function RecordDetailPage({
   const [groups, setGroups] = useState<FieldGroup[]>([]);
   const [quotes, setQuotes] = useState<RecordQuote[]>([]);
   const [sources, setSources] = useState<RecordSource[]>([]);
+  const [media, setMedia] = useState<RecordMedia[]>([]);
   const [verificationRequests, setVerificationRequests] = useState<any[]>([]);
   const [verificationResults, setVerificationResults] = useState<VerificationResult[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -81,6 +83,7 @@ export default function RecordDetailPage({
       setFields(data.fields || []);
       setQuotes(data.quotes || []);
       setSources(data.sources || []);
+      setMedia(data.media || []);
       setVerificationRequests(data.verificationRequests || []);
       setVerificationResults(data.verificationResults || []);
       setUserRole(data.role);
@@ -444,7 +447,19 @@ export default function RecordDetailPage({
           </section>
         )}
 
-        {/* Verification Activity Section */}
+        {/* Media Section */}
+        {media.length > 0 && (
+          <section className="mt-12 pt-8 border-t border-gray-200">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Media</h2>
+            <div className="space-y-6">
+              {media.map(mediaItem => (
+                <MediaEmbed key={mediaItem.id} media={mediaItem} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Record Metadata */}
         {verificationResults.length > 0 && (
           <section className="mt-12 pt-8 border-t border-gray-200">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Verification Activity</h2>
