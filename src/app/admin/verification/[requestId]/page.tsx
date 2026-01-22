@@ -368,7 +368,7 @@ export default function VerificationDetailPage({
                             )}
                           </div>
                         </div>
-                        {request.verification_scope === 'data' && isAssignedToMe && (
+                        {isAssignedToMe && (
                           <label className="flex items-center gap-2 cursor-pointer">
                             <input
                               type="checkbox"
@@ -495,9 +495,10 @@ export default function VerificationDetailPage({
 
           {/* Right: Verification Panel */}
           <div className="space-y-6">
-            {/* Action Panel */}
-            <div className="bg-white rounded-lg border p-6 sticky top-4">
-              <h2 className="font-semibold mb-4">Verification Actions</h2>
+            {/* Action Panel - Sticky with scroll */}
+            <div className="bg-white rounded-lg border sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto">
+              <div className="p-6">
+                <h2 className="font-semibold mb-4">Verification Actions</h2>
               
               {request.status === 'pending' && (
                 <div className="text-center py-4">
@@ -641,32 +642,35 @@ export default function VerificationDetailPage({
                   )}
                 </div>
               )}
+              </div>
+              
+              {/* Verification Checklist */}
+              {isAssignedToMe && (
+                <div className="border-t p-6">
+                  <h3 className="font-semibold mb-3">Verification Checklist</h3>
+                  <div className="space-y-2 text-sm">
+                    <label className="flex items-center gap-2">
+                      <input type="checkbox" className="rounded" />
+                      All field values are accurate
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input type="checkbox" className="rounded" />
+                      Quotes match their sources
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input type="checkbox" className="rounded" />
+                      Sources are accessible
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input type="checkbox" className="rounded" />
+                      Data is internally consistent
+                    </label>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Verification Checklist for Record-Level */}
-            {request.verification_scope === 'record' && isAssignedToMe && (
-              <div className="bg-white rounded-lg border p-6">
-                <h3 className="font-semibold mb-3">Verification Checklist</h3>
-                <div className="space-y-2 text-sm">
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" className="rounded" />
-                    All field values are accurate
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" className="rounded" />
-                    Quotes match their sources
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" className="rounded" />
-                    Sources are accessible
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" className="rounded" />
-                    Data is internally consistent
-                  </label>
-                </div>
-              </div>
-            )}
+            {/* Removed separate checklist box - now integrated above */}
           </div>
         </div>
       </main>
