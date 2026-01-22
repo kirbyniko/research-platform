@@ -18,6 +18,9 @@ interface RecordTypeSettings {
   require_all_fields_verified?: boolean;
   allow_validation_bypass?: boolean;
   validation_bypass_roles?: string[];
+  use_quotes?: boolean;
+  use_sources?: boolean;
+  use_media?: boolean;
   type_settings?: Record<string, unknown>;
 }
 
@@ -62,10 +65,11 @@ export async function GET(
         require_quotes_for_review, require_sources_for_quotes,
         allow_quote_requirement_bypass, quote_bypass_roles,
         require_all_fields_verified, allow_validation_bypass, validation_bypass_roles,
+        use_quotes, use_sources, use_media,
         type_settings,
         created_at, updated_at
        FROM record_types 
-       WHERE project_id = $1 AND slug = $2`,
+       WHERE project_id = $1 AND slug = $2`,`,
       [project.id, type]
     );
     
@@ -159,6 +163,9 @@ export async function PATCH(
       'require_all_fields_verified',
       'allow_validation_bypass',
       'validation_bypass_roles',
+      'use_quotes',
+      'use_sources',
+      'use_media',
       'type_settings'
     ];
     

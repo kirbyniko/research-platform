@@ -142,30 +142,16 @@ function GroupManagerModal({ projectSlug, recordTypeSlug, groups, onClose, onSav
           {/* Add New Group */}
           <div className="bg-gray-50 rounded-lg p-4">
             <h3 className="text-sm font-medium text-gray-900 mb-3">Add New Group</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Name *</label>
-                <input
-                  type="text"
-                  value={newGroupName}
-                  onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder="e.g., Shooting Details"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Slug *</label>
-                <input
-                  type="text"
-                  value={newGroupSlug}
-                  onChange={(e) => {
-                    setAutoSlug(false);
-                    setNewGroupSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''));
-                  }}
-                  placeholder="e.g., shooting_details"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Group Name *</label>
+              <input
+                type="text"
+                value={newGroupName}
+                onChange={(e) => handleNameChange(e.target.value)}
+                placeholder="e.g., Shooting Details"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              />
+              <p className="text-xs text-gray-500 mt-1">Slug will be auto-generated: {newGroupSlug || '(type a name)'}</p>
             </div>
             <button
               onClick={handleAddGroup}
@@ -189,7 +175,6 @@ function GroupManagerModal({ projectSlug, recordTypeSlug, groups, onClose, onSav
                   <div key={group.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
                       <div className="font-medium text-gray-900">{group.name}</div>
-                      <div className="text-xs text-gray-500 font-mono">{group.slug}</div>
                     </div>
                     <button
                       onClick={() => handleDeleteGroup(group.id)}

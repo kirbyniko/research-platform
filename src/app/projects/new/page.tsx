@@ -14,6 +14,7 @@ export default function NewProjectPage() {
   const [description, setDescription] = useState('');
   const [isPublic, setIsPublic] = useState(false);
   const [autoSlug, setAutoSlug] = useState(true);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -130,24 +131,37 @@ export default function NewProjectPage() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                URL Slug *
-              </label>
-              <div className="flex items-center">
-                <span className="text-gray-500 mr-2">/projects/</span>
-                <input
-                  type="text"
-                  value={slug}
-                  onChange={(e) => handleSlugChange(e.target.value)}
-                  placeholder="ice-deaths"
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
-                  maxLength={100}
-                />
+            {showAdvanced && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  URL Slug *
+                </label>
+                <div className="flex items-center">
+                  <span className="text-gray-500 mr-2">/projects/</span>
+                  <input
+                    type="text"
+                    value={slug}
+                    onChange={(e) => handleSlugChange(e.target.value)}
+                    placeholder="ice-deaths"
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                    maxLength={100}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Lowercase letters, numbers, and hyphens only. At least 3 characters.
+                </p>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Lowercase letters, numbers, and hyphens only. At least 3 characters.
-              </p>
+            )}
+            </div>
+
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
+                {showAdvanced ? '− Hide' : '+ Show'} Advanced Options
+              </button>
             </div>
 
             <div>

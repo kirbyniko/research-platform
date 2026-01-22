@@ -21,6 +21,9 @@ interface RecordTypeSettings {
   require_all_fields_verified: boolean;
   allow_validation_bypass: boolean;
   validation_bypass_roles: string[];
+  use_quotes: boolean;
+  use_sources: boolean;
+  use_media: boolean;
 }
 
 interface FieldWithVisibility extends Pick<FieldDefinition, 
@@ -98,6 +101,9 @@ export default function RecordTypeSettingsPage({
           allow_quote_requirement_bypass: settings.allow_quote_requirement_bypass,
           quote_bypass_roles: settings.quote_bypass_roles,
           require_all_fields_verified: settings.require_all_fields_verified,
+          use_quotes: settings.use_quotes,
+          use_sources: settings.use_sources,
+          use_media: settings.use_media,
           allow_validation_bypass: settings.allow_validation_bypass,
           validation_bypass_roles: settings.validation_bypass_roles
         })
@@ -185,6 +191,62 @@ export default function RecordTypeSettingsPage({
             {successMessage}
           </div>
         )}
+
+        {/* Default Data Types Section */}
+        <section className="mb-8 bg-white border rounded-lg p-6">
+          <h2 className="text-lg font-semibold mb-4">Default Data Types</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Enable default data types that will be available for all records of this type.
+          </p>
+          
+          <div className="space-y-3">
+            <label className="flex items-start gap-3 p-3 border rounded hover:bg-gray-50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.use_quotes}
+                onChange={(e) => setSettings({ ...settings, use_quotes: e.target.checked })}
+                className="mt-1"
+              />
+              <div className="flex-1">
+                <div className="font-medium">Quotes</div>
+                <div className="text-sm text-gray-500">
+                  Allow staff to attach text quotes with sources to records during review/validation
+                </div>
+              </div>
+            </label>
+            
+            <label className="flex items-start gap-3 p-3 border rounded hover:bg-gray-50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.use_sources}
+                onChange={(e) => setSettings({ ...settings, use_sources: e.target.checked })}
+                className="mt-1"
+              />
+              <div className="flex-1">
+                <div className="font-medium">Sources</div>
+                <div className="text-sm text-gray-500">
+                  Allow staff to attach source documents and links (primary/secondary) to records
+                </div>
+              </div>
+            </label>
+            
+            <label className="flex items-start gap-3 p-3 border rounded hover:bg-gray-50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.use_media}
+                onChange={(e) => setSettings({ ...settings, use_media: e.target.checked })}
+                className="mt-1"
+              />
+              <div className="flex-1">
+                <div className="font-medium">Media</div>
+                <div className="text-sm text-gray-500">
+                  Allow staff to attach media (videos, images, audio, documents) via URLs
+                  <span className="block text-xs mt-1 text-amber-600">Note: Currently supports URLs only (YouTube, Vimeo, direct links). File upload coming soon.</span>
+                </div>
+              </div>
+            </label>
+          </div>
+        </section>
 
         {/* Form Settings Section */}
         <section className="mb-8 bg-white border rounded-lg p-6">
