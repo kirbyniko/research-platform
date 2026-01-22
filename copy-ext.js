@@ -1,8 +1,34 @@
 const fs = require('fs');
-fs.copyFileSync('c:/Users/nikow/IceDeaths/extension/sidepanel.js', 'c:/Users/nikow/IceDeaths/extension-dist/sidepanel.js');
-fs.copyFileSync('c:/Users/nikow/IceDeaths/extension/sidepanel.html', 'c:/Users/nikow/IceDeaths/extension-dist/sidepanel.html');
-fs.copyFileSync('c:/Users/nikow/IceDeaths/extension/background.js', 'c:/Users/nikow/IceDeaths/extension-dist/background.js');
-fs.copyFileSync('c:/Users/nikow/IceDeaths/extension/content.js', 'c:/Users/nikow/IceDeaths/extension-dist/content.js');
-fs.copyFileSync('c:/Users/nikow/IceDeaths/extension/field-registry.js', 'c:/Users/nikow/IceDeaths/extension-dist/field-registry.js');
-fs.copyFileSync('c:/Users/nikow/IceDeaths/extension/type-field-definitions.js', 'c:/Users/nikow/IceDeaths/extension-dist/type-field-definitions.js');
+const path = require('path');
+
+const srcDir = 'c:/Users/nikow/research-platform/extension-v2';
+const destDir = 'c:/Users/nikow/research-platform/extension-dist';
+
+// Ensure dest directories exist
+function ensureDir(dir) {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
+// Copy directory recursively
+function copyDir(src, dest) {
+  ensureDir(dest);
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+  
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+    
+    if (entry.isDirectory()) {
+      copyDir(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
+// Copy all files from extension-v2 to extension-dist
+copyDir(srcDir, destDir);
+
 console.log('Files copied successfully');

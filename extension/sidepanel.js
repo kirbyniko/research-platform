@@ -335,6 +335,7 @@ let currentProjectSlug = null;
 let currentRecordTypeSlug = null;
 let dynamicFieldDefinitions = [];
 let dynamicFieldGroups = [];
+let dynamicFormValues = {};  // Values for the dynamic form
 let verifiedMedia = {};  // Track which media items have been verified
 let reviewTimeline = []; // Timeline entries loaded during review
 
@@ -1168,17 +1169,74 @@ async function selectRecordType(recordTypeSlug) {
 
 // Update the form container with dynamically generated fields
 function updateFormWithDynamicFields() {
-  // For now, we'll use legacy forms - in Phase 2 we'll generate dynamic forms
-  // This is a placeholder for future full dynamic form generation
-  console.log('[ProjectContext] Would update form with', dynamicFieldDefinitions.length, 'fields');
+  const dynamicContainer = document.getElementById('dynamicFormContainer');
+  const legacyContainer = document.getElementById('incidentFormContainer');
+  const dynamicFieldsContainer = document.getElementById('dynamicFormFields');
   
-  // TODO: Replace the static form sections with dynamic ones
-  // const formContainer = document.getElementById('dynamicFormContainer');
-  // if (formContainer) {
-  //   const form = window.DynamicForm.render(dynamicFieldDefinitions, dynamicFieldGroups, currentCase);
-  //   formContainer.innerHTML = '';
-  //   formContainer.appendChild(form);
-  // }
+  if (!dynamicContainer || !dynamicFieldsContainer) {
+    console.warn('[ProjectContext] Dynamic form containers not found');
+    return;
+  }
+  
+  // Always hide legacy container (fully generalized - no hardcoded forms)
+  if (legacyContainer) {
+    legacyContainer.style.display = 'none';
+  }
+  
+  // Check if we have field definitions loaded
+  if (dynamicFieldDefinitions.length === 0) {
+    dynamicContainer.style.display = 'block';
+    dynamicFieldsContainer.innerHTML = '<p class="text-gray-500 text-sm">Select a project and record type to load form fields.</p>';
+    console.log('[ProjectContext] No field definitions yet, showing placeholder');
+    return;
+  }
+  
+  // Use dynamic form
+  dynamicContainer.style.display = 'block';
+  
+  // Update header info
+  const projectNameEl = document.getElementById('dynamicFormProjectName');
+  const recordTypeEl = document.getElementById('dynamicFormRecordType');
+  
+  const projectSelector = document.getElementById('projectSelector');
+  const recordTypeSelector = document.getElementById('recordTypeSelector');
+  
+  if (projectNameEl) {
+    projectNameEl.textContent = projectSelector?.selectedOptions[0]?.text || currentProjectSlug;
+  }
+  if (recordTypeEl) {
+    recordTypeEl.textContent = recordTypeSelector?.selectedOptions[0]?.text || currentRecordTypeSlug;
+  }
+  
+  // Clear existing form fields
+  dynamicFieldsContainer.innerHTML = '';
+  
+  // Render dynamic form using DynamicForm module
+  if (typeof window.DynamicForm !== 'undefined') {
+    const form = window.DynamicForm.render(
+      dynamicFieldDefinitions, 
+      dynamicFieldGroups, 
+      dynamicFormValues || {}
+    );
+    dynamicFieldsContainer.appendChild(form);
+    
+    // Add change listeners to apply conditional visibility
+    dynamicFieldsContainer.querySelectorAll('input, select, textarea').forEach(input => {
+      input.addEventListener('change', () => {
+        const values = window.DynamicForm.collectValues(dynamicFieldsContainer);
+        window.DynamicForm.applyConditionalVisibility(dynamicFieldsContainer, values);
+        dynamicFormValues = values;
+      });
+    });
+    
+    console.log('[ProjectContext] Rendered dynamic form with', dynamicFieldDefinitions.length, 'fields');
+  } else {
+    dynamicFieldsContainer.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">Dynamic form module not loaded</p>';
+  }
+  
+  // Render quotes and sources for the dynamic form
+  renderDynamicQuotes();
+  renderDynamicSources();
 }
 
 // Setup tab navigation
@@ -2028,6 +2086,43 @@ function setupEventListeners() {
         break;
     }
   });
+  
+  // =============================================
+  // DYNAMIC FORM EVENT LISTENERS
+  // =============================================
+  
+  // Dynamic form extract button
+  const dynamicFormExtractBtn = document.getElementById('dynamicFormExtractBtn');
+  if (dynamicFormExtractBtn) {
+    dynamicFormExtractBtn.addEventListener('click', async () => {
+      await extractPageForDynamicForm();
+    });
+  }
+  
+  // Dynamic form save button
+  const dynamicSaveBtn = document.getElementById('dynamicSaveBtn');
+  if (dynamicSaveBtn) {
+    dynamicSaveBtn.addEventListener('click', async () => {
+      await saveDynamicFormRecord();
+    });
+  }
+  
+  // Dynamic form clear button
+  const dynamicClearBtn = document.getElementById('dynamicClearBtn');
+  if (dynamicClearBtn) {
+    dynamicClearBtn.addEventListener('click', async () => {
+      const confirmed = await showConfirm('Clear all form data?', '⚠️ Clear Form');
+      if (confirmed) {
+        clearDynamicForm();
+      }
+    });
+  }
+  
+  // Dynamic form add source button
+  const dynamicAddSourceBtn = document.getElementById('dynamicAddSourceBtn');
+  if (dynamicAddSourceBtn) {
+    dynamicAddSourceBtn.addEventListener('click', addCurrentPageAsSource);
+  }
 }
 
 // Toggle wide mode - open in a popup window for wider view
@@ -8596,28 +8691,22 @@ function handleContentTypeChange(e) {
     statementType: statementType
   });
   
-  // Toggle form containers
+  // Always hide legacy form containers (fully generalized)
   if (elements.incidentFormContainer) {
-    elements.incidentFormContainer.style.display = newType === 'incident' ? 'block' : 'none';
+    elements.incidentFormContainer.style.display = 'none';
   }
   if (elements.statementFormContainer) {
-    elements.statementFormContainer.style.display = newType === 'statement' ? 'block' : 'none';
+    elements.statementFormContainer.style.display = 'none';
   }
   
-  // Update button text
-  if (elements.newCaseBtn) {
-    elements.newCaseBtn.textContent = newType === 'incident' ? 'New Incident' : 'New Statement';
+  // Always show dynamic form
+  const dynamicContainer = document.getElementById('dynamicFormContainer');
+  if (dynamicContainer) {
+    dynamicContainer.style.display = 'block';
   }
   
-  // If switching to statement, set today's date if empty
-  if (newType === 'statement' && elements.statementDate && !elements.statementDate.value) {
-    elements.statementDate.value = new Date().toISOString().split('T')[0];
-  }
-  
-  // Initialize statement form visibility
-  if (newType === 'statement') {
-    handleStatementTypeChange();
-  }
+  // Update form with new record type
+  updateFormWithDynamicFields();
   
   console.log('[CONTENT TYPE] Content type changed to:', newType);
 }
@@ -9070,6 +9159,257 @@ function clearCase() {
   
   chrome.runtime.sendMessage({ type: 'SET_CURRENT_CASE', case: currentCase });
   chrome.runtime.sendMessage({ type: 'CLEAR_QUOTES' });
+}
+
+// =============================================
+// DYNAMIC FORM FUNCTIONS (Multi-project support)
+// =============================================
+
+// Clear the dynamic form
+function clearDynamicForm() {
+  dynamicFormValues = {};
+  verifiedQuotes = [];
+  pendingQuotes = [];
+  sources = [];
+  
+  // Clear form fields
+  const container = document.getElementById('dynamicFormFields');
+  if (container) {
+    container.querySelectorAll('input, select, textarea').forEach(el => {
+      if (el.type === 'checkbox' || el.type === 'radio') {
+        el.checked = false;
+      } else {
+        el.value = '';
+      }
+    });
+  }
+  
+  // Update UI
+  renderDynamicQuotes();
+  renderDynamicSources();
+  
+  // Notify background
+  chrome.runtime.sendMessage({ type: 'CLEAR_QUOTES' });
+  console.log('[DynamicForm] Cleared');
+}
+
+// Render quotes for dynamic form
+function renderDynamicQuotes() {
+  const list = document.getElementById('dynamicQuoteList');
+  const count = document.getElementById('dynamicQuoteCount');
+  
+  if (!list || !count) return;
+  
+  count.textContent = verifiedQuotes.length;
+  
+  if (verifiedQuotes.length === 0) {
+    list.innerHTML = '<p style="color: #666; font-size: 12px; padding: 8px;">No quotes added yet. Use the context menu to add quotes.</p>';
+    return;
+  }
+  
+  list.innerHTML = verifiedQuotes.map((q, idx) => `
+    <div class="quote-item" style="padding: 8px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 12px;">
+      <div style="margin-bottom: 4px;">"${q.text.length > 150 ? q.text.substring(0, 150) + '...' : q.text}"</div>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="color: #666; font-size: 10px;">${q.linkedField ? `→ ${q.linkedField}` : 'uncategorized'}</span>
+        <button class="btn btn-sm" data-action="removeVerified" data-id="${q.id}">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Render sources for dynamic form
+function renderDynamicSources() {
+  const list = document.getElementById('dynamicSourceList');
+  const count = document.getElementById('dynamicSourceCount');
+  
+  if (!list || !count) return;
+  
+  count.textContent = sources.length;
+  
+  if (sources.length === 0) {
+    list.innerHTML = '<p style="color: #666; font-size: 12px; padding: 8px;">No sources added yet.</p>';
+    return;
+  }
+  
+  list.innerHTML = sources.map((s, idx) => `
+    <div class="source-item" style="padding: 8px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 12px;">
+      <div style="font-weight: 500; margin-bottom: 2px;">${s.title || 'Untitled'}</div>
+      <div style="color: #666; font-size: 10px; word-break: break-all;">${s.url}</div>
+    </div>
+  `).join('');
+}
+
+// Extract page content for dynamic form
+async function extractPageForDynamicForm() {
+  const btn = document.getElementById('dynamicFormExtractBtn');
+  if (btn) btn.disabled = true;
+  
+  try {
+    // Get the current tab
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) {
+      showError('No active tab found');
+      return;
+    }
+    
+    // Send extract message to content script
+    chrome.tabs.sendMessage(tab.id, { type: 'EXTRACT_ARTICLE' }, async (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('Extract error:', chrome.runtime.lastError);
+        showError('Could not extract content. Is the page fully loaded?');
+        if (btn) btn.disabled = false;
+        return;
+      }
+      
+      if (response && response.quotes) {
+        // Add quotes as pending (or directly as verified)
+        response.quotes.forEach(q => {
+          verifiedQuotes.push({
+            ...q,
+            id: `q-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            status: 'verified'
+          });
+        });
+        renderDynamicQuotes();
+        
+        // Auto-add page as source if not already added
+        if (!sources.some(s => s.url === tab.url)) {
+          sources.push({
+            id: `src-${Date.now()}`,
+            url: tab.url,
+            title: tab.title || 'Source',
+            addedAt: new Date().toISOString()
+          });
+          renderDynamicSources();
+        }
+        
+        console.log('[DynamicForm] Extracted', response.quotes.length, 'quotes');
+        showNotification(`Extracted ${response.quotes.length} quotes`, 'success');
+      }
+      
+      if (btn) btn.disabled = false;
+    });
+  } catch (error) {
+    console.error('[DynamicForm] Extract error:', error);
+    showError('Error extracting content: ' + error.message);
+    if (btn) btn.disabled = false;
+  }
+}
+
+// Save dynamic form record
+async function saveDynamicFormRecord() {
+  if (!currentProjectSlug || !currentRecordTypeSlug) {
+    showError('Please select a project and record type first');
+    return;
+  }
+  
+  if (!apiKey) {
+    showError('Please add an API key in Settings to save records');
+    return;
+  }
+  
+  const saveBtn = document.getElementById('dynamicSaveBtn');
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<div class="spinner white"></div> Saving...';
+  }
+  
+  try {
+    // Collect form values
+    const container = document.getElementById('dynamicFormFields');
+    if (container && typeof window.DynamicForm !== 'undefined') {
+      dynamicFormValues = window.DynamicForm.collectValues(container);
+    }
+    
+    // Build the record payload
+    const payload = {
+      record_type_slug: currentRecordTypeSlug,
+      data: dynamicFormValues,
+      status: 'pending'
+    };
+    
+    console.log('[DynamicForm] Saving record:', payload);
+    
+    // Create the record
+    const response = await fetch(
+      `${apiUrl}/api/projects/${currentProjectSlug}/records`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create record');
+    }
+    
+    const result = await response.json();
+    const recordId = result.record?.id;
+    
+    console.log('[DynamicForm] Created record:', recordId);
+    
+    // Add sources
+    if (sources.length > 0 && recordId) {
+      for (const source of sources) {
+        await fetch(
+          `${apiUrl}/api/projects/${currentProjectSlug}/records/${recordId}/sources`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              url: source.url,
+              title: source.title,
+              source_type: 'news_article'
+            })
+          }
+        );
+      }
+    }
+    
+    // Add quotes
+    if (verifiedQuotes.length > 0 && recordId) {
+      for (const quote of verifiedQuotes) {
+        await fetch(
+          `${apiUrl}/api/projects/${currentProjectSlug}/records/${recordId}/quotes`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              text: quote.text,
+              field_key: quote.linkedField || null,
+              source_url: quote.sourceUrl || null
+            })
+          }
+        );
+      }
+    }
+    
+    showNotification('Record saved successfully!', 'success');
+    
+    // Clear form after successful save
+    clearDynamicForm();
+    
+  } catch (error) {
+    console.error('[DynamicForm] Save error:', error);
+    showError('Error saving record: ' + error.message);
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Record';
+    }
+  }
 }
 
 // Listen for messages from background
@@ -9938,28 +10278,67 @@ async function loadReviewQueue(status = 'all') {
   listEl.style.display = 'none';
   
   try {
-    const response = await fetch(`${apiUrl}/api/verification-queue?status=${status}&_t=${Date.now()}`, {
+    // Always use project-specific records API (fully generalized)
+    if (!currentProjectSlug) {
+      statusEl.textContent = 'Select a project first';
+      statusEl.style.color = '#f59e0b';
+      return;
+    }
+    
+    const statusMap = {
+      'all': '',
+      'needs_review': 'pending_review',
+      'needs_validation': 'under_review',
+      'verified': 'published',
+      'rejected': 'rejected'
+    };
+    const recordStatus = statusMap[status] || '';
+    
+    const params = new URLSearchParams();
+    if (recordStatus) params.set('status', recordStatus);
+    if (currentRecordTypeSlug) params.set('type', currentRecordTypeSlug);
+    params.set('limit', '50');
+    
+    const response = await fetch(`${apiUrl}/api/projects/${currentProjectSlug}/records?${params}&_t=${Date.now()}`, {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
-        'X-API-Key': apiKey,
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache'
+        'Content-Type': 'application/json'
       }
     });
     
     if (!response.ok) {
-      throw new Error('Failed to fetch verification queue');
+      throw new Error('Failed to fetch records');
     }
     
     const data = await response.json();
     
-    console.log('Review queue response:', {
-      total: data.incidents?.length,
-      stats: data.stats
-    });
+    // Transform records to standardized format
+    reviewQueue = (data.records || []).map(r => ({
+      id: r.id,
+      incident_id: r.id,
+      name: r.data?.subject_name || r.data?.victim_name || r.data?.name || r.data?.title || `Record #${r.id}`,
+      status: r.status,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+      data: r.data,
+      record_type_slug: r.record_type_slug,
+      record_type_name: r.record_type_name
+    }));
     
-    reviewQueue = data.incidents || [];
-    reviewQueueStats = data.stats || {};
+    // Build stats from records
+    reviewQueueStats = {
+      total: data.pagination?.total || reviewQueue.length,
+      pending_review: reviewQueue.filter(r => r.status === 'pending_review').length,
+      under_review: reviewQueue.filter(r => r.status === 'under_review').length,
+      published: reviewQueue.filter(r => r.status === 'published').length,
+      rejected: reviewQueue.filter(r => r.status === 'rejected').length
+    };
+    
+    console.log('Review queue response:', {
+      total: reviewQueue.length,
+      stats: reviewQueueStats,
+      project: currentProjectSlug
+    });
     
     // Update filter counts
     updateReviewFilterCounts();
@@ -10676,15 +11055,37 @@ function renderReviewQueue() {
   });
   
   if (sortedQueue.length === 0) {
-    listEl.innerHTML = `<div class="empty-state">No cases matching filter "${reviewQueueFilter}"</div>`;
+    listEl.innerHTML = `<div class="empty-state">No records matching filter "${reviewQueueFilter}"</div>`;
     return;
   }
   
-  listEl.innerHTML = sortedQueue.map(incident => {
-    const reviewCycle = incident.review_cycle || 1;
+  listEl.innerHTML = sortedQueue.map(record => {
+    const reviewCycle = record.review_cycle || 1;
     const isReturned = reviewCycle >= 2;
     const isHighPriority = reviewCycle >= 3;
-    const status = incident.verification_status || 'pending';
+    const status = record.verification_status || record.status || 'pending';
+    
+    // Extract display name - handle both legacy (incident) and dynamic (record) formats
+    const displayName = record.victim_name || 
+                       record.subject_name || 
+                       record.name || 
+                       record.data?.victim_name ||
+                       record.data?.name ||
+                       record.data?.title ||
+                       `Record #${record.id}`;
+    
+    // Extract type for display
+    const displayType = record.incident_type || 
+                        record.record_type_slug?.replace(/_/g, ' ') || 
+                        'Record';
+    
+    // Extract location for display
+    const city = record.city || record.data?.city || '';
+    const state = record.state || record.data?.state || '';
+    const incidentDate = record.incident_date || record.data?.incident_date || '';
+    
+    // Tags from both formats
+    const tags = record.tags || record.data?.tags || [];
     
     // Determine status badge text
     let statusBadge = '';
@@ -10697,7 +11098,7 @@ function renderReviewQueue() {
         statusBadge = 'Pending Review';
         statusClass = 'badge-yellow';
       }
-    } else if (status === 'first_review') {
+    } else if (status === 'first_review' || status === 'under_review') {
       if (isReturned) {
         statusBadge = '🔁 Re-Validation';
         statusClass = 'badge-cyan';
@@ -10722,15 +11123,15 @@ function renderReviewQueue() {
     }
     
     // Lock status - check if locked by someone else
-    const isLocked = incident.is_locked && incident.locked_by !== currentUserId;
-    const isLockedByMe = incident.is_locked && incident.locked_by === currentUserId;
-    const lockedByDisplay = incident.locked_by_name || incident.locked_by_email || 'Someone';
+    const isLocked = record.is_locked && record.locked_by !== currentUserId;
+    const isLockedByMe = record.is_locked && record.locked_by === currentUserId;
+    const lockedByDisplay = record.locked_by_name || record.locked_by_email || 'Someone';
     
     // Card styling based on priority
     const cardClass = isHighPriority ? 'returned-cycle-3plus' : (isReturned ? 'returned-cycle-2' : '');
     
     return `
-    <div class="review-case-card queue-item ${cardClass} ${isLocked ? 'locked-by-other' : ''}" data-incident-id="${incident.id}" data-review-cycle="${reviewCycle}" data-status="${status}" data-locked="${isLocked ? 'true' : 'false'}" data-locked-by="${incident.locked_by || ''}">
+    <div class="review-case-card queue-item ${cardClass} ${isLocked ? 'locked-by-other' : ''}" data-incident-id="${record.id}" data-review-cycle="${reviewCycle}" data-status="${status}" data-locked="${isLocked ? 'true' : 'false'}" data-locked-by="${record.locked_by || ''}">
       ${isReturned ? `
         <div class="priority-badge ${isHighPriority ? 'priority-red' : 'priority-orange'}" style="position: absolute; top: 8px; right: 8px; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: ${isHighPriority ? '#fecaca' : '#fed7aa'}; color: ${isHighPriority ? '#b91c1c' : '#c2410c'}; font-weight: 600;">
           ${isHighPriority ? '⚠️ HIGH PRIORITY' : 'PRIORITY'}
@@ -10755,9 +11156,9 @@ function renderReviewQueue() {
       
       <div class="queue-item-header" style="${isReturned || isLocked || isLockedByMe ? 'padding-right: 100px;' : ''}">
         <div>
-          <div style="font-weight: 600; font-size: 13px;">${escapeHtml(incident.victim_name || incident.subject_name || 'Unknown')}</div>
+          <div style="font-weight: 600; font-size: 13px;">${escapeHtml(displayName)}</div>
           <div style="font-size: 11px; color: #666;">
-            ${escapeHtml(incident.incident_type?.replace(/_/g, ' ') || 'Incident')}
+            ${escapeHtml(displayType.replace(/_/g, ' '))}
           </div>
         </div>
       </div>
@@ -10774,22 +11175,24 @@ function renderReviewQueue() {
       </div>
       
       <div class="queue-item-meta" style="font-size: 11px; color: #666;">
-        ${escapeHtml(incident.city ? incident.city + ', ' : '')}${escapeHtml(incident.state || '')}
-        ${incident.incident_date ? ' • ' + formatDateLocal(incident.incident_date) : ''}
+        ${escapeHtml(city ? city + ', ' : '')}${escapeHtml(state)}
+        ${incidentDate ? ' • ' + formatDateLocal(incidentDate) : ''}
       </div>
       
-      ${incident.tags && incident.tags.length > 0 ? `
+      ${tags && tags.length > 0 ? `
         <div style="display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0;">
-          ${incident.tags.slice(0, 4).map(tag => `
+          ${tags.slice(0, 4).map(tag => `
             <span style="padding: 2px 6px; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 4px; font-size: 10px;">
               ${escapeHtml(tag)}
             </span>
           `).join('')}
-          ${incident.tags.length > 4 ? `
+          ${tags.length > 4 ? `
             <span style="padding: 2px 6px; background: #f3f4f6; color: #4b5563; border-radius: 4px; font-size: 10px;">
-              +${incident.tags.length - 4} more
+              +${tags.length - 4} more
             </span>
           ` : ''}
+        </div>
+      ` : ''}
         </div>
       ` : ''}
       
