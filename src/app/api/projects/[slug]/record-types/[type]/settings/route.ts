@@ -69,7 +69,7 @@ export async function GET(
         type_settings,
         created_at, updated_at
        FROM record_types 
-       WHERE project_id = $1 AND slug = $2`,`,
+       WHERE project_id = $1 AND slug = $2`,
       [project.id, type]
     );
     

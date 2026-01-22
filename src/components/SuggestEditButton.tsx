@@ -182,7 +182,7 @@ export function SuggestEditButton({ incidentId, incidentData }: SuggestEditButto
                   onClick={() => handleFieldSelect(field)}
                   className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex justify-between items-center"
                 >
-                  <span>{field.label}</span>
+                  <span>{field.name}</span>
                   {incidentData[field.name] && (
                     <span className="text-xs text-gray-400 truncate max-w-[100px]">
                       {formatValue(incidentData[field.name])?.substring(0, 20)}...
@@ -205,7 +205,7 @@ export function SuggestEditButton({ incidentId, incidentData }: SuggestEditButto
         <SuggestEditModal
           incidentId={incidentId}
           fieldName={selectedField.name}
-          fieldLabel={selectedField.label}
+          fieldLabel={selectedField.name}
           currentValue={formatValue(incidentData[selectedField.name])}
           fieldType={selectedField.type}
           options={selectedField.options}

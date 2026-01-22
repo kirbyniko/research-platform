@@ -603,7 +603,7 @@ export default function RecordValidatePage({
                   >
                     {fields.map(field => (
                       <option key={field.slug} value={field.slug}>
-                        {field.label}
+                        {field.name}
                       </option>
                     ))}
                   </select>

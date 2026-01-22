@@ -152,7 +152,6 @@ export default function NewProjectPage() {
                 </p>
               </div>
             )}
-            </div>
 
             <div>
               <button

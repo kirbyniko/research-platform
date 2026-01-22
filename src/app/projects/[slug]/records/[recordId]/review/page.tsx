@@ -719,7 +719,7 @@ export default function RecordReviewPage({
                   >
                     {fields.map(field => (
                       <option key={field.slug} value={field.slug}>
-                        {field.label}
+                        {field.name}
                       </option>
                     ))}
                   </select>
