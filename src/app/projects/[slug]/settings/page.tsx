@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { TagManager } from '@/components/tags';
 import { StorageUsageBar } from '@/components/uploads';
 
@@ -445,8 +446,14 @@ useEffect(() => {
                       bytesUsed={storageInfo.usedBytes || 0}
                       bytesLimit={storageInfo.quotaBytes || 0}
                     />
-                    <div className="mt-2 text-sm text-gray-600">
-                      <span className="font-medium">{storageInfo.fileCount || 0}</span> files uploaded
+                    <div className="mt-2 flex items-center justify-between text-sm text-gray-600">
+                      <span><span className="font-medium">{storageInfo.fileCount || 0}</span> files uploaded</span>
+                      <Link 
+                        href={`/projects/${slug}/settings/usage`} 
+                        className="text-blue-600 hover:underline"
+                      >
+                        View detailed usage →
+                      </Link>
                     </div>
                   </div>
 

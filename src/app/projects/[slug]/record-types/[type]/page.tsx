@@ -120,6 +120,14 @@ export default function RecordTypePage({
             </Link>
 
             <Link
+              href={`/projects/${project.slug}/record-types/${recordType.slug}/settings`}
+              className="block p-4 border rounded hover:bg-gray-50"
+            >
+              <h3 className="font-medium">🔧 Advanced Settings</h3>
+              <p className="text-sm text-gray-600">Configure forms, quotes, and validation requirements</p>
+            </Link>
+
+            <Link
               href={`/projects/${project.slug}/records?type=${recordType.slug}`}
               className="block p-4 border rounded hover:bg-gray-50"
             >

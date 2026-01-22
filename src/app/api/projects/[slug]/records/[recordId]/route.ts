@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireServerAuth } from '@/lib/server-auth';
 import pool from '@/lib/db';
-import { getProjectBySlug, hasProjectPermission } from '@/lib/project-permissions';
+import { getProjectBySlug, hasProjectPermission, getUserProjectRole } from '@/lib/project-permissions';
 import { UpdateRecordRequest, RecordStatus, Permission } from '@/types/platform';
+import { checkQuoteRequirements, checkValidationRequirements } from '@/lib/record-requirements';
 
 interface RouteParams {
   params: Promise<{ slug: string; recordId: string }>;
@@ -178,6 +179,49 @@ export async function PATCH(
     
     if (!(await hasProjectPermission(userId, project.id, requiredPermission))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    
+    // Get user role for requirement enforcement
+    const userRole = await getUserProjectRole(userId, project.id);
+    
+    // Enforce quote requirements when transitioning to pending_validation
+    if (body.status === 'pending_validation') {
+      const quoteCheck = await checkQuoteRequirements(
+        parseInt(recordId),
+        record.record_type_id,
+        userRole || undefined
+      );
+      
+      if (!quoteCheck.passed) {
+        return NextResponse.json(
+          { 
+            error: 'Quote requirements not met',
+            message: quoteCheck.message,
+            missingFields: quoteCheck.missingFields
+          },
+          { status: 400 }
+        );
+      }
+    }
+    
+    // Enforce validation requirements when transitioning to verified
+    if (body.status === 'verified') {
+      const validationCheck = await checkValidationRequirements(
+        parseInt(recordId),
+        record.record_type_id,
+        userRole || undefined
+      );
+      
+      if (!validationCheck.passed) {
+        return NextResponse.json(
+          { 
+            error: 'Validation requirements not met',
+            message: validationCheck.message,
+            unverifiedFields: validationCheck.unverifiedFields
+          },
+          { status: 400 }
+        );
+      }
     }
     
     // Build update query

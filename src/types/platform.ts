@@ -31,6 +31,8 @@ export interface ProjectSettings {
   };
 }
 
+export type GuestFormMode = 'custom' | 'mirror_review' | 'disabled';
+
 export interface RecordType {
   id: number;
   project_id: number;
@@ -46,6 +48,18 @@ export interface RecordType {
   sort_order: number;
   created_at: string;
   updated_at: string;
+  
+  // Advanced settings
+  guest_form_mode?: GuestFormMode;
+  analyst_can_skip_guest_form?: boolean;
+  require_quotes_for_review?: boolean;
+  require_sources_for_quotes?: boolean;
+  allow_quote_requirement_bypass?: boolean;
+  quote_bypass_roles?: string[];
+  require_all_fields_verified?: boolean;
+  allow_validation_bypass?: boolean;
+  validation_bypass_roles?: string[];
+  type_settings?: Record<string, unknown>;
 }
 
 export interface FieldGroup {
@@ -170,6 +184,8 @@ export interface FieldDefinition {
   default_value?: unknown;
   is_required: boolean;
   requires_quote: boolean;
+  requires_source_for_quote?: boolean;
+  require_verified_for_publish?: boolean;
   validation_rules: ValidationRules;
   visibility?: FieldVisibility;
   show_in_guest_form: boolean;
@@ -428,6 +444,13 @@ export interface UpdateFieldDefinitionRequest {
   display_config?: object;
   visibility?: FieldVisibility;
   requires_quote?: boolean;
+  requires_source_for_quote?: boolean;
+  require_verified_for_publish?: boolean;
+  show_in_guest_form?: boolean;
+  show_in_review_form?: boolean;
+  show_in_validation_form?: boolean;
+  show_in_public_view?: boolean;
+  show_in_list_view?: boolean;
   group_id?: number | null;
   sort_order?: number;
 }

@@ -202,6 +202,32 @@ export async function PATCH(
       values.push(body.requires_quote);
     }
     
+    // Visibility settings
+    if (body.show_in_guest_form !== undefined) {
+      updates.push(`show_in_guest_form = $${paramIndex++}`);
+      values.push(body.show_in_guest_form);
+    }
+    
+    if (body.show_in_review_form !== undefined) {
+      updates.push(`show_in_review_form = $${paramIndex++}`);
+      values.push(body.show_in_review_form);
+    }
+    
+    if (body.show_in_validation_form !== undefined) {
+      updates.push(`show_in_validation_form = $${paramIndex++}`);
+      values.push(body.show_in_validation_form);
+    }
+    
+    if (body.show_in_public_view !== undefined) {
+      updates.push(`show_in_public_view = $${paramIndex++}`);
+      values.push(body.show_in_public_view);
+    }
+    
+    if (body.show_in_list_view !== undefined) {
+      updates.push(`show_in_list_view = $${paramIndex++}`);
+      values.push(body.show_in_list_view);
+    }
+    
     if (body.group_id !== undefined) {
       updates.push(`group_id = $${paramIndex++}`);
       values.push(body.group_id);
