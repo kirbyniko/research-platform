@@ -8,7 +8,7 @@ interface RouteParams {
 }
 
 interface VerifyFieldRequest {
-  field_key: string;
+  fieldSlug: string;
   verified: boolean;
 }
 
@@ -60,8 +60,8 @@ export async function POST(
     
     // Validate field exists
     const fieldResult = await pool.query(
-      'SELECT * FROM field_definitions WHERE record_type_id = $1 AND key = $2',
-      [record.record_type_id, body.field_key]
+      'SELECT * FROM field_definitions WHERE record_type_id = $1 AND slug = $2',
+      [record.record_type_id, body.fieldSlug]
     );
     
     if (fieldResult.rows.length === 0) {
@@ -72,13 +72,13 @@ export async function POST(
     const verifiedFields = record.verified_fields || {};
     
     if (body.verified) {
-      verifiedFields[body.field_key] = {
+      verifiedFields[body.fieldSlug] = {
         verified: true,
         by: userId,
         at: new Date().toISOString()
       };
     } else {
-      delete verifiedFields[body.field_key];
+      delete verifiedFields[body.fieldSlug];
     }
     
     const result = await pool.query(
@@ -91,7 +91,7 @@ export async function POST(
     
     return NextResponse.json({ 
       record: result.rows[0],
-      verifiedField: body.field_key,
+      verifiedField: body.fieldSlug,
       verified: body.verified
     });
   } catch (error) {
