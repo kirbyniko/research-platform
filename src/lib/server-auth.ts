@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { auth } from '@/lib/next-auth';
 import { getUserFromToken, getUserFromApiKey } from '@/lib/auth';
+import pool from '@/lib/db';
 
 export interface AuthUser {
   id: number;
@@ -19,6 +20,43 @@ const roleHierarchy: Record<RoleLevel, number> = {
   analyst: 4,
   admin: 5,
 };
+
+/**
+ * Get user from extension token
+ */
+async function getUserFromExtensionToken(token: string): Promise<AuthUser | null> {
+  try {
+    const result = await pool.query(
+      `SELECT et.user_id, u.email, u.role, u.name
+       FROM extension_tokens et
+       JOIN users u ON et.user_id = u.id
+       WHERE et.token = $1 AND et.revoked = FALSE AND et.expires_at > NOW()`,
+      [token]
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0];
+    
+    // Update last used timestamp (fire and forget)
+    pool.query(
+      'UPDATE extension_tokens SET last_used_at = NOW() WHERE token = $1',
+      [token]
+    ).catch(() => {});
+
+    return {
+      id: row.user_id,
+      email: row.email,
+      name: row.name || null,
+      role: row.role as RoleLevel,
+    };
+  } catch (error) {
+    console.error('[getUserFromExtensionToken] Error:', error);
+    return null;
+  }
+}
 
 /**
  * Unified authentication function that checks NextAuth session,
@@ -54,7 +92,7 @@ export async function requireServerAuth(
       return { user };
     }
 
-    // 2. Check Bearer token (API key or legacy JWT)
+    // 2. Check Bearer token (API key, extension token, or legacy JWT)
     const authHeader = request.headers.get('Authorization');
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
@@ -79,6 +117,18 @@ export async function requireServerAuth(
         return { error: 'Invalid or expired API key', status: 401 };
       }
 
+      // Check if it's an extension token (starts with 'ext_')
+      if (token.startsWith('ext_')) {
+        const extUser = await getUserFromExtensionToken(token);
+        if (extUser) {
+          if (requiredRole && !hasRequiredRole(extUser.role, requiredRole)) {
+            return { error: 'Insufficient permissions', status: 403 };
+          }
+          return { user: extUser };
+        }
+        return { error: 'Invalid or expired extension token', status: 401 };
+      }
+
       // Try as legacy JWT
       const jwtUser = await getUserFromToken(token);
       if (jwtUser) {
@@ -97,8 +147,21 @@ export async function requireServerAuth(
       }
     }
     
-    // 2b. Check X-API-Key header (used by browser extension)
+    // 2b. Check X-API-Key or X-Extension-Token header (used by browser extension)
     const xApiKey = request.headers.get('X-API-Key');
+    const xExtToken = request.headers.get('X-Extension-Token');
+    
+    if (xExtToken && xExtToken.startsWith('ext_')) {
+      const extUser = await getUserFromExtensionToken(xExtToken);
+      if (extUser) {
+        if (requiredRole && !hasRequiredRole(extUser.role, requiredRole)) {
+          return { error: 'Insufficient permissions', status: 403 };
+        }
+        return { user: extUser };
+      }
+      return { error: 'Invalid or expired extension token', status: 401 };
+    }
+    
     if (xApiKey && xApiKey.startsWith('ice_')) {
       const apiKeyUser = await getUserFromApiKey(xApiKey);
       if (apiKeyUser) {
