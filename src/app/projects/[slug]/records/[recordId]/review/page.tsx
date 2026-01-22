@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { DynamicForm } from '@/components/dynamic-form';
-import { FieldDefinition, FieldGroup, RecordQuote, RecordSource } from '@/types/platform';
+import { FieldDefinition, FieldGroup, RecordQuote, RecordSource, RecordMedia } from '@/types/platform';
 
 interface RecordData {
   id: number;
@@ -36,6 +36,7 @@ export default function RecordReviewPage({
   const [groups, setGroups] = useState<FieldGroup[]>([]);
   const [quotes, setQuotes] = useState<RecordQuote[]>([]);
   const [sources, setSources] = useState<RecordSource[]>([]);
+  const [media, setMedia] = useState<RecordMedia[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +63,16 @@ export default function RecordReviewPage({
     linked_fields: [] as string[],
   });
 
+  // New media form state
+  const [showMediaForm, setShowMediaForm] = useState(false);
+  const [newMedia, setNewMedia] = useState({
+    url: '',
+    media_type: 'embed' as const,
+    title: '',
+    description: '',
+    linked_fields: [] as string[]
+  });
+
   const fetchRecord = useCallback(async () => {
     if (!projectSlug || !recordId) return;
     
@@ -84,6 +95,7 @@ export default function RecordReviewPage({
       setGroups(data.groups || []);
       setQuotes(data.quotes || []);
       setSources(data.sources || []);
+      setMedia(data.media || []);
       setUserRole(data.role);
       
       // Check if user can upload
@@ -270,6 +282,30 @@ export default function RecordReviewPage({
       await fetchRecord();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete source');
+    }
+  };
+
+  const handleAddMedia = async () => {
+    if (!newMedia.url.trim()) {
+      alert('Please enter a media URL');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/projects/${projectSlug}/records/${recordId}/media`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newMedia)
+      });
+
+      if (!response.ok) throw new Error('Failed to add media');
+
+      const addedMedia = await response.json();
+      setMedia([...media, addedMedia]);
+      setNewMedia({ url: '', media_type: 'embed', title: '', description: '', linked_fields: [] });
+      setShowMediaForm(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to add media');
     }
   };
 
@@ -588,6 +624,145 @@ export default function RecordReviewPage({
                     >
                       Delete
                     </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Media */}
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-medium">Media ({media.length})</h3>
+              <button
+                onClick={() => setShowMediaForm(!showMediaForm)}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                {showMediaForm ? 'Cancel' : '+ Add Media'}
+              </button>
+            </div>
+
+            {showMediaForm && (
+              <div className="mb-4 p-3 bg-gray-50 rounded border space-y-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    URL *
+                  </label>
+                  <input
+                    type="url"
+                    value={newMedia.url}
+                    onChange={(e) => setNewMedia({ ...newMedia, url: e.target.value })}
+                    placeholder="https://youtube.com/watch?v=... or direct file URL"
+                    className="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Supports: YouTube, Vimeo, Twitter/X, or direct media files
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Media Type *
+                  </label>
+                  <select
+                    value={newMedia.media_type}
+                    onChange={(e) => setNewMedia({ ...newMedia, media_type: e.target.value as any })}
+                    className="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="video">Video</option>
+                    <option value="image">Image</option>
+                    <option value="audio">Audio</option>
+                    <option value="document">Document</option>
+                    <option value="embed">Embed</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Title (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={newMedia.title}
+                    onChange={(e) => setNewMedia({ ...newMedia, title: e.target.value })}
+                    placeholder="Brief title for this media"
+                    className="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Description (optional)
+                  </label>
+                  <textarea
+                    value={newMedia.description}
+                    onChange={(e) => setNewMedia({ ...newMedia, description: e.target.value })}
+                    placeholder="Context or notes about this media"
+                    rows={2}
+                    className="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Link to Fields (optional)
+                  </label>
+                  <select
+                    multiple
+                    value={newMedia.linked_fields}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions, option => option.value);
+                      setNewMedia({ ...newMedia, linked_fields: selected });
+                    }}
+                    className="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    size={4}
+                  >
+                    {fields.map(field => (
+                      <option key={field.slug} value={field.slug}>
+                        {field.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Hold Ctrl/Cmd to select multiple fields
+                  </p>
+                </div>
+
+                <button
+                  onClick={handleAddMedia}
+                  className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                >
+                  Add Media
+                </button>
+              </div>
+            )}
+
+            {media.length === 0 ? (
+              <p className="text-sm text-gray-500">No media attached.</p>
+            ) : (
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {media.map(mediaItem => (
+                  <div key={mediaItem.id} className="border rounded p-2 text-xs">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
+                        {mediaItem.media_type}
+                      </span>
+                      {mediaItem.provider && (
+                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
+                          {mediaItem.provider}
+                        </span>
+                      )}
+                    </div>
+                    {mediaItem.title && (
+                      <p className="font-medium text-gray-900 mb-1">{mediaItem.title}</p>
+                    )}
+                    <a href={mediaItem.url} target="_blank" rel="noopener noreferrer"
+                       className="text-blue-600 hover:underline truncate block">
+                      {mediaItem.url}
+                    </a>
+                    {mediaItem.linked_fields && mediaItem.linked_fields.length > 0 && (
+                      <p className="text-blue-600 mt-1">→ {mediaItem.linked_fields.join(', ')}</p>
+                    )}
                   </div>
                 ))}
               </div>
