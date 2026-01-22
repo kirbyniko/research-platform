@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { DynamicForm } from '@/components/dynamic-form';
 import { FieldDefinition, FieldGroup, RecordQuote, RecordSource } from '@/types/platform';
 
 interface RecordData {
@@ -26,6 +25,10 @@ interface RecordData {
   updated_at: string;
   reviewed_at?: string;
   validated_at?: string;
+  // Verification fields
+  verification_level?: number;
+  verification_scope?: string;
+  verification_date?: string;
 }
 
 export default function RecordDetailPage({ 
@@ -44,7 +47,6 @@ export default function RecordDetailPage({
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
 
   const fetchRecord = useCallback(async () => {
     if (!projectSlug || !recordId) return;
@@ -82,43 +84,6 @@ export default function RecordDetailPage({
     fetchRecord();
   }, [fetchRecord]);
 
-  const handleUpdate = async (formData: Record<string, unknown>) => {
-    const response = await fetch(`/api/projects/${projectSlug}/records/${recordId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: formData }),
-    });
-    
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || 'Failed to update record');
-    }
-    
-    setIsEditing(false);
-    fetchRecord();
-  };
-
-  const handleStatusChange = async (newStatus: string) => {
-    if (!confirm(`Change status to ${newStatus}?`)) return;
-    
-    try {
-      const response = await fetch(`/api/projects/${projectSlug}/records/${recordId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to update status');
-      }
-      
-      fetchRecord();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to update status');
-    }
-  };
-
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete this record? This action cannot be undone.')) return;
     
@@ -132,7 +97,7 @@ export default function RecordDetailPage({
         throw new Error(data.error || 'Failed to delete record');
       }
       
-      router.push(`/projects/${projectSlug}/records`);
+      router.push(`/projects/${projectSlug}`);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete record');
     }
@@ -162,9 +127,55 @@ export default function RecordDetailPage({
     );
   };
 
-  const canEdit = userRole && ['owner', 'admin', 'reviewer', 'validator'].includes(userRole);
   const canDelete = userRole && ['owner', 'admin'].includes(userRole);
+  const canReview = userRole && ['owner', 'admin', 'reviewer', 'validator'].includes(userRole) && record && record.status === 'pending_review';
+  const canValidate = userRole && ['owner', 'admin', 'validator'].includes(userRole) && record && record.status === 'pending_validation';
   const canProposeEdit = userRole && record && record.status === 'verified';
+  // Can request 3rd party verification if record is verified and user has appropriate role
+  const canRequestVerification = userRole && ['owner', 'admin', 'validator'].includes(userRole) && record && record.status === 'verified';
+
+  const getVerificationLevelBadge = (level?: number) => {
+    if (!level || level === 0) return null;
+    const badges: Record<number, { label: string; className: string; icon: string }> = {
+      1: { label: 'Self-Verified', className: 'bg-blue-100 text-blue-800', icon: '✓' },
+      2: { label: 'Audit-Ready', className: 'bg-purple-100 text-purple-800', icon: '✓✓' },
+      3: { label: 'Independently Verified', className: 'bg-emerald-100 text-emerald-800 border border-emerald-300', icon: '✓✓✓' },
+    };
+    const badge = badges[level];
+    if (!badge) return null;
+    return (
+      <span className={`px-3 py-1 text-sm font-medium rounded-full inline-flex items-center gap-1 ${badge.className}`}>
+        <span className="font-mono text-xs">{badge.icon}</span>
+        {badge.label}
+      </span>
+    );
+  };
+
+  const [requestingVerification, setRequestingVerification] = useState(false);
+  const [verificationModalOpen, setVerificationModalOpen] = useState(false);
+
+  const handleRequestVerification = async (scope: 'record' | 'data', priority: 'low' | 'normal' | 'high') => {
+    setRequestingVerification(true);
+    try {
+      const response = await fetch(`/api/projects/${projectSlug}/records/${recordId}/request-verification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scope, priority }),
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to request verification');
+      }
+      
+      alert('Verification request submitted successfully. It will be reviewed by a third-party verifier.');
+      setVerificationModalOpen(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to request verification');
+    } finally {
+      setRequestingVerification(false);
+    }
+  };
 
   if (!projectSlug || !recordId) {
     return <div className="p-8">Loading...</div>;
@@ -180,8 +191,8 @@ export default function RecordDetailPage({
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {error}
         </div>
-        <Link href={`/projects/${projectSlug}/records`} className="mt-4 inline-block text-blue-600 hover:underline">
-          ← Back to Records
+        <Link href={`/projects/${projectSlug}`} className="mt-4 inline-block text-blue-600 hover:underline">
+          ← Back to Dashboard
         </Link>
       </div>
     );
@@ -191,17 +202,13 @@ export default function RecordDetailPage({
     return <div className="p-8">Record not found</div>;
   }
 
-  // Article-style view for verified/published records
-  const isPublished = record.status === 'verified';
-  const showArticleView = isPublished && !isEditing;
-
-  if (showArticleView) {
-    return (
-      <article className="max-w-3xl mx-auto px-6 py-12 bg-white">
+  // Always show article-style view
+  return (
+    <article className="max-w-3xl mx-auto px-6 py-12 bg-white">
         {/* Header */}
         <div className="mb-8">
-          <Link href={`/projects/${projectSlug}/records`} className="text-sm text-gray-500 hover:text-gray-700">
-            ← Back to Records
+          <Link href={`/projects/${projectSlug}`} className="text-sm text-gray-500 hover:text-gray-700">
+            ← Back to Dashboard
           </Link>
         </div>
 
@@ -361,7 +368,10 @@ export default function RecordDetailPage({
           <dl className="grid grid-cols-2 gap-4">
             <div>
               <dt className="font-medium text-gray-700">Verification Status</dt>
-              <dd className="mt-1">{getStatusBadge(record.status)}</dd>
+              <dd className="mt-1 flex items-center gap-2">
+                {getStatusBadge(record.status)}
+                {getVerificationLevelBadge(record.verification_level)}
+              </dd>
             </div>
             <div>
               <dt className="font-medium text-gray-700">Last Updated</dt>
@@ -375,271 +385,142 @@ export default function RecordDetailPage({
                 </dd>
               </div>
             )}
+            {record.verification_level === 3 && record.verification_date && (
+              <div className="col-span-2">
+                <dt className="font-medium text-gray-700">Independently Verified</dt>
+                <dd className="mt-1">
+                  Third-party verification completed on {new Date(record.verification_date).toLocaleDateString()}
+                </dd>
+              </div>
+            )}
           </dl>
           
-          {canProposeEdit && (
-            <div className="mt-6">
+          {/* Action buttons based on status and permissions */}
+          <div className="mt-6 flex flex-wrap gap-3">
+            {canReview && (
+              <Link
+                href={`/projects/${projectSlug}/records/${recordId}/review`}
+                className="px-4 py-2 text-sm bg-yellow-600 text-white rounded hover:bg-yellow-700 inline-block"
+              >
+                Review Record
+              </Link>
+            )}
+            
+            {canValidate && (
+              <Link
+                href={`/projects/${projectSlug}/records/${recordId}/validate`}
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 inline-block"
+              >
+                Validate Record
+              </Link>
+            )}
+            
+            {canProposeEdit && (
               <Link
                 href={`/projects/${projectSlug}/records/${recordId}/propose-edit`}
                 className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 inline-block"
               >
                 Propose Edit
               </Link>
-            </div>
-          )}
-        </footer>
-      </article>
-    );
-  }
-
-  // Standard editing/workflow view
-  return (
-    <div className="max-w-4xl mx-auto p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <Link href={`/projects/${projectSlug}/records`} className="text-blue-600 hover:underline text-sm">
-          ← Back to Records
-        </Link>
-        
-        <div className="flex items-center justify-between mt-4">
-          <div>
-            <h1 className="text-2xl font-bold">{record.record_type_name} #{record.id}</h1>
-            <div className="flex items-center space-x-4 mt-2">
-              {getStatusBadge(record.status)}
-              <span className="text-sm text-gray-500">
-                Created {new Date(record.created_at).toLocaleString()}
-              </span>
-            </div>
-          </div>
-          
-          <div className="flex space-x-2">
-            {record.status === 'verified' && canProposeEdit && (
-              <Link
-                href={`/projects/${projectSlug}/records/${record.id}/propose-edit`}
-                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                Propose Edit
-              </Link>
             )}
-            {record.status !== 'verified' && canEdit && !isEditing && (
+            
+            {canRequestVerification && record.verification_level !== 3 && (
               <button
-                onClick={() => setIsEditing(true)}
-                className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                onClick={() => setVerificationModalOpen(true)}
+                className="px-4 py-2 text-sm bg-emerald-600 text-white rounded hover:bg-emerald-700"
               >
-                Edit
+                Request 3rd Party Verification
               </button>
             )}
+            
             {canDelete && (
               <button
                 onClick={handleDelete}
-                className="px-4 py-2 text-sm bg-red-100 text-red-700 rounded-md hover:bg-red-200"
+                className="px-4 py-2 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
               >
-                Delete
+                Delete Record
               </button>
             )}
           </div>
-        </div>
-      </div>
+        </footer>
 
-      {/* Status Actions */}
-      {canEdit && record.status !== 'verified' && (
-        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Workflow Actions</h3>
-          <div className="flex flex-wrap gap-2">
-            {record.status === 'pending_review' && (
-              <>
-                <button
-                  onClick={() => handleStatusChange('pending_validation')}
-                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                  Mark as Reviewed
-                </button>
-                <button
-                  onClick={() => handleStatusChange('rejected')}
-                  className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
-                >
-                  Reject
-                </button>
-              </>
-            )}
-            {record.status === 'pending_validation' && (
-              <>
-                <button
-                  onClick={() => handleStatusChange('verified')}
-                  className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
-                >
-                  Verify & Publish
-                </button>
-                <button
-                  onClick={() => handleStatusChange('pending_review')}
-                  className="px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200"
-                >
-                  Send Back to Review
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Archive Action for Verified Records */}
-      {canEdit && record.status === 'verified' && (
-        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Workflow Actions</h3>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => handleStatusChange('archived')}
-              className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-            >
-              Archive
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Metadata */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h3 className="text-lg font-medium mb-4">Submission Info</h3>
-        <dl className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <dt className="text-gray-500">Submitted By</dt>
-            <dd className="font-medium">
-              {record.is_guest_submission ? (
-                <span>
-                  Guest{record.guest_name ? `: ${record.guest_name}` : ''}
-                  {record.guest_email && <span className="text-gray-500 ml-2">({record.guest_email})</span>}
-                </span>
-              ) : (
-                record.submitted_by_name || 'Unknown'
-              )}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-gray-500">Created</dt>
-            <dd className="font-medium">{new Date(record.created_at).toLocaleString()}</dd>
-          </div>
-          {record.reviewed_by_name && (
-            <div>
-              <dt className="text-gray-500">Reviewed By</dt>
-              <dd className="font-medium">
-                {record.reviewed_by_name}
-                {record.reviewed_at && (
-                  <span className="text-gray-500 ml-2">
-                    ({new Date(record.reviewed_at).toLocaleString()})
-                  </span>
-                )}
-              </dd>
-            </div>
-          )}
-          {record.validated_by_name && (
-            <div>
-              <dt className="text-gray-500">Validated By</dt>
-              <dd className="font-medium">
-                {record.validated_by_name}
-                {record.validated_at && (
-                  <span className="text-gray-500 ml-2">
-                    ({new Date(record.validated_at).toLocaleString()})
-                  </span>
-                )}
-              </dd>
-            </div>
-          )}
-        </dl>
-      </div>
-
-      {/* Record Data */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h3 className="text-lg font-medium mb-4">Record Data</h3>
-        
-        {isEditing ? (
-          <DynamicForm
-            projectSlug={projectSlug}
-            recordTypeSlug={record.record_type_slug}
-            recordId={record.id}
-            mode="review"
-            fields={fields}
-            groups={groups}
-            initialData={record.data}
-            quotes={quotes}
-            verifiedFields={record.verified_fields}
-            onSubmit={handleUpdate}
-            onCancel={() => setIsEditing(false)}
-          />
-        ) : (
-          <DynamicForm
-            projectSlug={projectSlug}
-            recordTypeSlug={record.record_type_slug}
-            recordId={record.id}
-            mode="view"
-            fields={fields}
-            groups={groups}
-            initialData={record.data}
-            quotes={quotes}
-            verifiedFields={record.verified_fields}
-            onSubmit={async () => {}}
-          />
-        )}
-      </div>
-
-      {/* Quotes */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h3 className="text-lg font-medium mb-4">Quotes ({quotes.length})</h3>
-        {quotes.length === 0 ? (
-          <p className="text-gray-500">No quotes attached to this record.</p>
-        ) : (
-          <div className="space-y-4">
-            {quotes.map(quote => (
-              <div key={quote.id} className="border-l-4 border-blue-300 pl-4 py-2">
-                <p className="italic">&ldquo;{quote.quote_text}&rdquo;</p>
-                {quote.source && (
-                  <p className="text-sm text-gray-500 mt-1">— {quote.source}</p>
-                )}
-                {quote.source_url && (
-                  <a href={quote.source_url} target="_blank" rel="noopener noreferrer" 
-                     className="text-xs text-blue-600 hover:underline">
-                    View Source
-                  </a>
-                )}
-                {quote.linked_fields && quote.linked_fields.length > 0 && (
-                  <p className="text-xs text-gray-400 mt-1">
-                    Linked to: {quote.linked_fields.join(', ')}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Sources */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-medium mb-4">Sources ({sources.length})</h3>
-        {sources.length === 0 ? (
-          <p className="text-gray-500">No sources attached to this record.</p>
-        ) : (
-          <div className="space-y-3">
-            {sources.map(source => (
-              <div key={source.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded">
-                <span className="text-gray-400">🔗</span>
-                <div className="flex-1">
-                  <a href={source.url} target="_blank" rel="noopener noreferrer" 
-                     className="text-blue-600 hover:underline font-medium">
-                    {source.title || source.url}
-                  </a>
-                  {source.source_type && (
-                    <span className="ml-2 text-xs bg-gray-200 px-2 py-0.5 rounded">
-                      {source.source_type}
-                    </span>
-                  )}
-                  {source.notes && (
-                    <p className="text-sm text-gray-500 mt-1">{source.notes}</p>
-                  )}
+        {/* Verification Request Modal */}
+        {verificationModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-6">
+              <h3 className="text-lg font-semibold mb-4">Request Third-Party Verification</h3>
+              
+              <p className="text-gray-600 text-sm mb-6">
+                Third-party verification involves an independent review of this record by external verifiers. 
+                This provides the highest level of credibility for sensitive or high-profile cases.
+              </p>
+              
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                handleRequestVerification(
+                  formData.get('scope') as 'record' | 'data',
+                  formData.get('priority') as 'low' | 'normal' | 'high'
+                );
+              }}>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Verification Scope
+                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-start gap-3 p-3 border rounded cursor-pointer hover:bg-gray-50">
+                      <input type="radio" name="scope" value="record" defaultChecked className="mt-0.5" />
+                      <div>
+                        <div className="font-medium text-sm">Full Record Verification</div>
+                        <div className="text-xs text-gray-500">
+                          Verify all claims, sources, and data in this record as a whole
+                        </div>
+                      </div>
+                    </label>
+                    <label className="flex items-start gap-3 p-3 border rounded cursor-pointer hover:bg-gray-50">
+                      <input type="radio" name="scope" value="data" className="mt-0.5" />
+                      <div>
+                        <div className="font-medium text-sm">Granular Data Verification</div>
+                        <div className="text-xs text-gray-500">
+                          Verify individual data points and provide field-level verification status
+                        </div>
+                      </div>
+                    </label>
+                  </div>
                 </div>
-              </div>
-            ))}
+                
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Priority
+                  </label>
+                  <select name="priority" defaultValue="normal" className="w-full border rounded px-3 py-2 text-sm">
+                    <option value="low">Low - Routine verification</option>
+                    <option value="normal">Normal - Standard timeline</option>
+                    <option value="high">High - Time-sensitive case</option>
+                  </select>
+                </div>
+                
+                <div className="flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setVerificationModalOpen(false)}
+                    className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+                    disabled={requestingVerification}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50"
+                    disabled={requestingVerification}
+                  >
+                    {requestingVerification ? 'Submitting...' : 'Submit Request'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
-      </div>
-    </div>
-  );
+      </article>
+    );
 }

@@ -50,6 +50,7 @@ export default function ProjectDashboard({ params }: { params: Promise<{ slug: s
   const [validateQueue, setValidateQueue] = useState<RecordData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingRecordTypeId, setDeletingRecordTypeId] = useState<number | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -145,6 +146,37 @@ export default function ProjectDashboard({ params }: { params: Promise<{ slug: s
       rejected: 'bg-red-100 text-red-700'
     };
     return colors[status] || 'bg-gray-100 text-gray-700';
+  };
+
+  const handleDeleteRecordType = async (recordTypeSlug: string, recordTypeName: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!window.confirm(`Are you sure you want to delete "${recordTypeName}" and ALL its records? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingRecordTypeId(recordTypes.find(rt => rt.slug === recordTypeSlug)?.id || null);
+    
+    try {
+      const response = await fetch(`/api/projects/${resolvedParams.slug}/record-types/${recordTypeSlug}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        alert(data.error || 'Failed to delete record type');
+        setDeletingRecordTypeId(null);
+        return;
+      }
+
+      // Remove from list
+      setRecordTypes(recordTypes.filter(rt => rt.slug !== recordTypeSlug));
+      setDeletingRecordTypeId(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete record type');
+      setDeletingRecordTypeId(null);
+    }
   };
 
   if (loading) {
@@ -277,17 +309,7 @@ export default function ProjectDashboard({ params }: { params: Promise<{ slug: s
           <div className="p-6">
             {activeTab === 'records' && (
               <div>
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-semibold">All Records</h2>
-                  <div className="flex gap-2">
-                    <Link
-                      href={`/projects/${project.slug}/record-types/new`}
-                      className="text-sm px-3 py-1.5 border rounded hover:bg-gray-50"
-                    >
-                      + Record Type
-                    </Link>
-                  </div>
-                </div>
+                <h2 className="text-lg font-semibold mb-4">All Records</h2>
 
                 {currentRecords.length === 0 ? (
                   <div className="text-center py-12">
@@ -456,19 +478,28 @@ export default function ProjectDashboard({ params }: { params: Promise<{ slug: s
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {recordTypes.map(rt => (
-                <Link
-                  key={rt.id}
-                  href={`/projects/${project.slug}/record-types/${rt.slug}`}
-                  className="p-4 border rounded hover:bg-gray-50 text-center"
-                >
-                  <div className="text-3xl mb-2">{rt.icon || '📄'}</div>
-                  <div className="font-medium text-sm">{rt.name}</div>
-                  {rt.record_count !== undefined && (
-                    <div className="text-xs text-gray-500 mt-1">
-                      {rt.record_count} record{rt.record_count !== 1 ? 's' : ''}
-                    </div>
-                  )}
-                </Link>
+                <div key={rt.id} className="relative">
+                  <Link
+                    href={`/projects/${project.slug}/record-types/${rt.slug}`}
+                    className="block p-4 border rounded hover:bg-gray-50 text-center h-full"
+                  >
+                    <div className="text-3xl mb-2">{rt.icon || '📄'}</div>
+                    <div className="font-medium text-sm">{rt.name}</div>
+                    {rt.record_count !== undefined && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        {rt.record_count} record{rt.record_count !== 1 ? 's' : ''}
+                      </div>
+                    )}
+                  </Link>
+                  <button
+                    onClick={(e) => handleDeleteRecordType(rt.slug, rt.name, e)}
+                    disabled={deletingRecordTypeId === rt.id}
+                    className="absolute top-2 right-2 p-1 text-red-600 hover:bg-red-50 rounded opacity-0 hover:opacity-100 transition-opacity disabled:opacity-50"
+                    title="Delete record type and all records"
+                  >
+                    🗑️
+                  </button>
+                </div>
               ))}
             </div>
           )}

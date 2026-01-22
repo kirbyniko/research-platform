@@ -42,7 +42,7 @@ export default function ProjectSettings({
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'general' | 'tags' | 'storage' | 'permissions'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'workflow' | 'tags' | 'storage' | 'permissions'>('general');
   const [storageInfo, setStorageInfo] = useState<any>(null);
   const [subscriptionInfo, setSubscriptionInfo] = useState<any>(null);
   const [loadingStorage, setLoadingStorage] = useState(false);
@@ -53,12 +53,25 @@ export default function ProjectSettings({
   });
   const [saving, setSaving] = useState(false);
   
+  // Workflow settings state
+  const [workflowSettings, setWorkflowSettings] = useState({
+    require_validation: true,
+    require_different_validator: false,
+    propose_edits_instant: false,
+    third_party_verification_enabled: false
+  });
+  const [verificationQuota, setVerificationQuota] = useState({
+    quota_monthly: 5,
+    quota_used: 0,
+    quota_reset_date: null as string | null
+  });
+  const [savingWorkflow, setSavingWorkflow] = useState(false);
+  
   // Form state for general settings
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     tags_enabled: true,
-    require_different_validator: false,
     guest_submissions_public: false,
     public_validated_records: false
   });
@@ -77,7 +90,6 @@ export default function ProjectSettings({
         name: data.project.name || '',
         description: data.project.description || '',
         tags_enabled: data.project.tags_enabled ?? true,
-        require_different_validator: data.project.require_different_validator ?? false,
         guest_submissions_public: data.project.guest_submissions_public ?? false,
         public_validated_records: data.project.public_validated_records ?? false
       });
@@ -85,6 +97,13 @@ export default function ProjectSettings({
         guest_upload_enabled: data.project.guest_upload_enabled ?? false,
         guest_upload_quota_bytes: data.project.guest_upload_quota_bytes ?? 10485760,
         guest_upload_max_file_size: data.project.guest_upload_max_file_size ?? 5242880
+      });
+      // Load workflow settings
+      setWorkflowSettings({
+        require_validation: data.project.require_validation ?? true,
+        require_different_validator: data.project.require_different_validator ?? false,
+        propose_edits_instant: data.project.propose_edits_instant ?? false,
+        third_party_verification_enabled: data.project.third_party_verification_enabled ?? false
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load project');
@@ -119,6 +138,60 @@ useEffect(() => {
       setError(err instanceof Error ? err.message : 'Failed to save');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveWorkflow = async (updates: Partial<typeof workflowSettings>) => {
+    setSavingWorkflow(true);
+    try {
+      const res = await fetch(`/api/projects/${slug}/settings/workflow`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+      
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to save');
+      }
+      
+      const data = await res.json();
+      setWorkflowSettings(prev => ({
+        ...prev,
+        ...data.workflow,
+        third_party_verification_enabled: data.verification?.enabled ?? false
+      }));
+      setVerificationQuota({
+        quota_monthly: data.verification?.quota_monthly ?? 5,
+        quota_used: data.verification?.quota_used ?? 0,
+        quota_reset_date: data.verification?.quota_reset_date ?? null
+      });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to save workflow settings');
+    } finally {
+      setSavingWorkflow(false);
+    }
+  };
+
+  const fetchWorkflowSettings = async () => {
+    try {
+      const res = await fetch(`/api/projects/${slug}/settings/workflow`);
+      if (res.ok) {
+        const data = await res.json();
+        setWorkflowSettings({
+          require_validation: data.workflow?.require_validation ?? true,
+          require_different_validator: data.workflow?.require_different_validator ?? false,
+          propose_edits_instant: data.workflow?.propose_edits_instant ?? false,
+          third_party_verification_enabled: data.verification?.enabled ?? false
+        });
+        setVerificationQuota({
+          quota_monthly: data.verification?.quota_monthly ?? 5,
+          quota_used: data.verification?.quota_used ?? 0,
+          quota_reset_date: data.verification?.quota_reset_date ?? null
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch workflow settings:', err);
     }
   };
 
@@ -171,6 +244,9 @@ useEffect(() => {
     if (activeTab === 'storage' && !storageInfo) {
       fetchStorageInfo();
     }
+    if (activeTab === 'workflow') {
+      fetchWorkflowSettings();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
@@ -201,6 +277,7 @@ useEffect(() => {
 
   const tabs = [
     { id: 'general' as const, label: 'General' },
+    { id: 'workflow' as const, label: 'Workflow' },
     { id: 'tags' as const, label: 'Tags' },
     { id: 'storage' as const, label: 'Storage' },
     { id: 'permissions' as const, label: 'Permissions' }
@@ -292,22 +369,6 @@ useEffect(() => {
                   Enable tags for this project
                 </label>
               </div>
-
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="require_different_validator"
-                  checked={formData.require_different_validator}
-                  onChange={e => setFormData({ ...formData, require_different_validator: e.target.checked })}
-                  className="w-4 h-4 rounded border-gray-300"
-                />
-                <label htmlFor="require_different_validator" className="text-sm text-gray-700">
-                  Require different user for validation than review
-                </label>
-              </div>
-              <p className="text-xs text-gray-500 ml-7 -mt-2">
-                When enabled, records must be validated by a different user than the one who reviewed them
-              </p>
 
               <div className="flex items-center gap-3">
                 <input
@@ -425,6 +486,204 @@ useEffect(() => {
                 </p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Workflow Settings */}
+        {activeTab === 'workflow' && (
+          <div className="space-y-6">
+            {/* Review & Validation Workflow */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-lg font-semibold mb-2">Review & Validation Workflow</h2>
+              <p className="text-sm text-gray-600 mb-6">
+                Configure how records move through the review and validation process.
+              </p>
+              
+              <div className="space-y-6">
+                {/* Require Validation */}
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="require_validation"
+                    checked={workflowSettings.require_validation}
+                    onChange={async (e) => {
+                      const newValue = e.target.checked;
+                      setWorkflowSettings(prev => ({ ...prev, require_validation: newValue }));
+                      await handleSaveWorkflow({ require_validation: newValue });
+                    }}
+                    disabled={savingWorkflow}
+                    className="mt-1 w-4 h-4 rounded border-gray-300"
+                  />
+                  <div>
+                    <label htmlFor="require_validation" className="text-sm font-medium text-gray-700">
+                      Require validation step
+                    </label>
+                    <p className="text-xs text-gray-500 mt-1">
+                      When enabled, records must pass both review AND validation before being published.
+                      When disabled, records go directly from review to published.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Require Different Validator */}
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="require_different_validator_workflow"
+                    checked={workflowSettings.require_different_validator}
+                    onChange={async (e) => {
+                      const newValue = e.target.checked;
+                      setWorkflowSettings(prev => ({ ...prev, require_different_validator: newValue }));
+                      await handleSaveWorkflow({ require_different_validator: newValue });
+                    }}
+                    disabled={savingWorkflow || !workflowSettings.require_validation}
+                    className="mt-1 w-4 h-4 rounded border-gray-300 disabled:opacity-50"
+                  />
+                  <div className={!workflowSettings.require_validation ? 'opacity-50' : ''}>
+                    <label htmlFor="require_different_validator_workflow" className="text-sm font-medium text-gray-700">
+                      Require different user for validation
+                    </label>
+                    <p className="text-xs text-gray-500 mt-1">
+                      When enabled, the validator must be a different person than the reviewer.
+                      This adds a second pair of eyes to every record.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Instant Proposed Edits */}
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="propose_edits_instant"
+                    checked={workflowSettings.propose_edits_instant}
+                    onChange={async (e) => {
+                      const newValue = e.target.checked;
+                      setWorkflowSettings(prev => ({ ...prev, propose_edits_instant: newValue }));
+                      await handleSaveWorkflow({ propose_edits_instant: newValue });
+                    }}
+                    disabled={savingWorkflow}
+                    className="mt-1 w-4 h-4 rounded border-gray-300"
+                  />
+                  <div>
+                    <label htmlFor="propose_edits_instant" className="text-sm font-medium text-gray-700">
+                      Apply proposed edits instantly
+                    </label>
+                    <p className="text-xs text-gray-500 mt-1">
+                      When enabled, proposed edits from authorized users are applied immediately without review.
+                      <span className="text-amber-600 font-medium"> Use with caution.</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 3rd Party Verification */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-lg font-semibold mb-2">3rd Party Verification</h2>
+              <p className="text-sm text-gray-600 mb-6">
+                Request independent verification of your data by our verification team.
+              </p>
+              
+              <div className="space-y-6">
+                {/* Enable 3rd Party Verification */}
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="third_party_verification_enabled"
+                    checked={workflowSettings.third_party_verification_enabled}
+                    onChange={async (e) => {
+                      const newValue = e.target.checked;
+                      setWorkflowSettings(prev => ({ ...prev, third_party_verification_enabled: newValue }));
+                      await handleSaveWorkflow({ third_party_verification_enabled: newValue });
+                    }}
+                    disabled={savingWorkflow}
+                    className="mt-1 w-4 h-4 rounded border-gray-300"
+                  />
+                  <div>
+                    <label htmlFor="third_party_verification_enabled" className="text-sm font-medium text-gray-700">
+                      Enable 3rd party verification requests
+                    </label>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Allow project members to request independent verification of records and data.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Verification Quota Display */}
+                {workflowSettings.third_party_verification_enabled && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <h3 className="text-sm font-medium text-gray-700 mb-3">Monthly Verification Quota</h3>
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between text-sm mb-1">
+                          <span className="text-gray-600">
+                            {verificationQuota.quota_used} of {verificationQuota.quota_monthly} used
+                          </span>
+                          <span className="text-gray-500">
+                            {Math.max(0, verificationQuota.quota_monthly - verificationQuota.quota_used)} remaining
+                          </span>
+                        </div>
+                        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full transition-all ${
+                              verificationQuota.quota_used >= verificationQuota.quota_monthly 
+                                ? 'bg-red-500' 
+                                : verificationQuota.quota_used > verificationQuota.quota_monthly * 0.8
+                                  ? 'bg-amber-500'
+                                  : 'bg-green-500'
+                            }`}
+                            style={{ 
+                              width: `${Math.min(100, (verificationQuota.quota_used / verificationQuota.quota_monthly) * 100)}%` 
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-3">
+                      Free tier includes 5 verification requests per month. 
+                      <a href="#" className="text-blue-600 hover:underline ml-1">Upgrade for more →</a>
+                    </p>
+                  </div>
+                )}
+
+                {/* Verification Levels Explanation */}
+                {workflowSettings.third_party_verification_enabled && (
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <h3 className="text-sm font-medium text-gray-700 mb-3">Verification Levels</h3>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-start gap-3">
+                        <span className="w-6 h-6 flex items-center justify-center bg-gray-100 text-gray-600 rounded text-xs font-medium">0</span>
+                        <div>
+                          <p className="font-medium text-gray-700">Unverified</p>
+                          <p className="text-xs text-gray-500">Default state, no special validation</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <span className="w-6 h-6 flex items-center justify-center bg-blue-100 text-blue-600 rounded text-xs font-medium">1</span>
+                        <div>
+                          <p className="font-medium text-gray-700">Self-Verified</p>
+                          <p className="text-xs text-gray-500">Passed your project&apos;s review/validation workflow</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <span className="w-6 h-6 flex items-center justify-center bg-purple-100 text-purple-600 rounded text-xs font-medium">2</span>
+                        <div>
+                          <p className="font-medium text-gray-700">Audit-Ready</p>
+                          <p className="text-xs text-gray-500">All required sources provided and archived</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <span className="w-6 h-6 flex items-center justify-center bg-amber-100 text-amber-600 rounded text-xs font-medium">⭐</span>
+                        <div>
+                          <p className="font-medium text-gray-700">3rd Party Verified</p>
+                          <p className="text-xs text-gray-500">Independently verified by our team - highest trust level</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 

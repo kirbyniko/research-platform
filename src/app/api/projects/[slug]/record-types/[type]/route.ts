@@ -75,12 +75,16 @@ export async function GET(
        WHERE record_type_id = $1 AND deleted_at IS NULL`,
       [recordType.id]
     );
+
+    // Check if user can delete this record type (owners only)
+    const canDelete = role === 'owner';
     
     return NextResponse.json({
       recordType,
       fields: fieldsResult.rows,
       groups: groupsResult.rows,
       recordCount: parseInt(recordsResult.rows[0].count),
+      can_delete: canDelete,
       role
     });
   } catch (error) {
@@ -245,18 +249,11 @@ export async function DELETE(
     
     const recordType = recordTypeResult.rows[0];
     
-    // Check if there are any records
-    const recordsResult = await pool.query(
-      'SELECT COUNT(*) as count FROM records WHERE record_type_id = $1 AND deleted_at IS NULL',
-      [recordType.id]
+    // Delete all records of this type (soft delete)
+    await pool.query(
+      'UPDATE records SET deleted_at = NOW(), deleted_by = $1 WHERE record_type_id = $2',
+      [userId, recordType.id]
     );
-    
-    if (parseInt(recordsResult.rows[0].count) > 0) {
-      return NextResponse.json(
-        { error: 'Cannot delete record type with existing records. Archive or delete records first.' },
-        { status: 400 }
-      );
-    }
     
     // Delete field definitions first (cascade would handle this, but being explicit)
     await pool.query(

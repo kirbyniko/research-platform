@@ -86,16 +86,20 @@ export default function ProposeEditPage({
   }, [fetchRecord]);
 
   const handleSubmit = async (formData: Record<string, unknown>) => {
+    if (!proposalNotes.trim()) {
+      alert('Please add notes explaining your proposed changes');
+      return;
+    }
+    
     setSaving(true);
     
     try {
-      const response = await fetch('/api/proposed-changes', {
+      const response = await fetch(`/api/projects/${projectSlug}/records/${recordId}/propose-change`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          record_id: record!.id,
           proposed_data: formData,
-          notes: proposalNotes,
+          change_summary: proposalNotes,
         }),
       });
       
@@ -208,9 +212,10 @@ export default function ProposeEditPage({
           Cancel
         </Link>
         <button
+          type="button"
           onClick={() => {
             if (!proposalNotes.trim()) {
-              alert('Please add notes explaining your proposed changes');
+              alert('Please add notes explaining your proposed changes in the "Proposal Notes" field above');
               return;
             }
             const form = document.querySelector('form');

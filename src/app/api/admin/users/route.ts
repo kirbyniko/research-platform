@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       ORDER BY created_at DESC
     `);
 
-    return NextResponse.json({ users: result.rows });
+    return NextResponse.json({ success: true, users: result.rows });
   } catch (error) {
     console.error('Error fetching users:', error);
     console.error('Error details:', error instanceof Error ? error.message : String(error));

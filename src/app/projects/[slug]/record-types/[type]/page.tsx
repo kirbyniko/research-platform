@@ -31,10 +31,17 @@ export default function RecordTypePage({
   const [recordType, setRecordType] = useState<RecordType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [canDelete, setCanDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [projectSlug, setProjectSlug] = useState<string>('');
+  const [recordTypeSlug, setRecordTypeSlug] = useState<string>('');
   const router = useRouter();
 
   useEffect(() => {
     params.then(({ slug, type }) => {
+      setProjectSlug(slug);
+      setRecordTypeSlug(type);
       Promise.all([
         fetch(`/api/projects/${slug}`).then(r => r.json()),
         fetch(`/api/projects/${slug}/record-types/${type}`).then(r => r.json())
@@ -45,6 +52,11 @@ export default function RecordTypePage({
           
           if (recordTypeData.recordType) setRecordType(recordTypeData.recordType);
           else if (recordTypeData.error) setError(recordTypeData.error);
+
+          // Check if user can delete record types
+          if (recordTypeData.can_delete) {
+            setCanDelete(recordTypeData.can_delete);
+          }
           
           setLoading(false);
         })
@@ -54,6 +66,37 @@ export default function RecordTypePage({
         });
     });
   }, [params]);
+
+  const handleDelete = async () => {
+    const recordCount = recordType?.record_count || 0;
+    const confirmMessage = recordCount > 0
+      ? `Are you sure you want to delete "${recordType?.name}" record type and ALL ${recordCount} record${recordCount !== 1 ? 's' : ''}? This action cannot be undone.`
+      : `Are you sure you want to delete the "${recordType?.name}" record type? This action cannot be undone.`;
+    
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    setDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const response = await fetch(`/api/projects/${projectSlug}/record-types/${recordTypeSlug}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete record type');
+      }
+
+      // Redirect back to project
+      router.push(`/projects/${projectSlug}`);
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete record type');
+      setDeleting(false);
+    }
+  };
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -142,6 +185,23 @@ export default function RecordTypePage({
               <h3 className="font-medium">➕ Create New Record</h3>
               <p className="text-sm text-gray-300">Add a new {recordType.name}</p>
             </Link>
+
+            {canDelete && (
+              <div className="pt-4 border-t">
+                {deleteError && (
+                  <div className="mb-3 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded">
+                    {deleteError}
+                  </div>
+                )}
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="block w-full p-4 border-2 border-red-300 rounded hover:bg-red-50 text-red-600 font-medium disabled:opacity-50"
+                >
+                  🗑️ {deleting ? 'Deleting...' : 'Delete Record Type'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </main>
