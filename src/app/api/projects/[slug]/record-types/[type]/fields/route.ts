@@ -139,9 +139,9 @@ export async function POST(
       );
     }
     
-    // Check key uniqueness within record type
+    // Check slug uniqueness within record type
     const existingKey = await pool.query(
-      'SELECT id FROM field_definitions WHERE record_type_id = $1 AND key = $2',
+      'SELECT id FROM field_definitions WHERE record_type_id = $1 AND slug = $2',
       [recordType.id, body.slug]
     );
     

@@ -380,7 +380,7 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, groups, allField
           )}
 
           {/* Basic Info */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
               <input
@@ -390,19 +390,11 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, groups, allField
                 placeholder="e.g., Subject Name"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Slug *</label>
-              <input
-                type="text"
-                value={slug}
-                onChange={(e) => {
-                  setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''));
-                }}
-                placeholder="e.g., subject_name"
-                disabled={isEditing}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono disabled:bg-gray-100"
-              />
+              {name && !isEditing && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Slug will be auto-generated: <span className="font-mono bg-gray-100 px-1 py-0.5 rounded">{slug || generateSlug(name)}</span>
+                </p>
+              )}
             </div>
           </div>
 

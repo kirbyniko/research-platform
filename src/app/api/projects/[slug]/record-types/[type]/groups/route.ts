@@ -111,14 +111,21 @@ export async function POST(
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
-    if (!body.slug?.trim()) {
-      return NextResponse.json({ error: 'Slug is required' }, { status: 400 });
+    // Auto-generate slug from name if not provided
+    const groupSlug = (body.slug?.trim() || body.name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '_')
+      .substring(0, 100));
+
+    if (!groupSlug) {
+      return NextResponse.json({ error: 'Could not generate slug from name' }, { status: 400 });
     }
 
     // Check for duplicate slug
     const existingResult = await pool.query(
       'SELECT id FROM field_groups WHERE record_type_id = $1 AND slug = $2',
-      [recordType.id, body.slug]
+      [recordType.id, groupSlug]
     );
 
     if (existingResult.rows.length > 0) {
@@ -141,7 +148,7 @@ export async function POST(
       [
         recordType.id,
         body.name.trim(),
-        body.slug.trim(),
+        groupSlug,
         body.description?.trim() || null,
         sortOrder,
         body.show_when ? JSON.stringify(body.show_when) : null,
