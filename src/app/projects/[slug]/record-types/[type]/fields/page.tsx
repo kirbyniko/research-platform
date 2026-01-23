@@ -566,14 +566,22 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, groups, allField
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Field slug</label>
-                    <input
-                      type="text"
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Field</label>
+                    <select
                       value={showWhenField}
                       onChange={(e) => setShowWhenField(e.target.value)}
-                      placeholder="e.g., incident_types"
                       className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
-                    />
+                    >
+                      <option value="">Select a field...</option>
+                      {allFields
+                        .filter(f => f.id !== (field?.id || 0)) // Don't show the current field
+                        .map(f => (
+                          <option key={f.id} value={f.slug}>
+                            {f.name} ({f.slug})
+                          </option>
+                        ))
+                      }
+                    </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Condition</label>
