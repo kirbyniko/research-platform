@@ -1,6 +1,6 @@
 # Record Display Templates System
 
-## Status: ✅ Phase 2 Complete - Basic Template Editor Working
+## Status: ✅ Phase 5 Complete - Permissions UI Done, AI Phase Remaining
 
 ## Overview
 A system allowing users to create custom visual layouts/templates for how record data is displayed. Templates define arrangement, sizing, fonts, and colors of existing fields without modifying actual data.
@@ -343,9 +343,9 @@ Update the public record view to:
 ## Phase 5: Permissions
 
 ### 5.1 New Permission: Manage Appearances
-**Status:** 🔴 Not Started
+**Status:** ✅ Complete
 
-Add new permission to control who can create/edit display templates:
+Added new permission to control who can create/edit display templates:
 
 ```sql
 -- Add to project_members or create separate permissions table
@@ -355,23 +355,31 @@ ADD COLUMN can_manage_appearances BOOLEAN DEFAULT false;
 
 Permission levels:
 - **View**: Can see records with applied templates
-- **Edit Templates**: Can create/edit templates for record types
+- **Edit Templates**: Can create/edit templates for record types (requires can_manage_appearances or owner/admin)
 - **Override Records**: Can apply template overrides to specific records
+
+**Implemented:**
+- `can_manage_appearances` column on project_members table
+- Team management UI with checkbox to toggle permission
+- `/api/projects/[slug]/members/[memberId]` PATCH accepts can_manage_appearances
+- `/api/projects/[slug]/members` GET returns can_manage_appearances
+- `/api/projects/[slug]/members/me` returns can_manage_appearances
+- Owners and Admins automatically have this permission
 
 ---
 
 ## Implementation Order
 
-1. **Phase 1.1**: Add media as field type ⬅️ START HERE
-2. **Phase 1.2**: Create template database schema
-3. **Phase 1.3**: Define template JSON structure
-4. **Phase 2.1**: Build basic template editor (no AI yet)
-5. **Phase 4.1**: Build template renderer
-6. **Phase 4.2**: Integrate into public record view
-7. **Phase 2.2**: Template management pages
-8. **Phase 3.1**: AI assistant integration
-9. **Phase 3.2**: AI validation layer
-10. **Phase 5.1**: Permissions
+1. **Phase 1.1**: Add media as field type ✅ Complete
+2. **Phase 1.2**: Create template database schema ✅ Complete  
+3. **Phase 1.3**: Define template JSON structure ✅ Complete
+4. **Phase 2.1**: Build basic template editor (no AI yet) ✅ Complete
+5. **Phase 4.1**: Build template renderer ✅ Complete
+6. **Phase 4.2**: Integrate into public record view ✅ Complete
+7. **Phase 2.2**: Template management pages ✅ Complete
+8. **Phase 5.1**: Permissions ✅ Complete
+9. **Phase 3.1**: AI assistant integration 🔴 Not Started
+10. **Phase 3.2**: AI validation layer 🔴 Not Started
 
 ---
 
