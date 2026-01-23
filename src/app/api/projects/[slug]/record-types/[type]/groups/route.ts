@@ -141,6 +141,7 @@ export async function POST(
     const sortOrder = body.sort_order ?? (maxOrderResult.rows[0].max_order + 1);
 
     // Create group
+    console.log('Creating group with:', { recordTypeId: recordType.id, name: body.name.trim(), groupSlug, sortOrder });
     const result = await pool.query(
       `INSERT INTO field_groups (record_type_id, name, slug, description, sort_order, show_when)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -158,8 +159,9 @@ export async function POST(
     return NextResponse.json({ group: result.rows[0] });
   } catch (error) {
     console.error('Error creating group:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to create group' },
+      { error: 'Failed to create group', details: errorMessage },
       { status: 500 }
     );
   }
