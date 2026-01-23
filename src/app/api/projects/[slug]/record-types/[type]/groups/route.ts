@@ -143,8 +143,8 @@ export async function POST(
     // Create group
     console.log('Creating group with:', { recordTypeId: recordType.id, name: body.name.trim(), groupSlug, sortOrder });
     const result = await pool.query(
-      `INSERT INTO field_groups (record_type_id, name, slug, description, sort_order, show_when)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO field_groups (record_type_id, name, slug, description, sort_order)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
       [
         recordType.id,
@@ -152,7 +152,6 @@ export async function POST(
         groupSlug,
         body.description?.trim() || null,
         sortOrder,
-        body.show_when ? JSON.stringify(body.show_when) : null,
       ]
     );
 
