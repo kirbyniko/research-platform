@@ -28,17 +28,88 @@ const FIELD_TYPES: { value: FieldType; label: string; description: string }[] = 
   { value: 'email', label: 'Email', description: 'Email address input' },
   { value: 'location', label: 'Location', description: 'City/State/Country' },
   { value: 'rich_text', label: 'Rich Text', description: 'Formatted text with markdown' },
+  { value: 'media', label: 'Media', description: 'Image/video with upload or URL' },
+  { value: 'tri_state', label: 'Yes/No/Unknown', description: 'Three-way dropdown' },
 ];
+
+// Get operators appropriate for a field type
+function getOperatorsForFieldType(fieldType: FieldType) {
+  switch (fieldType) {
+    case 'boolean':
+      return [
+        { value: 'is_true', label: 'is true' },
+        { value: 'is_false', label: 'is false' },
+      ];
+    case 'number':
+      return [
+        { value: 'equals', label: 'equals' },
+        { value: 'not_equals', label: 'does not equal' },
+        { value: 'greater_than', label: 'greater than' },
+        { value: 'less_than', label: 'less than' },
+        { value: 'between', label: 'between' },
+        { value: 'exists', label: 'has any value' },
+        { value: 'not_exists', label: 'is empty' },
+      ];
+    case 'date':
+    case 'datetime':
+      return [
+        { value: 'equals', label: 'is exactly' },
+        { value: 'before', label: 'is before' },
+        { value: 'after', label: 'is after' },
+        { value: 'between', label: 'is between' },
+        { value: 'exists', label: 'has any value' },
+        { value: 'not_exists', label: 'is empty' },
+      ];
+    case 'select':
+    case 'radio':
+    case 'tri_state':
+      return [
+        { value: 'equals', label: 'equals' },
+        { value: 'not_equals', label: 'does not equal' },
+        { value: 'exists', label: 'has any value' },
+        { value: 'not_exists', label: 'is empty' },
+      ];
+    case 'multi_select':
+    case 'checkbox_group':
+      return [
+        { value: 'contains', label: 'contains' },
+        { value: 'not_contains', label: 'does not contain' },
+        { value: 'contains_all', label: 'contains all of' },
+        { value: 'contains_any', label: 'contains any of' },
+        { value: 'exists', label: 'has any value' },
+        { value: 'not_exists', label: 'is empty' },
+      ];
+    case 'media':
+      return [
+        { value: 'exists', label: 'has media' },
+        { value: 'not_exists', label: 'has no media' },
+        { value: 'has_image', label: 'has image' },
+        { value: 'has_video', label: 'has video' },
+      ];
+    default: // text, textarea, url, email, location, rich_text
+      return [
+        { value: 'equals', label: 'equals' },
+        { value: 'not_equals', label: 'does not equal' },
+        { value: 'contains', label: 'contains' },
+        { value: 'not_contains', label: 'does not contain' },
+        { value: 'starts_with', label: 'starts with' },
+        { value: 'ends_with', label: 'ends with' },
+        { value: 'exists', label: 'has any value' },
+        { value: 'not_exists', label: 'is empty' },
+      ];
+  }
+}
 
 interface GroupManagerModalProps {
   projectSlug: string;
   recordTypeSlug: string;
   groups: FieldGroup[];
+  allFields: FieldDefinition[];
   onClose: () => void;
   onSave: () => void;
 }
 
-function GroupManagerModal({ projectSlug, recordTypeSlug, groups, onClose, onSave }: GroupManagerModalProps) {
+function GroupManagerModal({ projectSlug, recordTypeSlug, groups, allFields, onClose, onSave }: GroupManagerModalProps) {
   const [localGroups, setLocalGroups] = useState<FieldGroup[]>(groups);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [newGroupName, setNewGroupName] = useState('');
@@ -46,6 +117,13 @@ function GroupManagerModal({ projectSlug, recordTypeSlug, groups, onClose, onSav
   const [autoSlug, setAutoSlug] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Conditional visibility state
+  const [showWhenEnabled, setShowWhenEnabled] = useState(false);
+  const [showWhenField, setShowWhenField] = useState('');
+  const [showWhenOperator, setShowWhenOperator] = useState('equals');
+  const [showWhenValue, setShowWhenValue] = useState('');
+  const [showWhenValue2, setShowWhenValue2] = useState(''); // For "between" operators
 
   function generateSlug(name: string): string {
     return name
@@ -72,6 +150,19 @@ function GroupManagerModal({ projectSlug, recordTypeSlug, groups, onClose, onSav
     setError(null);
 
     try {
+      const config: { show_when?: { field: string; operator: string; value: unknown; value2?: unknown } } = {};
+      if (showWhenEnabled && showWhenField && showWhenOperator) {
+        const needsValue = !['exists', 'not_exists', 'is_true', 'is_false'].includes(showWhenOperator);
+        const needsSecondValue = showWhenOperator === 'between';
+        
+        config.show_when = {
+          field: showWhenField,
+          operator: showWhenOperator,
+          value: needsValue ? showWhenValue : undefined,
+          ...(needsSecondValue && showWhenValue2 ? { value2: showWhenValue2 } : {}),
+        };
+      }
+
       const response = await fetch(
         `/api/projects/${projectSlug}/record-types/${recordTypeSlug}/groups`,
         {
@@ -80,6 +171,7 @@ function GroupManagerModal({ projectSlug, recordTypeSlug, groups, onClose, onSav
           body: JSON.stringify({
             name: newGroupName.trim(),
             slug: newGroupSlug.trim(),
+            config,
           }),
         }
       );
@@ -94,6 +186,11 @@ function GroupManagerModal({ projectSlug, recordTypeSlug, groups, onClose, onSav
       setNewGroupName('');
       setNewGroupSlug('');
       setAutoSlug(true);
+      setShowWhenEnabled(false);
+      setShowWhenField('');
+      setShowWhenOperator('equals');
+      setShowWhenValue('');
+      setShowWhenValue2('');
       onSave();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create group');
@@ -140,8 +237,8 @@ function GroupManagerModal({ projectSlug, recordTypeSlug, groups, onClose, onSav
           )}
 
           {/* Add New Group */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-gray-900 mb-3">Add New Group</h3>
+          <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+            <h3 className="text-sm font-medium text-gray-900">Add New Group</h3>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Group Name *</label>
               <input
@@ -153,10 +250,105 @@ function GroupManagerModal({ projectSlug, recordTypeSlug, groups, onClose, onSav
               />
               <p className="text-xs text-gray-500 mt-1">Slug will be auto-generated: {newGroupSlug || '(type a name)'}</p>
             </div>
+            
+            {/* Conditional Visibility for Groups */}
+            <div className="border-t pt-3">
+              <label className="flex items-center gap-2 cursor-pointer mb-3">
+                <input
+                  type="checkbox"
+                  checked={showWhenEnabled}
+                  onChange={(e) => setShowWhenEnabled(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600"
+                />
+                <span className="text-sm">Only show this group when a field has a specific value</span>
+              </label>
+              
+              {showWhenEnabled && (() => {
+                const selectedField = allFields.find(f => f.slug === showWhenField);
+                const operators = selectedField ? getOperatorsForFieldType(selectedField.field_type) : [];
+                const needsValue = !['exists', 'not_exists', 'is_true', 'is_false'].includes(showWhenOperator);
+                const needsSecondValue = showWhenOperator === 'between';
+                
+                return (
+                  <div className="bg-white rounded-lg p-3 space-y-3 border">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Field</label>
+                        <select
+                          value={showWhenField}
+                          onChange={(e) => {
+                            setShowWhenField(e.target.value);
+                            const newField = allFields.find(f => f.slug === e.target.value);
+                            if (newField) {
+                              const newOps = getOperatorsForFieldType(newField.field_type);
+                              setShowWhenOperator(newOps[0]?.value || 'equals');
+                            }
+                          }}
+                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                        >
+                          <option value="">Select a field...</option>
+                          {allFields.map(f => (
+                            <option key={f.id} value={f.slug}>{f.name}</option>
+                          ))
+                          }
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Condition</label>
+                        <select
+                          value={showWhenOperator}
+                          onChange={(e) => setShowWhenOperator(e.target.value)}
+                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                          disabled={!selectedField}
+                        >
+                          {operators.map(op => (
+                            <option key={op.value} value={op.value}>{op.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          {needsSecondValue ? 'From Value' : 'Value'}
+                        </label>
+                        <input
+                          type={selectedField?.field_type === 'number' ? 'number' : 
+                                 selectedField?.field_type === 'date' ? 'date' : 
+                                 selectedField?.field_type === 'datetime' ? 'datetime-local' : 'text'}
+                          value={showWhenValue}
+                          onChange={(e) => setShowWhenValue(e.target.value)}
+                          placeholder={selectedField?.field_type === 'date' ? 'YYYY-MM-DD' : 'Value...'}
+                          disabled={!needsValue}
+                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                        />
+                      </div>
+                    </div>
+                    {needsSecondValue && (
+                      <div className="grid grid-cols-3 gap-2">
+                        <div></div>
+                        <div></div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">To Value</label>
+                          <input
+                            type={selectedField?.field_type === 'number' ? 'number' : 
+                                   selectedField?.field_type === 'date' ? 'date' : 
+                                   selectedField?.field_type === 'datetime' ? 'datetime-local' : 'text'}
+                            value={showWhenValue2}
+                            onChange={(e) => setShowWhenValue2(e.target.value)}
+                            placeholder={selectedField?.field_type === 'date' ? 'YYYY-MM-DD' : 'To value...'}
+                            className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+            
             <button
               onClick={handleAddGroup}
               disabled={saving || !newGroupName.trim() || !newGroupSlug.trim()}
-              className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
             >
               {saving ? 'Adding...' : '+ Add Group'}
             </button>
@@ -243,6 +435,7 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, groups, allField
   const [showWhenField, setShowWhenField] = useState(field?.config?.show_when?.field || '');
   const [showWhenOperator, setShowWhenOperator] = useState<string>(field?.config?.show_when?.operator || 'contains');
   const [showWhenValue, setShowWhenValue] = useState(field?.config?.show_when?.value?.toString() || '');
+  const [showWhenValue2, setShowWhenValue2] = useState((field?.config?.show_when as any)?.value2?.toString() || '');
   
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -315,10 +508,14 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, groups, allField
       config.options = options;
     }
     if (showWhenEnabled && showWhenField) {
+      const needsValue = !['exists', 'not_exists', 'is_true', 'is_false'].includes(showWhenOperator);
+      const needsSecondValue = showWhenOperator === 'between';
+      
       config.show_when = {
         field: showWhenField,
         operator: showWhenOperator as 'equals' | 'not_equals' | 'contains' | 'not_contains' | 'exists' | 'not_exists',
-        value: ['exists', 'not_exists'].includes(showWhenOperator) ? undefined : showWhenValue,
+        value: needsValue ? showWhenValue : undefined,
+        ...(needsSecondValue && showWhenValue2 ? { value2: showWhenValue2 } : {}),
       };
     }
     
@@ -559,59 +756,97 @@ function FieldEditorModal({ projectSlug, recordTypeSlug, field, groups, allField
               <span className="text-sm">Only show this field when another field has a specific value</span>
             </label>
             
-            {showWhenEnabled && (
-              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                <p className="text-xs text-gray-500 mb-2">
-                  💡 Example: Show &quot;Shooting Details&quot; only when &quot;incident_types&quot; contains &quot;shooting&quot;
-                </p>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Field</label>
-                    <select
-                      value={showWhenField}
-                      onChange={(e) => setShowWhenField(e.target.value)}
-                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
-                    >
-                      <option value="">Select a field...</option>
-                      {allFields
-                        .filter(f => f.id !== (field?.id || 0)) // Don't show the current field
-                        .map(f => (
-                          <option key={f.id} value={f.slug}>
-                            {f.name} ({f.slug})
-                          </option>
-                        ))
-                      }
-                    </select>
+            {showWhenEnabled && (() => {
+              const selectedField = allFields.find(f => f.slug === showWhenField);
+              const operators = selectedField ? getOperatorsForFieldType(selectedField.field_type) : [];
+              const needsValue = !['exists', 'not_exists', 'is_true', 'is_false'].includes(showWhenOperator);
+              const needsSecondValue = showWhenOperator === 'between';
+              
+              return (
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                  <p className="text-xs text-gray-500 mb-2">
+                    💡 Show this field based on another field's value
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Field</label>
+                      <select
+                        value={showWhenField}
+                        onChange={(e) => {
+                          setShowWhenField(e.target.value);
+                          // Reset operator when field changes
+                          const newField = allFields.find(f => f.slug === e.target.value);
+                          if (newField) {
+                            const newOps = getOperatorsForFieldType(newField.field_type);
+                            setShowWhenOperator(newOps[0]?.value || 'equals');
+                          }
+                        }}
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                      >
+                        <option value="">Select a field...</option>
+                        {allFields
+                          .filter(f => f.id !== (field?.id || 0))
+                          .map(f => (
+                            <option key={f.id} value={f.slug}>
+                              {f.name}
+                            </option>
+                          ))
+                        }
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Condition</label>
+                      <select
+                        value={showWhenOperator}
+                        onChange={(e) => setShowWhenOperator(e.target.value)}
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                        disabled={!selectedField}
+                      >
+                        {operators.map(op => (
+                          <option key={op.value} value={op.value}>{op.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        {needsSecondValue ? 'From Value' : 'Value'}
+                      </label>
+                      <input
+                        type={selectedField?.field_type === 'number' ? 'number' : 
+                               selectedField?.field_type === 'date' ? 'date' : 
+                               selectedField?.field_type === 'datetime' ? 'datetime-local' : 'text'}
+                        value={showWhenValue}
+                        onChange={(e) => setShowWhenValue(e.target.value)}
+                        placeholder={selectedField?.field_type === 'date' ? 'YYYY-MM-DD' : 'Value...'}
+                        disabled={!needsValue}
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Condition</label>
-                    <select
-                      value={showWhenOperator}
-                      onChange={(e) => setShowWhenOperator(e.target.value)}
-                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
-                    >
-                      <option value="contains">contains</option>
-                      <option value="not_contains">does not contain</option>
-                      <option value="equals">equals</option>
-                      <option value="not_equals">does not equal</option>
-                      <option value="exists">has any value</option>
-                      <option value="not_exists">is empty</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Value</label>
-                    <input
-                      type="text"
-                      value={showWhenValue}
-                      onChange={(e) => setShowWhenValue(e.target.value)}
-                      placeholder="e.g., shooting"
-                      disabled={['exists', 'not_exists'].includes(showWhenOperator)}
-                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm disabled:bg-gray-100"
-                    />
-                  </div>
+                  {needsSecondValue && (
+                    <div className="grid grid-cols-3 gap-2">
+                      <div></div>
+                      <div></div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">To Value</label>
+                        <input
+                          type={selectedField?.field_type === 'number' ? 'number' : 
+                                 selectedField?.field_type === 'date' ? 'date' : 
+                                 selectedField?.field_type === 'datetime' ? 'datetime-local' : 'text'}
+                          value={showWhenValue2}
+                          onChange={(e) => setShowWhenValue2(e.target.value)}
+                          placeholder={selectedField?.field_type === 'date' ? 'YYYY-MM-DD' : 'To value...'}
+                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {selectedField?.field_type === 'boolean' && (
+                    <p className="text-xs text-gray-500">Boolean fields don't need a value</p>
+                  )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
 
           {/* Form Visibility */}
@@ -988,6 +1223,7 @@ export default function FieldEditorPage({ params }: { params: Promise<{ slug: st
           projectSlug={resolvedParams.slug}
           recordTypeSlug={resolvedParams.type}
           groups={groups}
+          allFields={fields}
           onSave={() => {
             fetchData();
           }}

@@ -70,6 +70,14 @@ export interface FieldGroup {
   description?: string;
   sort_order: number;
   collapsed_by_default: boolean;
+  config?: {
+    show_when?: {
+      field: string;
+      operator: string;
+      value: unknown;
+      value2?: unknown; // For "between" operators
+    };
+  };
 }
 
 export type FieldType =
