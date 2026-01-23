@@ -16,12 +16,19 @@ interface RecordType {
   };
 }
 
+interface RecordTypeSettings {
+  use_quotes: boolean;
+  use_sources: boolean;
+  use_media: boolean;
+}
+
 export default function NewRecordPage({ params }: { params: Promise<{ slug: string }> }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [projectSlug, setProjectSlug] = useState<string>('');
   const [recordTypes, setRecordTypes] = useState<RecordType[]>([]);
   const [selectedType, setSelectedType] = useState<RecordType | null>(null);
+  const [settings, setSettings] = useState<RecordTypeSettings | null>(null);
   const [fields, setFields] = useState<FieldDefinition[]>([]);
   const [groups, setGroups] = useState<FieldGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,12 +68,19 @@ export default function NewRecordPage({ params }: { params: Promise<{ slug: stri
   useEffect(() => {
     if (!selectedType || !projectSlug) return;
     
-    // Fetch fields for selected record type
-    fetch(`/api/projects/${projectSlug}/record-types/${selectedType.slug}/fields`)
-      .then(res => res.json())
-      .then(data => {
-        setFields(data.fields || []);
-        setGroups(data.groups || []);
+    // Fetch both fields and settings for selected record type
+    Promise.all([
+      fetch(`/api/projects/${projectSlug}/record-types/${selectedType.slug}/fields`).then(r => r.json()),
+      fetch(`/api/projects/${projectSlug}/record-types/${selectedType.slug}/settings`).then(r => r.json())
+    ])
+      .then(([fieldsData, settingsData]) => {
+        setFields(fieldsData.fields || []);
+        setGroups(fieldsData.groups || []);
+        setSettings({
+          use_quotes: settingsData.recordType?.use_quotes || false,
+          use_sources: settingsData.recordType?.use_sources || false,
+          use_media: settingsData.recordType?.use_media || false,
+        });
       })
       .catch(console.error);
   }, [selectedType, projectSlug]);
@@ -196,14 +210,32 @@ export default function NewRecordPage({ params }: { params: Promise<{ slug: stri
               </nav>
             </div>
             
-            {!isGuest ? (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+          {!isGuest ? (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm space-y-2">
+              <div>
                 <strong className="text-blue-900">Analyst Mode:</strong>
                 <span className="text-blue-800 ml-1">
                   You'll be able to add quotes, sources, and media after filling the form.
                 </span>
               </div>
-            ) : (
+              {settings && (settings.use_quotes || settings.use_sources || settings.use_media) && (
+                <div className="pt-2 border-t border-blue-200 text-xs">
+                  <strong className="text-blue-900 block mb-1">Available data types:</strong>
+                  <div className="flex flex-wrap gap-2">
+                    {settings.use_quotes && (
+                      <span className="bg-blue-200 text-blue-900 px-2 py-1 rounded">💬 Quotes</span>
+                    )}
+                    {settings.use_sources && (
+                      <span className="bg-blue-200 text-blue-900 px-2 py-1 rounded">📎 Sources</span>
+                    )}
+                    {settings.use_media && (
+                      <span className="bg-blue-200 text-blue-900 px-2 py-1 rounded">🎥 Media</span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
               <div className="space-y-3">
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
                   <strong className="text-yellow-900">Guest Submission:</strong>
