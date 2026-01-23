@@ -40,6 +40,7 @@ export async function GET(
         pm.invited_by, pm.invited_at, pm.accepted_at, 
         COALESCE(pm.can_upload, false) as can_upload, 
         pm.upload_quota_bytes,
+        COALESCE(pm.can_manage_appearances, false) as can_manage_appearances,
         u.name, u.email,
         inviter.name as invited_by_name
        FROM project_members pm
@@ -71,6 +72,7 @@ export async function GET(
       accepted_at: row.accepted_at,
       can_upload: row.can_upload,
       upload_quota_bytes: row.upload_quota_bytes,
+      can_manage_appearances: row.can_manage_appearances,
       user: {
         id: row.user_id,
         name: row.name,

@@ -171,6 +171,25 @@ export default function ProjectTeam({
     }
   }
 
+  async function handleToggleAppearances(memberId: number, currentValue: boolean) {
+    try {
+      const response = await fetch(`/api/projects/${projectSlug}/members/${memberId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ can_manage_appearances: !currentValue }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update appearance permission');
+      }
+
+      fetchMembers();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update appearance permission');
+    }
+  }
+
   async function handleUpdateQuota(memberId: number, quotaMB: number) {
     try {
       const quotaBytes = quotaMB > 0 ? quotaMB * 1024 * 1024 : null;
@@ -338,6 +357,24 @@ export default function ProjectTeam({
                             )}
                           </div>
                         )}
+                        
+                        {/* Appearance Permissions */}
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id={`appearances-${member.id}`}
+                            checked={member.can_manage_appearances || false}
+                            onChange={() => handleToggleAppearances(member.id, member.can_manage_appearances || false)}
+                            disabled={member.role === 'owner' || member.role === 'admin'}
+                            className="w-4 h-4 rounded border-gray-300"
+                          />
+                          <label htmlFor={`appearances-${member.id}`} className="text-sm text-gray-700">
+                            Can manage display templates
+                          </label>
+                          {(member.role === 'owner' || member.role === 'admin') && (
+                            <span className="text-xs text-gray-400">(automatic)</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

@@ -35,7 +35,7 @@ export async function PATCH(
     }
     
     const body = await request.json();
-    const { role, can_upload, upload_quota_bytes } = body;
+    const { role, can_upload, upload_quota_bytes, can_manage_appearances } = body;
     
     // Build update query dynamically
     const updates: string[] = [];
@@ -43,7 +43,7 @@ export async function PATCH(
     let idx = 1;
     
     if (role !== undefined) {
-      if (!['viewer', 'reviewer', 'editor', 'admin'].includes(role)) {
+      if (!['viewer', 'reviewer', 'editor', 'analyst', 'validator', 'admin'].includes(role)) {
         return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
       }
       updates.push(`role = $${idx++}`);
@@ -58,6 +58,11 @@ export async function PATCH(
     if (upload_quota_bytes !== undefined) {
       updates.push(`upload_quota_bytes = $${idx++}`);
       values.push(upload_quota_bytes);
+    }
+    
+    if (can_manage_appearances !== undefined) {
+      updates.push(`can_manage_appearances = $${idx++}`);
+      values.push(can_manage_appearances);
     }
     
     if (updates.length === 0) {

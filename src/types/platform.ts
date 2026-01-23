@@ -336,6 +336,7 @@ export interface ProjectMember {
   accepted_at?: string;
   can_upload?: boolean;
   upload_quota_bytes?: number | null;
+  can_manage_appearances?: boolean;
   
   // Joined fields
   user?: {
