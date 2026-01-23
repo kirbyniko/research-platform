@@ -171,6 +171,14 @@ export default function RecordTypePage({
             </Link>
 
             <Link
+              href={`/projects/${project.slug}/record-types/${recordType.slug}/templates`}
+              className="block p-4 border rounded hover:bg-gray-50"
+            >
+              <h3 className="font-medium">🎨 Display Templates</h3>
+              <p className="text-sm text-gray-600">Customize how records are displayed to viewers</p>
+            </Link>
+
+            <Link
               href={`/projects/${project.slug}/records?type=${recordType.slug}`}
               className="block p-4 border rounded hover:bg-gray-50"
             >

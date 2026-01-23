@@ -127,6 +127,31 @@ export async function GET(
       [record.id]
     );
     
+    // Get display template (record-specific first, then record type default)
+    let template = null;
+    
+    // First check for record-specific template
+    const recordTemplateResult = await pool.query(
+      `SELECT template FROM display_templates
+       WHERE record_id = $1`,
+      [record.id]
+    );
+    
+    if (recordTemplateResult.rows.length > 0) {
+      template = recordTemplateResult.rows[0].template;
+    } else {
+      // Fall back to record type's default template
+      const defaultTemplateResult = await pool.query(
+        `SELECT template FROM display_templates
+         WHERE record_type_id = $1 AND is_default = true`,
+        [record.record_type_id]
+      );
+      
+      if (defaultTemplateResult.rows.length > 0) {
+        template = defaultTemplateResult.rows[0].template;
+      }
+    }
+    
     return NextResponse.json({
       record,
       fields: fieldsResult.rows,
@@ -136,6 +161,7 @@ export async function GET(
       media: mediaResult.rows,
       verificationRequests: verificationRequestsResult.rows,
       verificationResults: verificationResultsResult.rows,
+      template,
       role
     });
   } catch (error) {

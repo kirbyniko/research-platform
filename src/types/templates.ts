@@ -317,3 +317,38 @@ export const PRESET_FIELD_STYLES: Record<string, Partial<FieldStyle>> = {
     boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
   },
 };
+
+// =====================================================
+// DEFAULT TEMPLATE
+// =====================================================
+
+export const DEFAULT_TEMPLATE: DisplayTemplate = {
+  version: 1,
+  page: {
+    maxWidth: '1200px',
+    padding: '2rem',
+    backgroundColor: '#ffffff',
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    fontSize: '1rem',
+    lineHeight: '1.6',
+  },
+  sections: [
+    {
+      id: 'main-content',
+      type: 'full-width',
+      padding: '0',
+      items: [],
+    },
+  ],
+  fieldDefaults: {
+    label: {
+      fontSize: '0.875rem',
+      fontWeight: '500',
+      color: '#6b7280',
+    },
+    value: {
+      fontSize: '1rem',
+      color: '#1f2937',
+    },
+  },
+};

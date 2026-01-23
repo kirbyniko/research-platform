@@ -4,7 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FieldDefinition, FieldGroup, RecordQuote, RecordSource, RecordMedia } from '@/types/platform';
+import { DisplayTemplate } from '@/types/templates';
 import MediaEmbed from '@/components/MediaEmbed';
+import { TemplateRenderer } from '@/components/templates/TemplateRenderer';
 
 interface RecordData {
   id: number;
@@ -60,6 +62,7 @@ export default function RecordDetailPage({
   const [quotes, setQuotes] = useState<RecordQuote[]>([]);
   const [sources, setSources] = useState<RecordSource[]>([]);
   const [media, setMedia] = useState<RecordMedia[]>([]);
+  const [template, setTemplate] = useState<DisplayTemplate | null>(null);
   const [verificationRequests, setVerificationRequests] = useState<any[]>([]);
   const [verificationResults, setVerificationResults] = useState<VerificationResult[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -84,6 +87,7 @@ export default function RecordDetailPage({
       setQuotes(data.quotes || []);
       setSources(data.sources || []);
       setMedia(data.media || []);
+      setTemplate(data.template || null);
       setVerificationRequests(data.verificationRequests || []);
       setVerificationResults(data.verificationResults || []);
       setUserRole(data.role);
@@ -228,7 +232,96 @@ export default function RecordDetailPage({
   const backLink = userRole ? `/projects/${projectSlug}` : `/projects/${projectSlug}/records`;
   const backText = userRole ? '← Back to Dashboard' : '← Back to Records';
   
-  // Always show article-style view
+  // If a template is defined, use the template renderer for the main content
+  if (template) {
+    return (
+      <div className="min-h-screen bg-white">
+        {/* Header Bar */}
+        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
+          <Link href={backLink} className="text-sm text-gray-500 hover:text-gray-700">
+            {backText}
+          </Link>
+          
+          {/* Verification Level Badge */}
+          {record.verification_level === 3 && (
+            <div className="px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded text-sm font-medium">
+              ✓✓✓ Independently Verified
+            </div>
+          )}
+        </div>
+        
+        {/* Template-Rendered Content */}
+        <TemplateRenderer
+          template={template}
+          fields={fields}
+          data={record.data as Record<string, any>}
+          quotes={quotes.map(q => ({ id: q.id, text: q.quote_text, source: q.source }))}
+          sources={sources.map(s => ({ id: s.id, title: s.title || s.url, url: s.url, date: s.accessed_date }))}
+          media={media.map(m => ({ id: m.id, type: m.media_type as 'image' | 'video', url: m.url, caption: m.description }))}
+        />
+        
+        {/* Metadata Footer - Always show */}
+        <div className="max-w-3xl mx-auto px-6 py-8">
+          <footer className="mt-8 pt-8 border-t border-gray-200 text-sm text-gray-500">
+            <dl className="grid grid-cols-2 gap-4">
+              <div>
+                <dt className="font-medium text-gray-700">Verification Status</dt>
+                <dd className="mt-1 flex items-center gap-2">
+                  {getStatusBadge(record.status)}
+                  {getVerificationLevelBadge(record.verification_level)}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-gray-700">Last Updated</dt>
+                <dd className="mt-1">{new Date(record.updated_at).toLocaleDateString()}</dd>
+              </div>
+            </dl>
+            
+            {/* Action buttons */}
+            <div className="mt-6 flex flex-wrap gap-3">
+              {canReview && (
+                <Link
+                  href={`/projects/${projectSlug}/records/${recordId}/review`}
+                  className="px-4 py-2 text-sm bg-yellow-600 text-white rounded hover:bg-yellow-700 inline-block"
+                >
+                  Review Record
+                </Link>
+              )}
+              
+              {canValidate && (
+                <Link
+                  href={`/projects/${projectSlug}/records/${recordId}/validate`}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 inline-block"
+                >
+                  Validate Record
+                </Link>
+              )}
+              
+              {canProposeEdit && (
+                <Link
+                  href={`/projects/${projectSlug}/records/${recordId}/propose-edit`}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 inline-block"
+                >
+                  Propose Edit
+                </Link>
+              )}
+              
+              {canDelete && (
+                <button
+                  onClick={handleDelete}
+                  className="px-4 py-2 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
+                >
+                  Delete Record
+                </button>
+              )}
+            </div>
+          </footer>
+        </div>
+      </div>
+    );
+  }
+  
+  // Default article-style view (no template defined)
   return (
     <article className="max-w-3xl mx-auto px-6 py-12 bg-white">
         {/* Header */}
