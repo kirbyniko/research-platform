@@ -51,7 +51,7 @@ export async function GET(
     const fieldsResult = await pool.query(
       `SELECT fd.*, fg.name as group_name, fg.description as group_description
        FROM field_definitions fd
-       LEFT JOIN field_groups fg ON fd.group_id = fg.id
+       LEFT JOIN field_groups fg ON fd.field_group_id = fg.id
        WHERE fd.record_type_id = $1
        ORDER BY fd.sort_order, fd.name`,
       [recordType.id]

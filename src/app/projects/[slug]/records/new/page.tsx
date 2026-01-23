@@ -169,43 +169,73 @@ export default function NewRecordPage({ params }: { params: Promise<{ slug: stri
             </button>
           </div>
 
-          {/* Guest submission toggle */}
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={isGuest}
-                onChange={(e) => setIsGuest(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded"
-              />
-              <span className="text-sm">Submit as guest (no account required)</span>
-            </label>
+          {/* Mode Selector - Analyst vs Guest */}
+          <div className="mb-6">
+            <div className="border-b border-gray-200 mb-4">
+              <nav className="-mb-px flex space-x-4">
+                <button
+                  onClick={() => setIsGuest(false)}
+                  className={`pb-3 px-1 border-b-2 font-medium text-sm ${
+                    !isGuest
+                      ? 'border-black text-black'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  📝 Analyst Mode
+                </button>
+                <button
+                  onClick={() => setIsGuest(true)}
+                  className={`pb-3 px-1 border-b-2 font-medium text-sm ${
+                    isGuest
+                      ? 'border-black text-black'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  👤 Guest Submission
+                </button>
+              </nav>
+            </div>
             
-            {isGuest && (
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Your Name
-                  </label>
-                  <input
-                    type="text"
-                    value={guestName}
-                    onChange={(e) => setGuestName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    placeholder="Optional"
-                  />
+            {!isGuest ? (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+                <strong className="text-blue-900">Analyst Mode:</strong>
+                <span className="text-blue-800 ml-1">
+                  You'll be able to add quotes, sources, and media after filling the form.
+                </span>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
+                  <strong className="text-yellow-900">Guest Submission:</strong>
+                  <span className="text-yellow-800 ml-1">
+                    Anonymous submission that will go through review.
+                  </span>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Your Email
-                  </label>
-                  <input
-                    type="email"
-                    value={guestEmail}
-                    onChange={(e) => setGuestEmail(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    placeholder="Optional - for follow-up"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Your Name (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={guestName}
+                      onChange={(e) => setGuestName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      placeholder="Anonymous"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Your Email (optional)
+                    </label>
+                    <input
+                      type="email"
+                      value={guestEmail}
+                      onChange={(e) => setGuestEmail(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      placeholder="For follow-up"
+                    />
+                  </div>
                 </div>
               </div>
             )}
