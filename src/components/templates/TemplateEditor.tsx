@@ -11,6 +11,7 @@ import {
   PRESET_SECTION_LAYOUTS,
   PRESET_FIELD_STYLES
 } from '@/types/templates';
+import { TemplateAIAssistant } from './TemplateAIAssistant';
 
 interface TemplateEditorProps {
   fields: FieldDefinition[];
@@ -48,6 +49,7 @@ export function TemplateEditor({
   const [template, setTemplate] = useState<DisplayTemplate>(initialTemplate || DEFAULT_TEMPLATE);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [draggedField, setDraggedField] = useState<string | null>(null);
 
   const updateTemplate = useCallback((updates: Partial<DisplayTemplate>) => {
@@ -152,10 +154,28 @@ export function TemplateEditor({
   const selectedSection = template.sections.find(s => s.id === selectedSectionId);
   const selectedItem = selectedSection?.items.find(i => i.id === selectedItemId);
 
+  // Handle AI-generated template
+  const handleAITemplate = (generatedTemplate: DisplayTemplate) => {
+    setTemplate(generatedTemplate);
+    onChange(generatedTemplate);
+    setSelectedSectionId(null);
+    setSelectedItemId(null);
+  };
+
   return (
+    <>
     <div className="flex h-full gap-4">
       {/* Left Panel: Field Palette */}
       <div className="w-64 flex-shrink-0 bg-gray-50 rounded-lg p-4 overflow-y-auto">
+        {/* AI Assistant Button */}
+        <button
+          onClick={() => setShowAIAssistant(true)}
+          className="w-full mb-4 px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+        >
+          <span className="text-lg">✨</span>
+          <span className="font-medium">AI Assistant</span>
+        </button>
+
         <h3 className="font-semibold text-gray-900 mb-3">Available Fields</h3>
         
         {/* Custom Fields */}
@@ -338,6 +358,16 @@ export function TemplateEditor({
         )}
       </div>
     </div>
+
+    {/* AI Assistant Modal */}
+    <TemplateAIAssistant
+      fields={fields}
+      enabledDataTypes={enabledDataTypes}
+      onTemplateGenerated={handleAITemplate}
+      isOpen={showAIAssistant}
+      onClose={() => setShowAIAssistant(false)}
+    />
+    </>
   );
 }
 

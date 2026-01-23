@@ -1,6 +1,6 @@
 # Record Display Templates System
 
-## Status: ✅ Phase 5 Complete - Permissions UI Done, AI Phase Remaining
+## Status: ✅ Complete - All Phases Implemented
 
 ## Overview
 A system allowing users to create custom visual layouts/templates for how record data is displayed. Templates define arrangement, sizing, fonts, and colors of existing fields without modifying actual data.
@@ -215,30 +215,43 @@ A drag-and-drop interface for creating templates:
 ## Phase 3: AI-Assisted Template Creation
 
 ### 3.1 WebGPU AI Integration
-**Status:** 🔴 Not Started
+**Status:** ✅ Complete
 
-Using the existing WebLLM infrastructure to help users create templates via natural language:
+Using WebLLM infrastructure (when WebGPU available) or smart rule-based generation to help users create templates via natural language:
 
 **User Flow:**
 1. User opens template editor
-2. Clicks "AI Assistant" button
+2. Clicks "AI Assistant" button (prominent gradient button in left panel)
 3. Describes desired layout: "Put the headshot in the top right, name large on the left, details below in two columns"
-4. AI generates template JSON
+4. AI generates template JSON (or smart template generator if no WebGPU)
 5. User previews and refines
 6. AI can only reference existing fields - validation ensures no fabrication
 
-**Implementation:**
-- Extend existing WebLLM setup
-- Create prompt template that:
-  - Lists all available fields with their types
-  - Explains the template JSON structure
-  - Strictly instructs to only use existing field slugs
-  - Provides examples
-- Validate AI output before applying:
-  - Check all fieldSlugs exist
-  - No custom text/values added
-  - Valid JSON structure
-- Allow iterative refinement
+**Implemented Components:**
+- `src/hooks/useTemplateAI.ts` - Core hook for AI template generation
+  - Checks WebGPU support
+  - Builds system prompt with available fields
+  - Validates AI output against field definitions
+  - Falls back to rule-based generation when no GPU
+- `src/components/templates/TemplateAIAssistant.tsx` - Modal UI
+  - Shows WebGPU status
+  - Example prompts for quick start
+  - Chat-like history
+  - Field inventory display
+- Integration into `TemplateEditor.tsx` - Button and modal
+
+**Validation Layer:**
+- All field slugs checked against available fields
+- Data types (quotes, sources, media) validated against enabled types
+- No custom text injection allowed
+- Template sanitized before applying
+
+**Smart Template Generator (Fallback):**
+When WebGPU is not available, uses heuristics to create templates:
+- Detects media fields for hero sections
+- Identifies name fields for prominent display
+- Groups dates and text fields logically
+- Supports prompt keywords: sidebar, hero, grid, compact, etc.
 
 **Prompt Structure:**
 ```
@@ -265,49 +278,21 @@ Generate a valid template JSON following this schema:
 ```
 
 ### 3.2 AI Validation Layer
-**Status:** 🔴 Not Started
+**Status:** ✅ Complete
 
-Strict validation to ensure AI doesn't introduce unauthorized content:
-
-```typescript
-function validateTemplate(
-  template: DisplayTemplate,
-  availableFields: FieldDefinition[],
-  enabledDataTypes: { quotes: boolean; sources: boolean; media: boolean }
-): ValidationResult {
-  const errors: string[] = [];
-  const fieldSlugs = new Set(availableFields.map(f => f.slug));
-  
-  for (const section of template.sections) {
-    for (const item of section.items) {
-      // Check field references
-      if (item.fieldSlug && !fieldSlugs.has(item.fieldSlug)) {
-        errors.push(`Unknown field: ${item.fieldSlug}`);
-      }
-      
-      // Check data type references
-      if (item.dataType) {
-        if (item.dataType === 'quotes' && !enabledDataTypes.quotes) {
-          errors.push('Quotes not enabled for this record type');
-        }
-        // ... similar for sources, media
-      }
-      
-      // Ensure no custom text injection
-      // (labelOverride is allowed but scrutinized)
-    }
-  }
-  
-  return { valid: errors.length === 0, errors };
-}
-```
+Strict validation implemented in `useTemplateAI.ts` to ensure AI doesn't introduce unauthorized content.
+The `validateTemplate` function checks:
+- All fieldSlugs exist in the available fields
+- All dataTypes are enabled for the record type
+- Template structure is valid JSON
+- No unsupported section types or item properties
 
 ---
 
 ## Phase 4: Template Rendering
 
 ### 4.1 Template Renderer Component
-**Status:** 🔴 Not Started
+**Status:** ✅ Complete
 
 A React component that takes record data + template and renders the styled display:
 
@@ -378,8 +363,8 @@ Permission levels:
 6. **Phase 4.2**: Integrate into public record view ✅ Complete
 7. **Phase 2.2**: Template management pages ✅ Complete
 8. **Phase 5.1**: Permissions ✅ Complete
-9. **Phase 3.1**: AI assistant integration 🔴 Not Started
-10. **Phase 3.2**: AI validation layer 🔴 Not Started
+9. **Phase 3.1**: AI assistant integration ✅ Complete
+10. **Phase 3.2**: AI validation layer ✅ Complete
 
 ---
 
