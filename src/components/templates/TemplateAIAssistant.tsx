@@ -43,10 +43,12 @@ export function TemplateAIAssistant({
     fields,
     enabledDataTypes,
     onTemplateGenerated: (template) => {
+      console.log('[AIAssistant] Template generated, calling parent callback');
       onTemplateGenerated(template);
+      const itemCount = template.sections.reduce((sum, s) => sum + s.items.length, 0);
       setHistory(h => [...h, {
         role: 'assistant',
-        content: `✓ Generated template with ${template.sections.length} section(s) and ${template.sections.reduce((sum, s) => sum + s.items.length, 0)} field(s).`,
+        content: `✓ Template created with ${template.sections.length} section(s) and ${itemCount} field(s). The layout has been applied to the editor. Close this window to see the result.`,
       }]);
     },
   });

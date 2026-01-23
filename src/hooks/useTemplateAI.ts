@@ -48,8 +48,8 @@ declare global {
   }
 }
 
-// Model to use - Phi-3.5-mini is good for structured output
-const MODEL_ID = 'Phi-3.5-mini-instruct-q4f16_1-MLC';
+// Model to use - Llama 3.2 3B is better for structured output and reasoning
+const MODEL_ID = 'Llama-3.2-3B-Instruct-q4f16_1-MLC';
 
 export function useTemplateAI({
   fields,
@@ -343,6 +343,12 @@ Return ONLY valid JSON matching this structure (no markdown, no explanation):
       // Sanitize and return
       const template = sanitizeTemplate(parsed);
       
+      console.log('[TemplateAI] Template generated successfully:', {
+        sections: template.sections.length,
+        totalFields: template.sections.reduce((sum, s) => sum + s.items.length, 0),
+        template
+      });
+      
       setState({ status: 'complete', progress: 100, message: 'Template generated successfully!' });
       onTemplateGenerated(template);
 
@@ -550,6 +556,12 @@ Return ONLY valid JSON matching this structure (no markdown, no explanation):
       },
       sections,
     };
+
+    console.log('[TemplateAI] Simple template generated:', {
+      sections: sections.length,
+      totalFields: sections.reduce((sum, s) => sum + s.items.length, 0),
+      template
+    });
 
     setState({ status: 'complete', progress: 100, message: 'Template generated!' });
     onTemplateGenerated(template);

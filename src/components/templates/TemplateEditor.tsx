@@ -156,10 +156,12 @@ export function TemplateEditor({
 
   // Handle AI-generated template
   const handleAITemplate = (generatedTemplate: DisplayTemplate) => {
+    console.log('[TemplateEditor] Applying AI-generated template:', generatedTemplate);
     setTemplate(generatedTemplate);
     onChange(generatedTemplate);
     setSelectedSectionId(null);
     setSelectedItemId(null);
+    setShowAIAssistant(false); // Close modal after successful generation
   };
 
   return (

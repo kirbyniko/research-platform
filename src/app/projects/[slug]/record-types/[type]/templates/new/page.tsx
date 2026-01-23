@@ -75,6 +75,13 @@ export default function NewTemplatePage() {
     setError(null);
 
     try {
+      console.log('[TemplateSave] Saving template:', {
+        name: name.trim(),
+        sections: template.sections.length,
+        fields: template.sections.reduce((sum, s) => sum + s.items.length, 0),
+        template
+      });
+      
       const res = await fetch(`/api/projects/${slug}/record-types/${type}/templates`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -89,13 +96,19 @@ export default function NewTemplatePage() {
       const data = await res.json();
 
       if (!res.ok) {
-        if (data.validationErrors) {
+        console.error('[TemplateSave] Save failed:', { status: res.status, data });
+        if (data.validation?.errors) {
+          const errorMsg = data.validation.errors.map((e: any) => `${e.path}: ${e.message}`).join(', ');
+          setError(`Validation errors: ${errorMsg}`);
+        } else if (data.validationErrors) {
           setError(`Validation errors: ${data.validationErrors.join(', ')}`);
         } else {
           throw new Error(data.error || 'Failed to create template');
         }
         return;
       }
+      
+      console.log('[TemplateSave] Template saved successfully:', data);
 
       router.push(`/projects/${slug}/record-types/${type}/templates`);
     } catch (err) {
