@@ -133,9 +133,12 @@ export default function NewRecordPage({ params }: { params: Promise<{ slug: stri
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="mb-6">
-        <Link href={`/projects/${projectSlug}/records`} className="text-blue-600 hover:underline text-sm">
-          ← Back to Records
-        </Link>
+        <button 
+          onClick={() => router.back()}
+          className="text-blue-600 hover:underline text-sm"
+        >
+          ← Back
+        </button>
         <h1 className="text-2xl font-bold mt-2">Create New Record</h1>
       </div>
 
