@@ -50,18 +50,28 @@ export default function BillingPage() {
     }
 
     fetch('/api/projects')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`Failed to load projects: ${res.status}`);
+        }
+        return res.json();
+      })
       .then(data => {
-        if (data.projects && data.projects.length > 0) {
+        if (data.error) {
+          setError(data.error);
+          setLoading(false);
+        } else if (data.projects && data.projects.length > 0) {
           setProjects(data.projects);
           setSelectedProjectId(data.projects[0].id);
+          // Don't set loading to false here - wait for usage data to load
         } else {
           setError('No projects found. Please create a project first.');
           setLoading(false);
         }
       })
       .catch(err => {
-        setError(err.message);
+        console.error('Error loading projects:', err);
+        setError(err.message || 'Failed to load projects');
         setLoading(false);
       });
   }, [session, status]);
@@ -72,17 +82,24 @@ export default function BillingPage() {
 
     setLoading(true);
     fetch(`/api/ai/usage?projectId=${selectedProjectId}`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`Failed to load usage data: ${res.status}`);
+        }
+        return res.json();
+      })
       .then(data => {
         if (data.error) {
           setError(data.error);
         } else {
           setUsageData(data);
+          setError(null); // Clear any previous errors
         }
         setLoading(false);
       })
       .catch(err => {
-        setError(err.message);
+        console.error('Error loading usage data:', err);
+        setError(err.message || 'Failed to load usage data');
         setLoading(false);
       });
   }, [selectedProjectId]);
