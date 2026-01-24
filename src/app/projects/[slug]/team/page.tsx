@@ -56,6 +56,9 @@ export default function ProjectTeam({
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [editingUploadPerms, setEditingUploadPerms] = useState<number | null>(null);
+  const [memberCredits, setMemberCredits] = useState<Record<number, { balance: number; usage_total: number }>>({});
+  const [allocatingTo, setAllocatingTo] = useState<number | null>(null);
+  const [allocateAmount, setAllocateAmount] = useState<number>(10);
 
   useEffect(() => {
     params.then(p => setProjectSlug(p.slug));
@@ -64,10 +67,30 @@ export default function ProjectTeam({
   useEffect(() => {
     if (status === 'authenticated' && projectSlug) {
       fetchMembers();
+      fetchMemberCredits();
     } else if (status === 'unauthenticated') {
       router.push('/login');
     }
   }, [status, projectSlug]);
+
+  async function fetchMemberCredits() {
+    try {
+      const response = await fetch(`/api/projects/${projectSlug}/team/credits`);
+      if (response.ok) {
+        const data = await response.json();
+        const creditsMap: Record<number, any> = {};
+        data.members?.forEach((m: any) => {
+          creditsMap[m.user_id] = {
+            balance: m.balance || 0,
+            usage_total: m.usage_total || 0
+          };
+        });
+        setMemberCredits(creditsMap);
+      }
+    } catch (err) {
+      console.error('Failed to fetch member credits:', err);
+    }
+  }
 
   async function fetchMembers() {
     try {
@@ -204,10 +227,40 @@ export default function ProjectTeam({
         throw new Error(data.error || 'Failed to update quota');
       }
 
-      fetchMembers();
       setEditingUploadPerms(null);
+      fetchMembers();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to update quota');
+    }
+  }
+
+  async function handleAllocateCredits(userId: number) {
+    if (allocateAmount <= 0) {
+      alert('Please enter a positive amount');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/projects/${projectSlug}/team/credits`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userId, 
+          amount: allocateAmount,
+          reason: 'Manual allocation by project admin'
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || data.details || 'Failed to allocate credits');
+      }
+
+      setAllocatingTo(null);
+      setAllocateAmount(10);
+      fetchMemberCredits();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to allocate credits');
     }
   }
 
@@ -374,6 +427,54 @@ export default function ProjectTeam({
                           {(member.role === 'owner' || member.role === 'admin') && (
                             <span className="text-xs text-gray-400">(automatic)</span>
                           )}
+                        </div>
+
+                        {/* AI Credits */}
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="text-sm font-medium text-gray-700">AI Credits: </span>
+                              <span className="text-sm text-gray-900 font-semibold">
+                                {memberCredits[member.user_id]?.balance || 0}
+                              </span>
+                              <span className="text-xs text-gray-500 ml-2">
+                                ({memberCredits[member.user_id]?.usage_total || 0} used)
+                              </span>
+                            </div>
+                            {(member.role !== 'owner') && (
+                              allocatingTo === member.user_id ? (
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={allocateAmount}
+                                    onChange={(e) => setAllocateAmount(parseInt(e.target.value) || 0)}
+                                    className="w-20 px-2 py-1 border rounded text-sm"
+                                    placeholder="Amount"
+                                  />
+                                  <button
+                                    onClick={() => handleAllocateCredits(member.user_id)}
+                                    className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                                  >
+                                    Give
+                                  </button>
+                                  <button
+                                    onClick={() => setAllocatingTo(null)}
+                                    className="text-xs text-gray-600 hover:text-gray-800"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setAllocatingTo(member.user_id)}
+                                  className="text-xs text-blue-600 hover:text-blue-800"
+                                >
+                                  Allocate Credits
+                                </button>
+                              )
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>

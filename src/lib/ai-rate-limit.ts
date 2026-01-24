@@ -111,15 +111,29 @@ export async function checkAIRateLimit(
     };
   }
   
-  // If tier requires credits, check project credit balance
+  // If tier requires credits, check member's individual credit balance first, then project pool
   let creditsBalance = 0;
+  let usingMemberCredits = false;
+  
   if (tier.requires_credits && tier.credits_per_request > 0) {
-    const creditsResult = await pool.query(
-      `SELECT balance FROM user_credits WHERE project_id = $1 ORDER BY id LIMIT 1`,
-      [projectId]
+    // First check if user has individual member credits
+    const memberCreditsResult = await pool.query(
+      `SELECT balance FROM project_member_credits WHERE project_id = $1 AND user_id = $2`,
+      [projectId, userId]
     );
     
-    creditsBalance = creditsResult.rows[0]?.balance || 0;
+    if (memberCreditsResult.rows.length > 0 && memberCreditsResult.rows[0].balance >= tier.credits_per_request) {
+      creditsBalance = memberCreditsResult.rows[0].balance;
+      usingMemberCredits = true;
+    } else {
+      // Fall back to project pool
+      const creditsResult = await pool.query(
+        `SELECT balance FROM user_credits WHERE project_id = $1 ORDER BY id LIMIT 1`,
+        [projectId]
+      );
+      
+      creditsBalance = creditsResult.rows[0]?.balance || 0;
+    }
     
     if (creditsBalance < tier.credits_per_request) {
       return {
@@ -127,7 +141,7 @@ export async function checkAIRateLimit(
         remaining: creditsBalance,
         resetAt: new Date(),
         tier: tier.name,
-        reason: `Insufficient project credits (need ${tier.credits_per_request}, have ${creditsBalance})`,
+        reason: `Insufficient credits (need ${tier.credits_per_request}, have ${creditsBalance})`,
         creditsRemaining: creditsBalance,
         hourlyRemaining: tier.requests_per_hour - hourCount,
         dailyRemaining: tier.requests_per_day - dayCount
@@ -187,20 +201,30 @@ export async function recordAIUsage(
   let creditsUsed = 0;
   let wasFree = true;
   
-  // If credits required, deduct them from PROJECT balance
+  // If credits required, deduct them from member's balance first, then project pool
   if (tier.requires_credits && tier.credits_per_request > 0) {
     creditsUsed = tier.credits_per_request;
     wasFree = false;
     
-    // Deduct credits from project
-    await pool.query(`
-      UPDATE user_credits 
-      SET balance = balance - $2, total_used = total_used + $2, updated_at = NOW()
-      WHERE project_id = $1
-    `, [projectId, creditsUsed]);
+    // Try to deduct from member credits first
+    const memberDeduct = await pool.query(`
+      UPDATE project_member_credits 
+      SET balance = balance - $3, updated_at = NOW()
+      WHERE project_id = $1 AND user_id = $2 AND balance >= $3
+      RETURNING id
+    `, [projectId, userId, creditsUsed]);
+    
+    // If no member credits, deduct from project pool
+    if (memberDeduct.rows.length === 0) {
+      await pool.query(`
+        UPDATE user_credits 
+        SET balance = balance - $2, total_used = total_used + $2, updated_at = NOW()
+        WHERE project_id = $1
+      `, [projectId, creditsUsed]);
+    }
   }
   
-  // Record the usage
+  // Record the usage with user_id
   const usageResult = await pool.query(`
     INSERT INTO ai_usage 
     (user_id, operation_type, model_name, input_tokens, output_tokens, credits_used, was_free_tier, project_id, record_type_id, response_time_ms)
