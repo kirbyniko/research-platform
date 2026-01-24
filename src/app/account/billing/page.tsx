@@ -1,6 +1,7 @@
 'use client';
 
 // Billing page for managing project credits and AI usage
+// Rebuild trigger: 20260124-001
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
