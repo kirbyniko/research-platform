@@ -410,10 +410,10 @@ export async function addCredits(
   // Ensure project has a credits record
   try {
     await pool.query(`
-      INSERT INTO user_credits (project_id, balance, total_purchased)
-      VALUES ($1, 0, 0)
+      INSERT INTO user_credits (user_id, project_id, balance, total_purchased)
+      VALUES ($1, $2, 0, 0)
       ON CONFLICT (project_id) DO NOTHING
-    `, [projectId]);
+    `, [userId, projectId]);
     console.log(`[addCredits] Ensured credits record exists for project ${projectId}`);
   } catch (error) {
     console.error(`[addCredits] Error creating credits record:`, error);
