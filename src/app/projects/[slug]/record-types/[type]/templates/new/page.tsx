@@ -32,7 +32,7 @@ export default function NewTemplatePage() {
   const type = params.type as string;
 
   const [fields, setFields] = useState<FieldDefinition[]>([]);
-  const [recordType, setRecordType] = useState<{ id: number; name: string; slug: string; enabled_data_types?: string[] } | null>(null);
+  const [recordType, setRecordType] = useState<{ id: number; name: string; slug: string; enabled_data_types?: string[]; project_id?: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -249,6 +249,7 @@ export default function NewTemplatePage() {
           enabledDataTypes={getEnabledDataTypes(recordType?.enabled_data_types)}
           initialTemplate={template}
           onChange={setTemplate}
+          projectId={recordType?.project_id}
         />
 
         {/* Live Preview */}

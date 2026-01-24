@@ -111,6 +111,14 @@ export default function Navigation() {
                         My Projects
                       </Link>
 
+                      <Link
+                        href="/account/billing"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        Billing & Credits
+                      </Link>
+
                       {user.role === 'admin' && (
                         <Link
                           href="/admin"

@@ -19,6 +19,7 @@ interface TemplateEditorProps {
   initialTemplate?: DisplayTemplate;
   onChange: (template: DisplayTemplate) => void;
   previewData?: Record<string, any>;
+  projectId?: number;
 }
 
 const DEFAULT_TEMPLATE: DisplayTemplate = {
@@ -45,6 +46,7 @@ export function TemplateEditor({
   initialTemplate,
   onChange,
   previewData,
+  projectId,
 }: TemplateEditorProps) {
   const [template, setTemplate] = useState<DisplayTemplate>(initialTemplate || DEFAULT_TEMPLATE);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
@@ -368,6 +370,7 @@ export function TemplateEditor({
       onTemplateGenerated={handleAITemplate}
       isOpen={showAIAssistant}
       onClose={() => setShowAIAssistant(false)}
+      projectId={projectId}
     />
     </>
   );

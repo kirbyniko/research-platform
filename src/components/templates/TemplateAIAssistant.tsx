@@ -11,6 +11,7 @@ interface TemplateAIAssistantProps {
   onTemplateGenerated: (template: DisplayTemplate) => void;
   isOpen: boolean;
   onClose: () => void;
+  projectId?: number;
 }
 
 const EXAMPLE_PROMPTS = [
@@ -27,6 +28,7 @@ export function TemplateAIAssistant({
   onTemplateGenerated,
   isOpen,
   onClose,
+  projectId,
 }: TemplateAIAssistantProps) {
   const [prompt, setPrompt] = useState('');
   const [history, setHistory] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
@@ -42,6 +44,7 @@ export function TemplateAIAssistant({
   } = useTemplateAI({
     fields,
     enabledDataTypes,
+    projectId,
     onTemplateGenerated: (template) => {
       console.log('[AIAssistant] Template generated, calling parent callback');
       onTemplateGenerated(template);

@@ -8,6 +8,7 @@ interface UseTemplateAIOptions {
   fields: FieldDefinition[];
   enabledDataTypes: { quotes: boolean; sources: boolean; media: boolean };
   onTemplateGenerated: (template: DisplayTemplate) => void;
+  projectId?: number;
 }
 
 interface AIState {
@@ -55,6 +56,7 @@ export function useTemplateAI({
   fields,
   enabledDataTypes,
   onTemplateGenerated,
+  projectId,
 }: UseTemplateAIOptions) {
   const [state, setState] = useState<AIState>({
     status: 'idle',
@@ -302,25 +304,33 @@ Return ONLY valid JSON matching this structure (no markdown, no explanation):
     try {
       setState({ status: 'loading-model', progress: 0, message: 'Initializing AI...', error: undefined });
 
-      // Try GitHub Copilot API first (server-side)
+      // Try OpenAI API first (server-side)
       try {
-        setState(s => ({ ...s, message: 'Connecting to GitHub Copilot...' }));
+        setState(s => ({ ...s, message: 'Connecting to AI service...' }));
         
         const response = await fetch('/api/ai/generate-template', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            prompt,
+            userPrompt: prompt,
             fields,
             enabledDataTypes,
+            recordTypeName: 'Record',
+            projectName: 'Project',
+            projectId,
           }),
         });
 
         const data = await response.json();
 
-        // If successful, use the Copilot-generated template
+        // Handle rate limiting
+        if (response.status === 429) {
+          throw new Error(data.message || 'Rate limit exceeded. Please try again later.');
+        }
+
+        // If successful, use the generated template
         if (response.ok && data.template) {
-          console.log('[TemplateAI] GitHub Copilot generated template:', data.template);
+          console.log('[TemplateAI] AI generated template:', data.template);
           
           setState(s => ({ ...s, status: 'validating', message: 'Validating template...' }));
 
@@ -333,13 +343,13 @@ Return ONLY valid JSON matching this structure (no markdown, no explanation):
           // Sanitize and return
           const template = sanitizeTemplate(data.template);
           
-          console.log('[TemplateAI] Template generated successfully via Copilot:', {
+          console.log('[TemplateAI] Template generated successfully via AI:', {
             sections: template.sections.length,
             totalFields: template.sections.reduce((sum, s) => sum + s.items.length, 0),
             template
           });
           
-          setState({ status: 'complete', progress: 100, message: 'Template generated via GitHub Copilot!' });
+          setState({ status: 'complete', progress: 100, message: 'Template generated via GPT-4o!' });
           onTemplateGenerated(template);
 
           return template;
@@ -350,9 +360,9 @@ Return ONLY valid JSON matching this structure (no markdown, no explanation):
           throw new Error(data.error || 'Failed to generate template');
         }
 
-        console.log('[TemplateAI] Copilot unavailable, falling back to local WebLLM');
-      } catch (copilotError) {
-        console.log('[TemplateAI] Copilot error, falling back to WebLLM:', copilotError);
+        console.log('[TemplateAI] API unavailable, falling back to local WebLLM');
+      } catch (apiError) {
+        console.log('[TemplateAI] API error, falling back to WebLLM:', apiError);
       }
 
       // Fall back to local WebLLM
