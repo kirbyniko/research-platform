@@ -11,19 +11,13 @@ interface Project {
   name: string;
   description?: string;
   is_public: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-interface ProjectWithRole {
-  project: Project;
   role: string;
 }
 
 export default function ProjectsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [projects, setProjects] = useState<ProjectWithRole[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,8 +37,16 @@ export default function ProjectsPage() {
       const response = await fetch('/api/projects');
       if (!response.ok) throw new Error('Failed to fetch projects');
       const data = await response.json();
-      setProjects(data.projects);
+      console.log('[ProjectsPage] API response:', data);
+      
+      if (Array.isArray(data.projects)) {
+        const validProjects = data.projects.filter((p: any) => p && typeof p === 'object' && p.id);
+        setProjects(validProjects);
+      } else {
+        setProjects([]);
+      }
     } catch (err) {
+      console.error('[ProjectsPage] Error:', err);
       setError(err instanceof Error ? err.message : 'Failed to load projects');
     } finally {
       setLoading(false);
@@ -97,22 +99,22 @@ export default function ProjectsPage() {
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {projects.map(({ project, role }) => (
+            {projects.filter(p => p && p.id && p.slug).map((project) => (
               <Link
                 key={project.id}
                 href={`/projects/${project.slug}`}
                 className="bg-white rounded-lg shadow hover:shadow-md transition p-6 block"
               >
                 <div className="flex items-start justify-between mb-3">
-                  <h2 className="text-xl font-semibold text-gray-900">{project.name}</h2>
+                  <h2 className="text-xl font-semibold text-gray-900">{project.name || 'Unnamed'}</h2>
                   <span className={`text-xs px-2 py-1 rounded-full ${
-                    role === 'owner' ? 'bg-purple-100 text-purple-700' :
-                    role === 'admin' ? 'bg-blue-100 text-blue-700' :
-                    role === 'reviewer' ? 'bg-green-100 text-green-700' :
-                    role === 'validator' ? 'bg-yellow-100 text-yellow-700' :
+                    project.role === 'owner' ? 'bg-purple-100 text-purple-700' :
+                    project.role === 'admin' ? 'bg-blue-100 text-blue-700' :
+                    project.role === 'reviewer' ? 'bg-green-100 text-green-700' :
+                    project.role === 'validator' ? 'bg-yellow-100 text-yellow-700' :
                     'bg-gray-100 text-gray-700'
                   }`}>
-                    {role}
+                    {project.role || 'member'}
                   </span>
                 </div>
                 
@@ -125,9 +127,6 @@ export default function ProjectsPage() {
                 <div className="flex items-center gap-4 text-xs text-gray-500">
                   <span className={`flex items-center gap-1 ${project.is_public ? 'text-green-600' : 'text-gray-500'}`}>
                     {project.is_public ? '🌐 Public' : '🔒 Private'}
-                  </span>
-                  <span>
-                    Updated {new Date(project.updated_at).toLocaleDateString()}
                   </span>
                 </div>
               </Link>
