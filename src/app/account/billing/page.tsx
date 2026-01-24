@@ -47,20 +47,29 @@ export default function BillingPage() {
 
   // Load user's projects
   useEffect(() => {
-    if (status === 'loading') return;
+    console.log('[Billing] useEffect triggered - status:', status, 'session:', !!session);
+    
+    if (status === 'loading') {
+      console.log('[Billing] Status is loading, returning');
+      return;
+    }
     if (!session) {
+      console.log('[Billing] No session, setting loading to false');
       setLoading(false);
       return;
     }
 
+    console.log('[Billing] Fetching projects...');
     fetch('/api/projects')
       .then(res => {
+        console.log('[Billing] Projects API response:', res.status);
         if (!res.ok) {
           throw new Error(`Failed to load projects: ${res.status}`);
         }
         return res.json();
       })
       .then(data => {
+        console.log('[Billing] Projects data:', data);
         if (data.error) {
           setError(data.error);
           setLoading(false);
@@ -74,7 +83,7 @@ export default function BillingPage() {
         }
       })
       .catch(err => {
-        console.error('Error loading projects:', err);
+        console.error('[Billing] Error loading projects:', err);
         setError(err.message || 'Failed to load projects');
         setLoading(false);
       });
