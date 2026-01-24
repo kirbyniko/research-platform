@@ -117,9 +117,17 @@ export default function NewTemplatePage() {
       });
 
       const data = await res.json();
+      console.log('[TemplateSave] Response data:', data);
 
       if (!res.ok) {
         console.error('[TemplateSave] Save failed:', { status: res.status, data });
+        
+        // Show the actual error details to the user
+        if (data.details) {
+          setError(`Server error: ${data.details}`);
+          return;
+        }
+        
         if (data.validation?.errors) {
           const errorMsg = data.validation.errors.map((e: any) => `${e.path}: ${e.message}`).join(', ');
           setError(`Validation errors: ${errorMsg}`);

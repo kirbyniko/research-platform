@@ -117,16 +117,20 @@ export async function POST(
 ) {
   console.log('[TemplateAPI] POST request started');
   try {
+    console.log('[TemplateAPI] Getting auth...');
     const authResult = await requireServerAuth(request);
     console.log('[TemplateAPI] Auth result:', 'error' in authResult ? 'error' : 'success');
     if ('error' in authResult) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
     const userId = authResult.user.id;
+    console.log('[TemplateAPI] User ID:', userId);
 
+    console.log('[TemplateAPI] Getting params...');
     const { slug, type } = await params;
     console.log('[TemplateAPI] Params:', { slug, type });
     
+    console.log('[TemplateAPI] Parsing body...');
     const body = await request.json();
     console.log('[TemplateAPI] Body received:', { 
       name: body.name, 
