@@ -304,10 +304,75 @@ export async function getUserCreditsAndUsage(userId: number) {
 }
 
 /**
- * Add credits to a user's account (after Stripe payment)
+ * Get project credits and usage statistics
+ */
+export async function getProjectCreditsAndUsage(userId: number, projectId: number) {
+  // Get project credits
+  const creditsResult = await pool.query(`
+    SELECT balance, total_purchased, total_used 
+    FROM user_credits 
+    WHERE project_id = $1
+  `, [projectId]);
+  
+  const credits = creditsResult.rows[0] || { balance: 0, total_purchased: 0, total_used: 0 };
+  
+  // Get recent usage for this project
+  const now = new Date();
+  const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+  const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  
+  const usageResult = await pool.query(`
+    SELECT 
+      COUNT(*) FILTER (WHERE created_at > $2) as hour_count,
+      COUNT(*) FILTER (WHERE created_at > $3) as day_count,
+      COUNT(*) FILTER (WHERE created_at > $4) as month_count,
+      COUNT(*) as total_count
+    FROM ai_usage 
+    WHERE project_id = $1
+  `, [projectId, hourAgo, dayAgo, monthAgo]);
+  
+  const usage = usageResult.rows[0];
+  
+  // Get user tier and limits
+  const userResult = await pool.query(`
+    SELECT u.ai_tier, r.* 
+    FROM users u
+    LEFT JOIN rate_limit_tiers r ON r.name = u.ai_tier
+    WHERE u.id = $1
+  `, [userId]);
+  
+  const tierInfo = userResult.rows[0] || { ai_tier: 'free', requests_per_hour: 3, requests_per_day: 10, requests_per_month: 50 };
+  
+  return {
+    credits: {
+      balance: credits.balance,
+      totalPurchased: credits.total_purchased,
+      totalUsed: credits.total_used,
+    },
+    usage: {
+      thisHour: parseInt(usage.hour_count) || 0,
+      today: parseInt(usage.day_count) || 0,
+      thisMonth: parseInt(usage.month_count) || 0,
+      allTime: parseInt(usage.total_count) || 0,
+    },
+    limits: {
+      tier: tierInfo.ai_tier || 'free',
+      perHour: tierInfo.requests_per_hour,
+      perDay: tierInfo.requests_per_day,
+      perMonth: tierInfo.requests_per_month,
+      requiresCredits: tierInfo.requires_credits,
+      creditsPerRequest: tierInfo.credits_per_request,
+    }
+  };
+}
+
+/**
+ * Add credits to a project (after Stripe payment)
  */
 export async function addCredits(
   userId: number,
+  projectId: number,
   amount: number,
   options: {
     stripePaymentIntentId?: string;
@@ -316,34 +381,35 @@ export async function addCredits(
     transactionType?: 'purchase' | 'bonus' | 'admin_adjustment' | 'refund';
   } = {}
 ): Promise<{ newBalance: number; transactionId: number }> {
-  // Ensure user has a credits record
+  // Ensure project has a credits record
   await pool.query(`
-    INSERT INTO user_credits (user_id, balance, total_purchased)
+    INSERT INTO user_credits (project_id, balance, total_purchased)
     VALUES ($1, 0, 0)
-    ON CONFLICT (user_id) DO NOTHING
-  `, [userId]);
+    ON CONFLICT (project_id) DO NOTHING
+  `, [projectId]);
   
-  // Add credits
+  // Add credits to project
   const updateResult = await pool.query(`
     UPDATE user_credits 
     SET 
       balance = balance + $2, 
       total_purchased = CASE WHEN $3 = 'purchase' THEN total_purchased + $2 ELSE total_purchased END,
       updated_at = NOW()
-    WHERE user_id = $1
+    WHERE project_id = $1
     RETURNING balance
-  `, [userId, amount, options.transactionType || 'purchase']);
+  `, [projectId, amount, options.transactionType || 'purchase']);
   
   const newBalance = updateResult.rows[0].balance;
   
   // Record transaction
   const transactionResult = await pool.query(`
     INSERT INTO credit_transactions 
-    (user_id, transaction_type, amount, balance_after, stripe_payment_intent_id, stripe_checkout_session_id, description)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    (user_id, project_id, transaction_type, amount, balance_after, stripe_payment_intent_id, stripe_checkout_session_id, description)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING id
   `, [
     userId,
+    projectId,
     options.transactionType || 'purchase',
     amount,
     newBalance,

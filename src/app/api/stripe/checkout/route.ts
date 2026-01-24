@@ -17,12 +17,30 @@ export async function POST(request: NextRequest) {
     const userId = authResult.user.id;
 
     const body = await request.json();
-    const { packageId } = body;
+    const { packageId, projectId } = body;
+
+    if (!projectId) {
+      return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
+    }
 
     const pkg = getPackageById(packageId);
     if (!pkg) {
       return NextResponse.json({ error: 'Invalid package' }, { status: 400 });
     }
+
+    // Verify user has access to the project
+    const projectCheck = await pool.query(
+      `SELECT p.id, p.name FROM projects p
+       JOIN project_members pm ON pm.project_id = p.id
+       WHERE p.id = $1 AND pm.user_id = $2 AND p.deleted_at IS NULL`,
+      [projectId, userId]
+    );
+
+    if (projectCheck.rows.length === 0) {
+      return NextResponse.json({ error: 'Project not found or access denied' }, { status: 403 });
+    }
+
+    const project = projectCheck.rows[0];
 
     // Get or create Stripe customer ID
     let stripeCustomerId: string;
@@ -62,8 +80,8 @@ export async function POST(request: NextRequest) {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: pkg.name,
-              description: pkg.description,
+              name: `${pkg.name} - ${project.name}`,
+              description: `${pkg.description} for project: ${project.name}`,
             },
             unit_amount: pkg.price,
           },
@@ -71,10 +89,11 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/settings/credits?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/settings/credits?canceled=true`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/account/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/account/billing?canceled=true`,
       metadata: {
         userId: userId.toString(),
+        projectId: projectId.toString(),
         packageId: pkg.id,
         credits: pkg.credits.toString(),
       },

@@ -4,6 +4,12 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { CREDIT_PACKAGES } from '@/lib/stripe';
 
+interface Project {
+  id: number;
+  name: string;
+  slug: string;
+}
+
 interface UsageData {
   credits: {
     balance: number;
@@ -28,11 +34,14 @@ interface UsageData {
 
 export default function BillingPage() {
   const { data: session, status } = useSession();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [usageData, setUsageData] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState<string | null>(null);
 
+  // Load user's projects
   useEffect(() => {
     if (status === 'loading') return;
     if (!session) {
@@ -40,7 +49,29 @@ export default function BillingPage() {
       return;
     }
 
-    fetch('/api/ai/usage')
+    fetch('/api/projects')
+      .then(res => res.json())
+      .then(data => {
+        if (data.projects && data.projects.length > 0) {
+          setProjects(data.projects);
+          setSelectedProjectId(data.projects[0].id);
+        } else {
+          setError('No projects found. Please create a project first.');
+          setLoading(false);
+        }
+      })
+      .catch(err => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, [session, status]);
+
+  // Load usage data when project is selected
+  useEffect(() => {
+    if (!selectedProjectId) return;
+
+    setLoading(true);
+    fetch(`/api/ai/usage?projectId=${selectedProjectId}`)
       .then(res => res.json())
       .then(data => {
         if (data.error) {
@@ -54,15 +85,20 @@ export default function BillingPage() {
         setError(err.message);
         setLoading(false);
       });
-  }, [session, status]);
+  }, [selectedProjectId]);
 
   const handlePurchase = async (packageId: string) => {
+    if (!selectedProjectId) {
+      alert('Please select a project first');
+      return;
+    }
+
     setPurchasing(packageId);
     try {
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packageId }),
+        body: JSON.stringify({ packageId, projectId: selectedProjectId }),
       });
 
       const data = await response.json();
@@ -112,6 +148,29 @@ export default function BillingPage() {
           <h1 className="text-3xl font-bold text-gray-900">Billing & Usage</h1>
           <p className="mt-2 text-gray-600">Manage your AI credits and view usage statistics</p>
         </div>
+
+        {/* Project Selector */}
+        {projects.length > 0 && (
+          <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Project
+            </label>
+            <select
+              value={selectedProjectId || ''}
+              onChange={(e) => setSelectedProjectId(parseInt(e.target.value))}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-2 text-sm text-gray-500">
+              Credits are managed per project. Purchase credits for the selected project.
+            </p>
+          </div>
+        )}
 
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">

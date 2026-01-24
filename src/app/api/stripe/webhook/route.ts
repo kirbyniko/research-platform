@@ -38,26 +38,27 @@ export async function POST(request: NextRequest) {
       
       // Get metadata
       const userId = parseInt(session.metadata?.userId || '0');
+      const projectId = parseInt(session.metadata?.projectId || '0');
       const packageId = session.metadata?.packageId;
       const credits = parseInt(session.metadata?.credits || '0');
       
-      if (!userId || !credits) {
+      if (!userId || !projectId || !credits) {
         console.error('Missing metadata in checkout session:', session.id);
         return NextResponse.json({ error: 'Invalid session metadata' }, { status: 400 });
       }
 
-      console.log(`Processing checkout for user ${userId}: ${credits} credits`);
+      console.log(`Processing checkout for project ${projectId} by user ${userId}: ${credits} credits`);
 
       try {
-        // Add credits to user
-        const result = await addCredits(userId, credits, {
+        // Add credits to project
+        const result = await addCredits(userId, projectId, credits, {
           stripeCheckoutSessionId: session.id,
           stripePaymentIntentId: session.payment_intent as string,
           description: `Purchased ${packageId}: ${credits} credits`,
           transactionType: 'purchase',
         });
 
-        console.log(`Added ${credits} credits to user ${userId}. New balance: ${result.newBalance}`);
+        console.log(`Added ${credits} credits to project ${projectId}. New balance: ${result.newBalance}`);
       } catch (error) {
         console.error('Failed to add credits:', error);
         return NextResponse.json({ error: 'Failed to add credits' }, { status: 500 });
