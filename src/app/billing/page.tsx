@@ -59,18 +59,27 @@ export default function BillingPage() {
         return res.json();
       })
       .then(data => {
+        console.log('[BillingPage] Projects API response:', data);
         if (data.error) {
           setError(data.error);
           setLoading(false);
-        } else if (data.projects && data.projects.length > 0) {
-          setProjects(data.projects);
-          setSelectedProjectId(data.projects[0].id);
+        } else if (Array.isArray(data.projects) && data.projects.length > 0) {
+          // Validate project structure
+          const validProjects = data.projects.filter((p: any) => p && typeof p === 'object' && p.id);
+          if (validProjects.length > 0) {
+            setProjects(validProjects);
+            setSelectedProjectId(validProjects[0].id);
+          } else {
+            setError('Projects data is malformed. Please reload the page.');
+            setLoading(false);
+          }
         } else {
           setError('No projects found. Please create a project first.');
           setLoading(false);
         }
       })
       .catch(err => {
+        console.error('[BillingPage] Error loading projects:', err);
         setError(err.message || 'Failed to load projects');
         setLoading(false);
       });
@@ -183,9 +192,9 @@ export default function BillingPage() {
               onChange={(e) => setSelectedProjectId(parseInt(e.target.value))}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
-              {projects.map((project) => (
+              {projects.filter(p => p && p.id).map((project) => (
                 <option key={project.id} value={project.id}>
-                  {project.name}
+                  {project.name || 'Unnamed Project'}
                 </option>
               ))}
             </select>
