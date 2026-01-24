@@ -74,8 +74,10 @@ export default function BillingPage() {
           setError(data.error);
           setLoading(false);
         } else if (data.projects && data.projects.length > 0) {
+          console.log('[Billing] Setting projects and selectedProjectId:', data.projects[0].id);
           setProjects(data.projects);
           setSelectedProjectId(data.projects[0].id);
+          console.log('[Billing] State update called');
           // Don't set loading to false here - wait for usage data to load
         } else {
           setError('No projects found. Please create a project first.');
