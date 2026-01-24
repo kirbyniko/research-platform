@@ -70,13 +70,15 @@ export default function BillingPage() {
       })
       .then(data => {
         console.log('[Billing] Projects data:', data);
+        console.log('[Billing] First project:', JSON.stringify(data.projects?.[0]));
         if (data.error) {
           setError(data.error);
           setLoading(false);
         } else if (data.projects && data.projects.length > 0) {
-          console.log('[Billing] Setting projects and selectedProjectId:', data.projects[0].id);
+          const projectId = data.projects[0].id;
+          console.log('[Billing] Setting projects and selectedProjectId:', projectId);
           setProjects(data.projects);
-          setSelectedProjectId(data.projects[0].id);
+          setSelectedProjectId(projectId);
           console.log('[Billing] State update called');
           // Don't set loading to false here - wait for usage data to load
         } else {
