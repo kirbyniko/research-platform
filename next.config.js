@@ -30,6 +30,16 @@ const nextConfig = {
   },
   
   // Security headers for production
+  async redirects() {
+    return [
+      {
+        source: '/account/billing',
+        destination: '/billing',
+        permanent: true,
+      },
+    ];
+  },
+
   async headers() {
     return [
       {
