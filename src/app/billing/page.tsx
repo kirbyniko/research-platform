@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { CREDIT_PACKAGES } from '@/lib/stripe';
+import { CREDIT_PACKAGES } from '@/lib/stripe-packages';
 
 interface Project {
   id: number;
