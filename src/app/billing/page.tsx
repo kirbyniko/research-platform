@@ -43,6 +43,36 @@ export default function BillingPage() {
   const [error, setError] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState<string | null>(null);
 
+  // Check for successful payment on page load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const success = urlParams.get('success');
+    const sessionId = urlParams.get('session_id');
+
+    if (success === 'true' && sessionId) {
+      console.log('[BillingPage] Payment success detected, verifying...', sessionId);
+      
+      // Verify the payment and add credits if not already done
+      fetch('/api/stripe/verify-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      })
+        .then(res => res.json())
+        .then(data => {
+          console.log('[BillingPage] Verification result:', data);
+          if (data.success) {
+            // Remove query params and reload
+            window.history.replaceState({}, '', '/billing');
+            window.location.reload();
+          }
+        })
+        .catch(err => {
+          console.error('[BillingPage] Verification error:', err);
+        });
+    }
+  }, []);
+
   // Load user's projects
   useEffect(() => {
     if (status === 'loading') return;
