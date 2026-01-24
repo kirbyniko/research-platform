@@ -80,25 +80,35 @@ export default function BillingPage() {
   useEffect(() => {
     if (!selectedProjectId) return;
 
+    console.log('[Billing] Loading usage for project:', selectedProjectId);
     setLoading(true);
+    setError(null);
+    
     fetch(`/api/ai/usage?projectId=${selectedProjectId}`)
       .then(res => {
+        console.log('[Billing] Usage API response status:', res.status);
         if (!res.ok) {
-          throw new Error(`Failed to load usage data: ${res.status}`);
+          return res.json().then(data => {
+            throw new Error(data.details || data.error || `Failed to load usage data: ${res.status}`);
+          }).catch(err => {
+            if (err.message) throw err;
+            throw new Error(`Failed to load usage data: ${res.status}`);
+          });
         }
         return res.json();
       })
       .then(data => {
+        console.log('[Billing] Usage data loaded:', data);
         if (data.error) {
-          setError(data.error);
+          setError(`Error: ${data.error}${data.details ? ` - ${data.details}` : ''}`);
         } else {
           setUsageData(data);
-          setError(null); // Clear any previous errors
+          setError(null);
         }
         setLoading(false);
       })
       .catch(err => {
-        console.error('Error loading usage data:', err);
+        console.error('[Billing] Error loading usage data:', err);
         setError(err.message || 'Failed to load usage data');
         setLoading(false);
       });
