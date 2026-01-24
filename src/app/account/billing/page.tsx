@@ -91,7 +91,11 @@ export default function BillingPage() {
 
   // Load usage data when project is selected
   useEffect(() => {
-    if (!selectedProjectId) return;
+    console.log('[Billing] Usage useEffect fired - selectedProjectId:', selectedProjectId);
+    if (!selectedProjectId) {
+      console.log('[Billing] No selectedProjectId, returning');
+      return;
+    }
 
     console.log('[Billing] Loading usage for project:', selectedProjectId);
     setLoading(true);
