@@ -15,6 +15,7 @@
     "@aws-sdk/s3-request-presigner": "^3.972.0",
     "@descope/nextjs-sdk": "^0.15.7",
     "@descope/react-sdk": "^2.25.7",
+    "@github/copilot-sdk": "^0.1.17",
     "@mlc-ai/web-llm": "^0.2.80",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",

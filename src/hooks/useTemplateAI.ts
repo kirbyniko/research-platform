@@ -302,9 +302,63 @@ Return ONLY valid JSON matching this structure (no markdown, no explanation):
     try {
       setState({ status: 'loading-model', progress: 0, message: 'Initializing AI...', error: undefined });
 
+      // Try GitHub Copilot API first (server-side)
+      try {
+        setState(s => ({ ...s, message: 'Connecting to GitHub Copilot...' }));
+        
+        const response = await fetch('/api/ai/generate-template', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt,
+            fields,
+            enabledDataTypes,
+          }),
+        });
+
+        const data = await response.json();
+
+        // If successful, use the Copilot-generated template
+        if (response.ok && data.template) {
+          console.log('[TemplateAI] GitHub Copilot generated template:', data.template);
+          
+          setState(s => ({ ...s, status: 'validating', message: 'Validating template...' }));
+
+          // Validate
+          const validation = validateTemplate(data.template);
+          if (!validation.valid) {
+            throw new Error(`Invalid template: ${validation.errors.join(', ')}`);
+          }
+
+          // Sanitize and return
+          const template = sanitizeTemplate(data.template);
+          
+          console.log('[TemplateAI] Template generated successfully via Copilot:', {
+            sections: template.sections.length,
+            totalFields: template.sections.reduce((sum, s) => sum + s.items.length, 0),
+            template
+          });
+          
+          setState({ status: 'complete', progress: 100, message: 'Template generated via GitHub Copilot!' });
+          onTemplateGenerated(template);
+
+          return template;
+        }
+
+        // If fallback flag is set, continue to local WebLLM
+        if (!data.fallback) {
+          throw new Error(data.error || 'Failed to generate template');
+        }
+
+        console.log('[TemplateAI] Copilot unavailable, falling back to local WebLLM');
+      } catch (copilotError) {
+        console.log('[TemplateAI] Copilot error, falling back to WebLLM:', copilotError);
+      }
+
+      // Fall back to local WebLLM
       const engine = await initEngine();
 
-      setState(s => ({ ...s, status: 'generating', message: 'Generating template...' }));
+      setState(s => ({ ...s, status: 'generating', message: 'Generating template with local AI...' }));
 
       const response = await engine.chat.completions.create({
         messages: [
@@ -358,7 +412,7 @@ Return ONLY valid JSON matching this structure (no markdown, no explanation):
       setState({ status: 'error', progress: 0, message: '', error: errorMessage });
       throw error;
     }
-  }, [initEngine, buildSystemPrompt, validateTemplate, sanitizeTemplate, onTemplateGenerated]);
+  }, [initEngine, buildSystemPrompt, validateTemplate, sanitizeTemplate, onTemplateGenerated, fields, enabledDataTypes]);
 
   // Generate using a simpler rule-based approach (fallback when WebGPU not available)
   const generateSimpleTemplate = useCallback((prompt: string) => {
