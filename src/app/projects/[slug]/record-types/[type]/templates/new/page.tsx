@@ -126,7 +126,8 @@ export default function NewTemplatePage() {
         } else if (data.validationErrors) {
           setError(`Validation errors: ${data.validationErrors.join(', ')}`);
         } else {
-          throw new Error(data.error || 'Failed to create template');
+          const errorDetails = data.details ? `\n\nDetails: ${data.details}` : '';
+          throw new Error((data.error || 'Failed to create template') + errorDetails);
         }
         return;
       }
