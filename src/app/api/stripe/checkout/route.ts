@@ -71,6 +71,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get the base URL from the request
+    const protocol = request.headers.get('x-forwarded-proto') || 'http';
+    const host = request.headers.get('host') || 'localhost:3000';
+    const baseUrl = `${protocol}://${host}`;
+
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
@@ -89,8 +94,8 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/billing`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/billing`,
+      success_url: `${baseUrl}/billing?success=true`,
+      cancel_url: `${baseUrl}/billing`,
       metadata: {
         userId: userId.toString(),
         projectId: projectId.toString(),
