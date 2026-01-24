@@ -169,7 +169,7 @@ export async function POST(
 
     // Get record type
     const recordTypeResult = await pool.query(
-      `SELECT id, settings FROM record_types WHERE project_id = $1 AND slug = $2`,
+      `SELECT id, type_settings, use_quotes, use_sources, use_media FROM record_types WHERE project_id = $1 AND slug = $2`,
       [projectId, type]
     );
     if (recordTypeResult.rows.length === 0) {
@@ -177,8 +177,7 @@ export async function POST(
       return NextResponse.json({ error: 'Record type not found' }, { status: 404 });
     }
     const recordType = recordTypeResult.rows[0];
-    const settings = recordType.settings || {};
-    console.log('[TemplateAPI] Record type:', { id: recordType.id, settings: !!settings });
+    console.log('[TemplateAPI] Record type:', { id: recordType.id });
 
     // Get available fields
     const fieldsResult = await pool.query(
@@ -194,9 +193,9 @@ export async function POST(
       body.template,
       fieldSlugs,
       {
-        quotes: settings.enable_quotes !== false,
-        sources: settings.enable_sources !== false,
-        media: settings.enable_media !== false,
+        quotes: recordType.use_quotes !== false,
+        sources: recordType.use_sources !== false,
+        media: recordType.use_media !== false,
       }
     );
     console.log('[TemplateAPI] Validation result:', { valid: validation.valid, errors: validation.errors.length, warnings: validation.warnings.length });
