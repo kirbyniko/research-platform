@@ -33,7 +33,11 @@ interface UsageData {
 }
 
 export default function BillingPage() {
+  console.log('[Billing] Component rendering');
+  
   const { data: session, status } = useSession();
+  console.log('[Billing] Session status:', status, 'Session:', !!session);
+  
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [usageData, setUsageData] = useState<UsageData | null>(null);
