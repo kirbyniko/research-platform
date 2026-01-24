@@ -112,7 +112,7 @@ export default function Navigation() {
                       </Link>
 
                       <Link
-                        href="/account/billing"
+                        href="/billing"
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                         onClick={() => setMenuOpen(false)}
                       >

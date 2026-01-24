@@ -48,6 +48,7 @@ export default function ProjectTeam({
   const router = useRouter();
   const [projectSlug, setProjectSlug] = useState<string>('');
   const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [currentUserRole, setCurrentUserRole] = useState<ProjectRole | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -100,6 +101,7 @@ export default function ProjectTeam({
       }
       const data = await response.json();
       setMembers(data.members);
+      setCurrentUserRole(data.currentUserRole || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load members');
     } finally {
@@ -441,7 +443,7 @@ export default function ProjectTeam({
                                 ({memberCredits[member.user_id]?.usage_total || 0} used)
                               </span>
                             </div>
-                            {(member.role !== 'owner') && (
+                            {(currentUserRole === 'owner' || currentUserRole === 'admin') && (
                               allocatingTo === member.user_id ? (
                                 <div className="flex items-center gap-2">
                                   <input

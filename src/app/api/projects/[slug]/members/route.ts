@@ -80,7 +80,14 @@ export async function GET(
       }
     }));
     
-    return NextResponse.json({ members });
+    // Find current user's role in project
+    const currentUserMember = membersResult.rows.find(m => m.user_id === userId);
+    const currentUserRole = currentUserMember?.role || null;
+    
+    return NextResponse.json({ 
+      members,
+      currentUserRole 
+    });
   } catch (error) {
     console.error('Error fetching project members:', error);
     return NextResponse.json(
