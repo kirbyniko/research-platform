@@ -115,15 +115,25 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string; type: string }> }
 ) {
+  console.log('[TemplateAPI] POST request started');
   try {
     const authResult = await requireServerAuth(request);
+    console.log('[TemplateAPI] Auth result:', 'error' in authResult ? 'error' : 'success');
     if ('error' in authResult) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
     const userId = authResult.user.id;
 
     const { slug, type } = await params;
+    console.log('[TemplateAPI] Params:', { slug, type });
+    
     const body = await request.json();
+    console.log('[TemplateAPI] Body received:', { 
+      name: body.name, 
+      hasTemplate: !!body.template,
+      sections: body.template?.sections?.length,
+      fields: body.template?.sections?.reduce((sum: number, s: any) => sum + (s.items?.length || 0), 0) 
+    });
 
     // Get project
     const projectResult = await pool.query(
@@ -131,9 +141,11 @@ export async function POST(
       [slug]
     );
     if (projectResult.rows.length === 0) {
+      console.log('[TemplateAPI] Project not found:', slug);
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
     const projectId = projectResult.rows[0].id;
+    console.log('[TemplateAPI] Project found:', projectId);
 
     // Check permission
     const memberResult = await pool.query(
@@ -142,9 +154,11 @@ export async function POST(
       [projectId, userId]
     );
     if (memberResult.rows.length === 0) {
+      console.log('[TemplateAPI] Not a member');
       return NextResponse.json({ error: 'Not a member of this project' }, { status: 403 });
     }
     const member = memberResult.rows[0];
+    console.log('[TemplateAPI] Member:', { role: member.role, canManage: member.can_manage_appearances });
     if (!member.can_manage_appearances && member.role !== 'admin' && member.role !== 'owner') {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
@@ -155,10 +169,12 @@ export async function POST(
       [projectId, type]
     );
     if (recordTypeResult.rows.length === 0) {
+      console.log('[TemplateAPI] Record type not found:', type);
       return NextResponse.json({ error: 'Record type not found' }, { status: 404 });
     }
     const recordType = recordTypeResult.rows[0];
     const settings = recordType.settings || {};
+    console.log('[TemplateAPI] Record type:', { id: recordType.id, settings: !!settings });
 
     // Get available fields
     const fieldsResult = await pool.query(
@@ -166,8 +182,10 @@ export async function POST(
       [recordType.id]
     );
     const fieldSlugs = new Set<string>(fieldsResult.rows.map((r: { slug: string }) => r.slug));
+    console.log('[TemplateAPI] Available fields:', fieldSlugs.size);
 
     // Validate template
+    console.log('[TemplateAPI] Starting validation...');
     const validation = validateTemplate(
       body.template,
       fieldSlugs,
@@ -177,13 +195,16 @@ export async function POST(
         media: settings.enable_media !== false,
       }
     );
+    console.log('[TemplateAPI] Validation result:', { valid: validation.valid, errors: validation.errors.length, warnings: validation.warnings.length });
 
     if (!validation.valid) {
+      console.log('[TemplateAPI] Validation failed:', validation.errors);
       return NextResponse.json({ error: 'Invalid template', validation }, { status: 400 });
     }
 
     // If setting as default, unset any existing default
     if (body.is_default) {
+      console.log('[TemplateAPI] Unsetting existing default...');
       await pool.query(
         `UPDATE display_templates SET is_default = false 
          WHERE record_type_id = $1 AND is_default = true`,
@@ -192,6 +213,7 @@ export async function POST(
     }
 
     // Create template
+    console.log('[TemplateAPI] Inserting template...');
     const result = await pool.query(
       `INSERT INTO display_templates 
        (project_id, record_type_id, name, description, template, is_default, ai_prompt, created_by)
@@ -208,13 +230,20 @@ export async function POST(
         userId,
       ]
     );
+    console.log('[TemplateAPI] Template inserted successfully:', result.rows[0]?.id);
 
     return NextResponse.json({ 
       template: result.rows[0],
       validation 
     });
   } catch (error) {
-    console.error('Error creating template:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('[TemplateAPI] Error creating template:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : '';
+    console.error('[TemplateAPI] Error details:', { errorMessage, errorStack });
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: errorMessage 
+    }, { status: 500 });
   }
 }
