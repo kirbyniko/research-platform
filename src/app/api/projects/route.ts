@@ -17,7 +17,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
     
-    const projects = await getUserProjects(authResult.user.id);
+    const projectsWithRole = await getUserProjects(authResult.user.id);
+    
+    // Flatten the response to just include projects with id, slug, name
+    const projects = projectsWithRole.map(item => ({
+      id: item.project.id,
+      slug: item.project.slug,
+      name: item.project.name,
+      description: item.project.description,
+      is_public: item.project.is_public,
+      role: item.role,
+    }));
     
     return NextResponse.json({ projects });
   } catch (error) {
