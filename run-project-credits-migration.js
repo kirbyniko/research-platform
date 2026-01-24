@@ -1,10 +1,18 @@
+require('dotenv').config({ path: '.env.production.local' });
+require('dotenv').config({ path: '.env.local' });
 const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
+// Remove quotes from DATABASE_URL if present
+let databaseUrl = process.env.DATABASE_URL;
+if (databaseUrl && (databaseUrl.startsWith('"') || databaseUrl.startsWith("'"))) {
+  databaseUrl = databaseUrl.slice(1, -1);
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('localhost') ? false : { rejectUnauthorized: false }
+  connectionString: databaseUrl,
+  ssl: databaseUrl?.includes('localhost') ? false : { rejectUnauthorized: false }
 });
 
 async function runMigration() {

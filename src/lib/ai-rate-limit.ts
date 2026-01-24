@@ -405,42 +405,63 @@ export async function addCredits(
     transactionType?: 'purchase' | 'bonus' | 'admin_adjustment' | 'refund';
   } = {}
 ): Promise<{ newBalance: number; transactionId: number }> {
+  console.log(`[addCredits] Starting: userId=${userId}, projectId=${projectId}, amount=${amount}`);
+  
   // Ensure project has a credits record
-  await pool.query(`
-    INSERT INTO user_credits (project_id, balance, total_purchased)
-    VALUES ($1, 0, 0)
-    ON CONFLICT (project_id) DO NOTHING
-  `, [projectId]);
+  try {
+    await pool.query(`
+      INSERT INTO user_credits (project_id, balance, total_purchased)
+      VALUES ($1, 0, 0)
+      ON CONFLICT (project_id) DO NOTHING
+    `, [projectId]);
+    console.log(`[addCredits] Ensured credits record exists for project ${projectId}`);
+  } catch (error) {
+    console.error(`[addCredits] Error creating credits record:`, error);
+    throw error;
+  }
   
   // Add credits to project
-  const updateResult = await pool.query(`
-    UPDATE user_credits 
-    SET 
-      balance = balance + $2, 
-      total_purchased = CASE WHEN $3 = 'purchase' THEN total_purchased + $2 ELSE total_purchased END,
-      updated_at = NOW()
-    WHERE project_id = $1
-    RETURNING balance
-  `, [projectId, amount, options.transactionType || 'purchase']);
-  
-  const newBalance = updateResult.rows[0].balance;
-  
-  // Record transaction
-  const transactionResult = await pool.query(`
-    INSERT INTO credit_transactions 
-    (user_id, project_id, transaction_type, amount, balance_after, stripe_payment_intent_id, stripe_checkout_session_id, description)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    RETURNING id
-  `, [
-    userId,
-    projectId,
-    options.transactionType || 'purchase',
-    amount,
-    newBalance,
-    options.stripePaymentIntentId || null,
-    options.stripeCheckoutSessionId || null,
-    options.description || `Added ${amount} credits`
-  ]);
-  
-  return { newBalance, transactionId: transactionResult.rows[0].id };
+  try {
+    const updateResult = await pool.query(`
+      UPDATE user_credits 
+      SET 
+        balance = balance + $2, 
+        total_purchased = CASE WHEN $3 = 'purchase' THEN total_purchased + $2 ELSE total_purchased END,
+        updated_at = NOW()
+      WHERE project_id = $1
+      RETURNING balance
+    `, [projectId, amount, options.transactionType || 'purchase']);
+    
+    if (updateResult.rows.length === 0) {
+      console.error(`[addCredits] No rows updated for project ${projectId} - credits record may not exist`);
+      throw new Error(`Failed to update credits for project ${projectId}`);
+    }
+    
+    const newBalance = updateResult.rows[0].balance;
+    console.log(`[addCredits] Updated balance to ${newBalance} for project ${projectId}`);
+    
+    // Record transaction
+    const transactionResult = await pool.query(`
+      INSERT INTO credit_transactions 
+      (user_id, project_id, transaction_type, amount, balance_after, stripe_payment_intent_id, stripe_checkout_session_id, description)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id
+    `, [
+      userId,
+      projectId,
+      options.transactionType || 'purchase',
+      amount,
+      newBalance,
+      options.stripePaymentIntentId || null,
+      options.stripeCheckoutSessionId || null,
+      options.description || `Added ${amount} credits`
+    ]);
+    
+    console.log(`[addCredits] Created transaction ${transactionResult.rows[0].id}`);
+    
+    return { newBalance, transactionId: transactionResult.rows[0].id };
+  } catch (error) {
+    console.error(`[addCredits] Error updating credits:`, error);
+    throw error;
+  }
 }
