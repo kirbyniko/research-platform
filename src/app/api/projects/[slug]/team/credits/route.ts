@@ -6,7 +6,7 @@ import { hasProjectPermission } from '@/lib/project-permissions';
 // GET /api/projects/[slug]/team/credits - Get all team member credit balances
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const authResult = await requireServerAuth(request);
@@ -14,13 +14,8 @@ export async function GET(
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
-    const { slug } = params;
-    const hasPermission = await hasProjectPermission(authResult.user.id, slug, ['owner', 'admin']);
+    const { slug } = await params;
     
-    if (!hasPermission) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
-
     // Get project ID
     const projectResult = await pool.query(
       'SELECT id FROM projects WHERE slug = $1 AND deleted_at IS NULL',
@@ -32,6 +27,13 @@ export async function GET(
     }
 
     const projectId = projectResult.rows[0].id;
+    
+    // Check permission
+    const hasPermission = await hasProjectPermission(authResult.user.id, projectId, 'manage_members');
+    
+    if (!hasPermission) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
 
     // Get all team members with their credit balances
     const membersResult = await pool.query(`
@@ -78,7 +80,7 @@ export async function GET(
 // POST /api/projects/[slug]/team/credits - Allocate credits to a team member
 export async function POST(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const authResult = await requireServerAuth(request);
@@ -86,20 +88,8 @@ export async function POST(
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
-    const { slug } = params;
-    const hasPermission = await hasProjectPermission(authResult.user.id, slug, ['owner', 'admin']);
+    const { slug } = await params;
     
-    if (!hasPermission) {
-      return NextResponse.json({ error: 'Only owners and admins can allocate credits' }, { status: 403 });
-    }
-
-    const body = await request.json();
-    const { userId, amount, reason } = body;
-
-    if (!userId || !amount || amount <= 0) {
-      return NextResponse.json({ error: 'User ID and positive amount required' }, { status: 400 });
-    }
-
     // Get project ID
     const projectResult = await pool.query(
       'SELECT id FROM projects WHERE slug = $1 AND deleted_at IS NULL',
@@ -111,6 +101,18 @@ export async function POST(
     }
 
     const projectId = projectResult.rows[0].id;
+    const hasPermission = await hasProjectPermission(authResult.user.id, projectId, 'manage_members');
+    
+    if (!hasPermission) {
+      return NextResponse.json({ error: 'Only owners and admins can allocate credits' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { userId, amount, reason } = body;
+
+    if (!userId || !amount || amount <= 0) {
+      return NextResponse.json({ error: 'User ID and positive amount required' }, { status: 400 });
+    }
 
     // Verify user is a member
     const memberCheck = await pool.query(
