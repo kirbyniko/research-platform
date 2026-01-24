@@ -16,8 +16,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get('projectId');
 
-    console.log('[AI Usage API] Request:', { userId, projectId });
-
     if (!projectId) {
       return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
     }
@@ -31,20 +29,16 @@ export async function GET(request: NextRequest) {
     );
 
     if (projectCheck.rows.length === 0) {
-      console.error('[AI Usage API] Project access denied:', { projectId, userId });
       return NextResponse.json({ error: 'Project not found or access denied' }, { status: 403 });
     }
     
-    console.log('[AI Usage API] Fetching stats for project:', projectId);
     const stats = await getProjectCreditsAndUsage(userId, parseInt(projectId));
-    console.log('[AI Usage API] Stats fetched:', stats);
     
     return NextResponse.json(stats);
   } catch (error) {
-    console.error('[AI Usage API] Error fetching AI usage:', error);
+    console.error('Error fetching AI usage:', error);
     return NextResponse.json({ 
-      error: 'Failed to fetch usage',
-      details: error instanceof Error ? error.message : String(error)
+      error: 'Failed to fetch usage'
     }, { status: 500 });
   }
 }

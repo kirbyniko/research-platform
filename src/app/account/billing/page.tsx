@@ -33,11 +33,7 @@ interface UsageData {
 }
 
 export default function BillingPage() {
-  console.log('[Billing] Component rendering');
-  
   const { data: session, status } = useSession();
-  console.log('[Billing] Session status:', status, 'Session:', !!session);
-  
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [usageData, setUsageData] = useState<UsageData | null>(null);
@@ -47,47 +43,32 @@ export default function BillingPage() {
 
   // Load user's projects
   useEffect(() => {
-    console.log('[Billing] useEffect triggered - status:', status, 'session:', !!session);
-    
-    if (status === 'loading') {
-      console.log('[Billing] Status is loading, returning');
-      return;
-    }
+    if (status === 'loading') return;
     if (!session) {
-      console.log('[Billing] No session, setting loading to false');
       setLoading(false);
       return;
     }
 
-    console.log('[Billing] Fetching projects...');
     fetch('/api/projects')
       .then(res => {
-        console.log('[Billing] Projects API response:', res.status);
         if (!res.ok) {
           throw new Error(`Failed to load projects: ${res.status}`);
         }
         return res.json();
       })
       .then(data => {
-        console.log('[Billing] Projects data:', data);
-        console.log('[Billing] First project:', JSON.stringify(data.projects?.[0]));
         if (data.error) {
           setError(data.error);
           setLoading(false);
         } else if (data.projects && data.projects.length > 0) {
-          const projectId = data.projects[0].id;
-          console.log('[Billing] Setting projects and selectedProjectId:', projectId);
           setProjects(data.projects);
-          setSelectedProjectId(projectId);
-          console.log('[Billing] State update called');
-          // Don't set loading to false here - wait for usage data to load
+          setSelectedProjectId(data.projects[0].id);
         } else {
           setError('No projects found. Please create a project first.');
           setLoading(false);
         }
       })
       .catch(err => {
-        console.error('[Billing] Error loading projects:', err);
         setError(err.message || 'Failed to load projects');
         setLoading(false);
       });
@@ -95,19 +76,13 @@ export default function BillingPage() {
 
   // Load usage data when project is selected
   useEffect(() => {
-    console.log('[Billing] Usage useEffect fired - selectedProjectId:', selectedProjectId);
-    if (!selectedProjectId) {
-      console.log('[Billing] No selectedProjectId, returning');
-      return;
-    }
+    if (!selectedProjectId) return;
 
-    console.log('[Billing] Loading usage for project:', selectedProjectId);
     setLoading(true);
     setError(null);
     
     fetch(`/api/ai/usage?projectId=${selectedProjectId}`)
       .then(res => {
-        console.log('[Billing] Usage API response status:', res.status);
         if (!res.ok) {
           return res.json().then(data => {
             throw new Error(data.details || data.error || `Failed to load usage data: ${res.status}`);
@@ -119,7 +94,6 @@ export default function BillingPage() {
         return res.json();
       })
       .then(data => {
-        console.log('[Billing] Usage data loaded:', data);
         if (data.error) {
           setError(`Error: ${data.error}${data.details ? ` - ${data.details}` : ''}`);
         } else {
@@ -129,7 +103,6 @@ export default function BillingPage() {
         setLoading(false);
       })
       .catch(err => {
-        console.error('[Billing] Error loading usage data:', err);
         setError(err.message || 'Failed to load usage data');
         setLoading(false);
       });
