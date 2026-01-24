@@ -1,5 +1,7 @@
 'use client';
 
+// Billing page for managing project credits and AI usage
+
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { CREDIT_PACKAGES } from '@/lib/stripe';
