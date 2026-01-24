@@ -87,6 +87,12 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('[Verify Payment] Error:', error);
-    return NextResponse.json({ error: 'Failed to verify payment' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[Verify Payment] Error message:', errorMessage);
+    console.error('[Verify Payment] Error stack:', error instanceof Error ? error.stack : 'No stack');
+    return NextResponse.json({ 
+      error: 'Failed to verify payment', 
+      details: errorMessage 
+    }, { status: 500 });
   }
 }
