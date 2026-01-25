@@ -134,129 +134,38 @@ export async function POST(request: NextRequest) {
 
     const validSlugs = fields.map((f: FieldDefinition) => f.slug);
     
-    const systemPrompt = `You are an expert UI/UX designer specializing in data presentation templates. 
-Your task is to create beautiful, professional display templates for structured data records.
+    const systemPrompt = `You are a UI designer. Create a beautiful JSON template for displaying records.
 
-CRITICAL CONSTRAINTS - YOU MUST FOLLOW THESE:
-1. You can ONLY use the field slugs provided in the available fields list
-2. Each field slug can be used AT MOST ONCE across all sections
-3. You CANNOT add any custom text, labels, or content that isn't derived from a field
-4. You CANNOT create fake fields or make up field slugs
-5. All displayable content must come from the provided fields
+RULES:
+- Use ONLY these field slugs (nothing else): ${validSlugs.join(', ')}
+- Each slug used AT MOST once
+- Return ONLY valid JSON, no markdown or text
+- Use bold colors: blues (#1e40af, #3b82f6), teals (#0891b2), oranges (#ea580c), purples (#7c3aed)
+- Add backgrounds, padding, borders for visual impact
+- Create 2-3 sections with different layouts (hero, grid, sidebar)
 
-AVAILABLE FIELDS (these are the ONLY field slugs you can use):
+AVAILABLE FIELDS:
 ${JSON.stringify(fieldInfo, null, 2)}
 
-VALID FIELD SLUGS: ${validSlugs.join(', ')}
-
-SECTION TYPES (use these as the "type" field in sections):
-- "full-width": Single column, items stack vertically - good for main content
-- "grid": Multi-column grid (specify columns: 2, 3, or 4) - good for compact data
-- "sidebar-left": Main content with left sidebar (set sidebarWidth like "300px")
-- "sidebar-right": Main content with right sidebar
-- "hero": Large header area - good for images and main titles
-
-ITEM OPTIONS (each item in a section's items array):
-- id: Unique identifier like "item-1", "item-2", etc.
-- fieldSlug: The exact field slug from the list above (REQUIRED unless using dataType)
-- dataType: "quotes", "sources", or "media" - use instead of fieldSlug for these special types
-- colSpan: How many columns the item spans in a grid (1-4)
-- hideIfEmpty: true to hide if no value (usually true)
-- hideLabel: true to hide the field label
-- labelOverride: Alternative label text
-- style: { fontSize, fontWeight, color, textAlign, backgroundColor, padding, margin, borderRadius, border }
-
-DESIGN PRINCIPLES - CREATE TRULY BEAUTIFUL, STRIKING LAYOUTS:
-- Use BOLD color schemes - don't default to grays. Use rich colors like:
-  * Deep blues (#1e40af, #3b82f6), vibrant teals (#0891b2, #06b6d4)
-  * Warm oranges (#ea580c, #f97316), rich purples (#7c3aed, #a855f7)
-  * Accent with complementary colors for contrast
-- Apply background colors to sections liberally - create visual zones
-- Use dramatic typography: Large hero titles (3rem-4rem), clear hierarchy
-- Add padding generously (2rem-3rem) to create breathing room
-- Use borderRadius (8px-16px) for modern, polished look
-- Consider borders and shadows for depth: border: "1px solid #e5e7eb", boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
-- Create visual rhythm through alternating section backgrounds
-- Make images prominent - use hero sections with large display
-- Group related fields in visually distinct sections with different background colors
-- Use white text on dark backgrounds for impact (color: "#ffffff" on dark backgroundColor)
-- Create infographic-like layouts with data presented in visually interesting ways
-
-LAYOUT CREATIVITY:
-- Mix section types strategically (hero → grid → sidebar → grid)
-- Use different column counts (2-col for dates, 3-col for categories, 4-col for tags)
-- Feature the most important fields in hero sections with dramatic styling
-- Use sidebar sections for supplementary information
-- Create card-like sections with distinct backgrounds and padding
-- Consider asymmetric layouts for visual interest
-
-EXACT OUTPUT FORMAT (return ONLY this JSON structure):
+Return ONLY this JSON structure - no extra text:
 {
   "version": 1,
-  "page": {
-    "maxWidth": "1200px",
-    "padding": "2rem",
-    "backgroundColor": "#ffffff",
-    "fontFamily": "system-ui, -apple-system, sans-serif"
-  },
+  "page": { "maxWidth": "1200px", "padding": "2rem", "backgroundColor": "#ffffff" },
   "sections": [
     {
       "id": "section-1",
       "type": "hero",
-      "padding": "3rem 2rem",
       "backgroundColor": "#1e40af",
+      "padding": "3rem",
       "borderRadius": "12px",
-      "margin": "0 0 2rem 0",
-      "items": [
-        {
-          "id": "item-1",
-          "fieldSlug": "name_field_slug",
-          "hideIfEmpty": true,
-          "hideLabel": true,
-          "style": { 
-            "fontSize": "3rem", 
-            "fontWeight": "bold",
-            "color": "#ffffff",
-            "textAlign": "center"
-          }
-        }
-      ]
-    },
-    {
-      "id": "section-2",
-      "type": "grid",
-      "columns": 3,
-      "gap": "1.5rem",
-      "padding": "2rem",
-      "backgroundColor": "#f8fafc",
-      "borderRadius": "8px",
-      "margin": "0 0 2rem 0",
-      "items": [
-        { 
-          "id": "item-2", 
-          "fieldSlug": "field_slug", 
-          "hideIfEmpty": true,
-          "style": {
-            "backgroundColor": "#ffffff",
-            "padding": "1.5rem",
-            "borderRadius": "8px",
-            "border": "1px solid #e5e7eb"
-          }
-        }
-      ]
+      "items": [{ "id": "item-1", "fieldSlug": "field_slug_here", "hideIfEmpty": true, "style": { "color": "#ffffff", "fontSize": "2rem" } }]
     }
   ]
-}
+}`;
 
-Remember: Use ONLY field slugs from this list: ${validSlugs.join(', ')}
-Return ONLY the JSON object, no markdown or explanation.`;
-
-    const userMessage = `Create a beautiful display template for "${recordTypeName}" records in the "${projectName}" project.
-
-${userPrompt ? `User's design preferences: ${userPrompt}` : 'Create a professional, modern template that showcases the data effectively.'}
-
-The template should use ALL available fields exactly once, arranged in a visually appealing and logical way.
-Return ONLY the JSON object, no markdown code blocks or explanation.`;
+    const userMessage = `Create a beautiful template for "${recordTypeName}" records.
+${userPrompt ? `User wants: ${userPrompt}` : 'Make it visually striking with colors and good layout.'}
+Use all available fields exactly once.`;
 
     const startTime = Date.now();
     
@@ -297,28 +206,73 @@ Return ONLY the JSON object, no markdown code blocks or explanation.`;
     console.log('Raw AI response (first 500 chars):', responseText.substring(0, 500));
     console.log('Response length:', responseText.length);
 
-    // Parse and validate the response
+    // Parse and validate the response (tolerant to wrapping/extra text)
     let template: DisplayTemplate;
-    try {
-      // Try direct parse first
-      template = JSON.parse(responseText);
-    } catch (e1) {
-      console.log('Direct JSON parse failed, trying to strip markdown...');
+    const tryParse = (txt: string, label: string) => {
+      const parsed = JSON.parse(txt);
+      console.log(`Parsed via ${label}`);
+      return parsed;
+    };
+
+    // Prefer SDK-provided parsed message when available
+    const parsedFromSDK = (completion.choices[0] as any)?.message?.parsed as DisplayTemplate | undefined;
+    if (parsedFromSDK) {
+      console.log('Using parsed message from SDK');
+      template = parsedFromSDK;
+    } else {
       try {
-        // Try stripping markdown code blocks
-        let cleaned = responseText.trim();
-        if (cleaned.startsWith('```json')) {
-          cleaned = cleaned.replace(/^```json\s*/, '').replace(/```\s*$/, '');
-        } else if (cleaned.startsWith('```')) {
-          cleaned = cleaned.replace(/^```\s*/, '').replace(/```\s*$/, '');
+        template = tryParse(responseText, 'direct');
+      } catch (e1) {
+        console.log('Direct JSON parse failed, trying to strip markdown/fences, drop trailing commas, and trim to first/last brace...');
+        try {
+          let cleaned = responseText.trim();
+          if (cleaned.startsWith('```json')) cleaned = cleaned.replace(/^```json\s*/, '');
+          if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```\s*/, '');
+          if (cleaned.endsWith('```')) cleaned = cleaned.replace(/```\s*$/, '');
+
+          // Remove trailing commas before closing braces/brackets
+          cleaned = cleaned.replace(/,(\s*[}\]])/g, '$1');
+
+          // Narrow to first opening brace and last closing brace to avoid stray text
+          const firstBrace = cleaned.indexOf('{');
+          const lastBrace = cleaned.lastIndexOf('}');
+          if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+          }
+
+          template = tryParse(cleaned, 'cleaned brace slice');
+        } catch (e2) {
+          console.error('Failed to parse AI response after all attempts');
+          console.error('Original response length:', responseText.length);
+          console.error('Original response (first 1000 chars):', responseText.substring(0, 1000));
+          console.error('Original response (chars 13000-14000):', responseText.substring(13000, 14000));
+          console.error('Parse error:', e2);
+          console.error('Full response for debugging:', responseText);
+          
+          // Fallback: generate a simple template instead of failing
+          console.warn('AI response parsing failed, generating fallback simple template instead');
+          template = {
+            version: 1,
+            page: {
+              maxWidth: '1200px',
+              padding: '2rem',
+              backgroundColor: '#ffffff',
+            },
+            sections: [
+              {
+                id: 'section-1',
+                type: 'full-width',
+                padding: '1rem',
+                items: fields.slice(0, 10).map((f: FieldDefinition, i: number) => ({
+                  id: `item-${i}`,
+                  fieldSlug: f.slug,
+                  hideIfEmpty: true,
+                })),
+              },
+            ],
+          };
         }
-        template = JSON.parse(cleaned);
-        console.log('Successfully parsed after stripping markdown');
-      } catch (e2) {
-        console.error('Failed to parse AI response after all attempts');
-        console.error('Original response:', responseText);
-        console.error('Parse error:', e2);
-        throw new Error(`Invalid JSON response from AI: ${e2 instanceof Error ? e2.message : 'Unknown error'}`);
+        }
       }
     }
 
@@ -375,7 +329,7 @@ Return ONLY the JSON object, no markdown code blocks or explanation.`;
       projectId,
       'template_generation',
       {
-        modelName: 'gpt-4o',
+        modelName: 'gpt-4o-mini',
         inputTokens,
         outputTokens,
         responseTimeMs: responseTime
