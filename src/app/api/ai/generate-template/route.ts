@@ -269,12 +269,12 @@ Return ONLY the JSON object, no markdown code blocks or explanation.`;
       );
     }
     
-    console.log('Making OpenAI API call with model gpt-4o');
+    console.log('Making OpenAI API call with model gpt-4o-mini');
     console.log('System prompt length:', systemPrompt.length);
     console.log('User message:', userMessage);
     
     const completion = await client.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage }
@@ -290,16 +290,36 @@ Return ONLY the JSON object, no markdown code blocks or explanation.`;
     const responseText = completion.choices[0]?.message?.content;
     
     if (!responseText) {
+      console.error('No response content from OpenAI');
       throw new Error('No response from AI');
     }
+
+    console.log('Raw AI response (first 500 chars):', responseText.substring(0, 500));
+    console.log('Response length:', responseText.length);
 
     // Parse and validate the response
     let template: DisplayTemplate;
     try {
+      // Try direct parse first
       template = JSON.parse(responseText);
-    } catch {
-      console.error('Failed to parse AI response:', responseText);
-      throw new Error('Invalid JSON response from AI');
+    } catch (e1) {
+      console.log('Direct JSON parse failed, trying to strip markdown...');
+      try {
+        // Try stripping markdown code blocks
+        let cleaned = responseText.trim();
+        if (cleaned.startsWith('```json')) {
+          cleaned = cleaned.replace(/^```json\s*/, '').replace(/```\s*$/, '');
+        } else if (cleaned.startsWith('```')) {
+          cleaned = cleaned.replace(/^```\s*/, '').replace(/```\s*$/, '');
+        }
+        template = JSON.parse(cleaned);
+        console.log('Successfully parsed after stripping markdown');
+      } catch (e2) {
+        console.error('Failed to parse AI response after all attempts');
+        console.error('Original response:', responseText);
+        console.error('Parse error:', e2);
+        throw new Error(`Invalid JSON response from AI: ${e2 instanceof Error ? e2.message : 'Unknown error'}`);
+      }
     }
 
     // Validate that only valid field slugs are used
