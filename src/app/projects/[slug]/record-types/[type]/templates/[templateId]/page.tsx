@@ -4,6 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { TemplateEditor } from '@/components/templates/TemplateEditor';
+import { TemplatePreview } from '@/components/templates/TemplatePreview';
 import { DisplayTemplate, DEFAULT_TEMPLATE } from '@/types/templates';
 import { FieldDefinition } from '@/types/platform';
 
@@ -33,10 +34,12 @@ export default function EditTemplatePage({ params }: PageProps) {
   const router = useRouter();
 
   const [fields, setFields] = useState<FieldDefinition[]>([]);
-  const [recordType, setRecordType] = useState<{ id: number; name: string; slug: string; enabled_data_types?: string[] } | null>(null);
+  const [recordType, setRecordType] = useState<{ id: number; name: string; slug: string; enabled_data_types?: string[]; project_id?: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previewRecord, setPreviewRecord] = useState<Record<string, any> | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -54,7 +57,7 @@ export default function EditTemplatePage({ params }: PageProps) {
       const rtRes = await fetch(`/api/projects/${slug}/record-types/${type}`);
       if (!rtRes.ok) throw new Error('Failed to fetch record type');
       const rtData = await rtRes.json();
-      setRecordType(rtData);
+      setRecordType(rtData.recordType);
 
       // Fetch fields
       const fieldsRes = await fetch(`/api/projects/${slug}/record-types/${type}/fields`);
@@ -72,10 +75,30 @@ export default function EditTemplatePage({ params }: PageProps) {
       setDescription(templateData.description || '');
       setIsDefault(templateData.is_default);
       setTemplate(templateData.template || DEFAULT_TEMPLATE);
+
+      // Fetch a sample record for preview
+      fetchPreviewRecord();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPreviewRecord = async () => {
+    setLoadingPreview(true);
+    try {
+      const res = await fetch(`/api/projects/${slug}/records?type=${type}&limit=1&sortBy=created_at&sortOrder=desc`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.records && data.records.length > 0) {
+          setPreviewRecord(data.records[0].data);
+        }
+      }
+    } catch (err) {
+      console.warn('Could not load preview record:', err);
+    } finally {
+      setLoadingPreview(false);
     }
   };
 
@@ -218,7 +241,28 @@ export default function EditTemplatePage({ params }: PageProps) {
           enabledDataTypes={getEnabledDataTypes(recordType?.enabled_data_types)}
           initialTemplate={template}
           onChange={setTemplate}
+          projectId={recordType?.project_id}
         />
+
+        {/* Live Preview */}
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Live Preview</h2>
+            <button
+              onClick={fetchPreviewRecord}
+              className="text-sm text-blue-600 hover:text-blue-700"
+            >
+              Refresh Preview
+            </button>
+          </div>
+          
+          <TemplatePreview
+            template={template}
+            recordData={previewRecord}
+            fields={fields}
+            loading={loadingPreview}
+          />
+        </div>
       </div>
     </div>
   );

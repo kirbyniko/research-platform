@@ -126,6 +126,9 @@ export function TemplatePreview({ template, recordData, fields, loading }: Templ
     backgroundColor: section.backgroundColor,
     padding: section.padding,
     borderRadius: section.borderRadius,
+    margin: section.margin,
+    border: section.border,
+    boxShadow: section.boxShadow,
   });
 
   const getSectionClass = (section: any) => {

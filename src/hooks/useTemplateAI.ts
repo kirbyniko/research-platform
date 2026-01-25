@@ -327,6 +327,13 @@ Return ONLY valid JSON matching this structure (no markdown, no explanation):
         if (response.status === 429) {
           throw new Error(data.message || 'Rate limit exceeded. Please try again later.');
         }
+        
+        // Handle other errors with detailed messages
+        if (!response.ok) {
+          const errorMsg = data.details || data.error || 'Unknown error';
+          console.error('[TemplateAI] API error response:', data);
+          throw new Error(errorMsg);
+        }
 
         // If successful, use the generated template
         if (response.ok && data.template) {
@@ -632,16 +639,11 @@ Return ONLY valid JSON matching this structure (no markdown, no explanation):
     return template;
   }, [fields, enabledDataTypes, onTemplateGenerated]);
 
-  // Main generate function - uses AI if available, falls back to rules
+  // Main generate function - ALWAYS tries OpenAI API first, then WebLLM, then simple fallback
   const generate = useCallback(async (prompt: string, preferAI: boolean = true) => {
-    if (preferAI && isWebGPUSupported && window.webllm) {
-      return generateTemplate(prompt);
-    } else {
-      setState({ status: 'generating', progress: 50, message: 'Generating template...', error: undefined });
-      await new Promise(r => setTimeout(r, 500)); // Brief delay for UX
-      return generateSimpleTemplate(prompt);
-    }
-  }, [isWebGPUSupported, generateTemplate, generateSimpleTemplate]);
+    // Always try generateTemplate first - it will attempt OpenAI API, then WebLLM, then simple
+    return generateTemplate(prompt);
+  }, [generateTemplate]);
 
   const reset = useCallback(() => {
     setState({ status: 'idle', progress: 0, message: '' });

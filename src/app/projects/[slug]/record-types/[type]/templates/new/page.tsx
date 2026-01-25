@@ -54,7 +54,7 @@ export default function NewTemplatePage() {
       const rtRes = await fetch(`/api/projects/${slug}/record-types/${type}`);
       if (!rtRes.ok) throw new Error('Failed to fetch record type');
       const rtData = await rtRes.json();
-      setRecordType(rtData);
+      setRecordType(rtData.recordType);
 
       // Fetch fields
       const fieldsRes = await fetch(`/api/projects/${slug}/record-types/${type}/fields`);

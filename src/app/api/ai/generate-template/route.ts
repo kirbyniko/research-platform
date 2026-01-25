@@ -164,16 +164,31 @@ ITEM OPTIONS (each item in a section's items array):
 - hideIfEmpty: true to hide if no value (usually true)
 - hideLabel: true to hide the field label
 - labelOverride: Alternative label text
-- style: { fontSize, fontWeight, color, textAlign, backgroundColor, padding, margin, borderRadius }
+- style: { fontSize, fontWeight, color, textAlign, backgroundColor, padding, margin, borderRadius, border }
 
-DESIGN PRINCIPLES:
-- Create visually striking, modern layouts that make data easy to scan
-- Use whitespace effectively for readability
-- Group related fields logically (dates together, names together, etc.)
-- Put images and important fields in hero sections
-- Use appropriate visual hierarchy
-- For dates, keep them together in a clean grid
-- For long text fields (textarea, rich_text), give them full width
+DESIGN PRINCIPLES - CREATE TRULY BEAUTIFUL, STRIKING LAYOUTS:
+- Use BOLD color schemes - don't default to grays. Use rich colors like:
+  * Deep blues (#1e40af, #3b82f6), vibrant teals (#0891b2, #06b6d4)
+  * Warm oranges (#ea580c, #f97316), rich purples (#7c3aed, #a855f7)
+  * Accent with complementary colors for contrast
+- Apply background colors to sections liberally - create visual zones
+- Use dramatic typography: Large hero titles (3rem-4rem), clear hierarchy
+- Add padding generously (2rem-3rem) to create breathing room
+- Use borderRadius (8px-16px) for modern, polished look
+- Consider borders and shadows for depth: border: "1px solid #e5e7eb", boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
+- Create visual rhythm through alternating section backgrounds
+- Make images prominent - use hero sections with large display
+- Group related fields in visually distinct sections with different background colors
+- Use white text on dark backgrounds for impact (color: "#ffffff" on dark backgroundColor)
+- Create infographic-like layouts with data presented in visually interesting ways
+
+LAYOUT CREATIVITY:
+- Mix section types strategically (hero → grid → sidebar → grid)
+- Use different column counts (2-col for dates, 3-col for categories, 4-col for tags)
+- Feature the most important fields in hero sections with dramatic styling
+- Use sidebar sections for supplementary information
+- Create card-like sections with distinct backgrounds and padding
+- Consider asymmetric layouts for visual interest
 
 EXACT OUTPUT FORMAT (return ONLY this JSON structure):
 {
@@ -188,26 +203,46 @@ EXACT OUTPUT FORMAT (return ONLY this JSON structure):
     {
       "id": "section-1",
       "type": "hero",
-      "padding": "2rem",
-      "backgroundColor": "#f8fafc",
+      "padding": "3rem 2rem",
+      "backgroundColor": "#1e40af",
+      "borderRadius": "12px",
+      "margin": "0 0 2rem 0",
       "items": [
         {
           "id": "item-1",
           "fieldSlug": "name_field_slug",
           "hideIfEmpty": true,
-          "style": { "fontSize": "2rem", "fontWeight": "bold" }
+          "hideLabel": true,
+          "style": { 
+            "fontSize": "3rem", 
+            "fontWeight": "bold",
+            "color": "#ffffff",
+            "textAlign": "center"
+          }
         }
       ]
     },
     {
       "id": "section-2",
       "type": "grid",
-      "columns": 2,
-      "gap": "1rem",
-      "padding": "1rem",
+      "columns": 3,
+      "gap": "1.5rem",
+      "padding": "2rem",
+      "backgroundColor": "#f8fafc",
+      "borderRadius": "8px",
+      "margin": "0 0 2rem 0",
       "items": [
-        { "id": "item-2", "fieldSlug": "field_slug", "hideIfEmpty": true },
-        { "id": "item-3", "fieldSlug": "another_field", "hideIfEmpty": true }
+        { 
+          "id": "item-2", 
+          "fieldSlug": "field_slug", 
+          "hideIfEmpty": true,
+          "style": {
+            "backgroundColor": "#ffffff",
+            "padding": "1.5rem",
+            "borderRadius": "8px",
+            "border": "1px solid #e5e7eb"
+          }
+        }
       ]
     }
   ]
@@ -227,11 +262,16 @@ Return ONLY the JSON object, no markdown code blocks or explanation.`;
     
     const client = getOpenAI();
     if (!client) {
+      console.error('OpenAI client not initialized - API key missing or invalid');
       return NextResponse.json(
         { error: 'AI service not configured. Please set OPENAI_API_KEY.', fallback: true },
         { status: 503 }
       );
     }
+    
+    console.log('Making OpenAI API call with model gpt-4o');
+    console.log('System prompt length:', systemPrompt.length);
+    console.log('User message:', userMessage);
     
     const completion = await client.chat.completions.create({
       model: 'gpt-4o',
@@ -243,6 +283,8 @@ Return ONLY the JSON object, no markdown code blocks or explanation.`;
       temperature: 0.7,
       max_tokens: 4000,
     });
+    
+    console.log('OpenAI API call successful');
 
     const responseTime = Date.now() - startTime;
     const responseText = completion.choices[0]?.message?.content;
@@ -335,25 +377,50 @@ Return ONLY the JSON object, no markdown code blocks or explanation.`;
     });
 
   } catch (error) {
-    console.error('AI template generation error:', error);
+    console.error('=== AI TEMPLATE GENERATION ERROR ===');
+    console.error('Error type:', error?.constructor?.name);
+    console.error('Error message:', error instanceof Error ? error.message : String(error));
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
+    
+    // For OpenAI errors, log additional details
+    if (error && typeof error === 'object' && 'status' in error) {
+      console.error('OpenAI API error status:', (error as any).status);
+      console.error('OpenAI API error type:', (error as any).type);
+      console.error('OpenAI API error code:', (error as any).code);
+    }
+    
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorDetails = error && typeof error === 'object' ? JSON.stringify(error, null, 2) : String(error);
+    
+    console.error('Full error details:', errorDetails);
     
     if (error instanceof Error) {
-      if (error.message.includes('rate limit')) {
+      if (error.message.includes('rate limit') || errorMessage.includes('rate_limit')) {
         return NextResponse.json(
-          { error: 'OpenAI rate limit exceeded. Please try again later.' },
+          { 
+            error: 'OpenAI rate limit exceeded. Please try again later.',
+            details: errorMessage 
+          },
           { status: 429 }
         );
       }
-      if (error.message.includes('API key')) {
+      if (error.message.includes('API key') || error.message.includes('authentication') || error.message.includes('Incorrect API key')) {
         return NextResponse.json(
-          { error: 'AI service configuration error' },
+          { 
+            error: 'AI service configuration error - Invalid API key',
+            details: errorMessage 
+          },
           { status: 500 }
         );
       }
     }
     
     return NextResponse.json(
-      { error: 'Failed to generate template', details: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        error: 'Failed to generate template', 
+        details: errorMessage,
+        fullError: errorDetails
+      },
       { status: 500 }
     );
   }
