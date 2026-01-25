@@ -272,7 +272,6 @@ Use all available fields exactly once.`;
             ],
           };
         }
-        }
       }
     }
 
