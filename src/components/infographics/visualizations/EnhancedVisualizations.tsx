@@ -170,6 +170,8 @@ interface EnhancedLegendProps {
   position?: 'top' | 'bottom' | 'left' | 'right' | 'overlay-bottom' | 'overlay-top' | 'top-right' | 'top-left';
   title?: string;
   dotSize?: number;
+  totalRecords?: number; // Explicit total for accurate percentages
+  onCategoryClick?: (label: string, records?: Record<string, unknown>[]) => void;
 }
 
 export function EnhancedLegend({
@@ -177,7 +179,9 @@ export function EnhancedLegend({
   theme = 'dark',
   position = 'top-right',
   title = 'Legend',
-  dotSize = 14
+  dotSize = 14,
+  totalRecords,
+  onCategoryClick
 }: EnhancedLegendProps) {
   if (!items || items.length === 0) return null;
   
@@ -203,8 +207,9 @@ export function EnhancedLegend({
   
   const positionClass = positionClasses[position] || positionClasses['top-right'];
   
-  // Calculate total for percentages
-  const total = items.reduce((sum, item) => sum + (item.count || 0), 0);
+  // Calculate total for percentages - use explicit totalRecords if provided
+  const summedTotal = items.reduce((sum, item) => sum + (item.count || 0), 0);
+  const total = totalRecords ?? summedTotal;
   
   return (
     <div 
@@ -222,9 +227,16 @@ export function EnhancedLegend({
       <div className="space-y-3">
         {items.map((item, index) => {
           const percentage = total > 0 && item.count ? ((item.count / total) * 100).toFixed(1) : null;
+          const isClickable = !!onCategoryClick;
           
           return (
-            <div key={index} className="flex items-start gap-3">
+            <div 
+              key={index} 
+              className={`flex items-start gap-3 ${isClickable ? 'cursor-pointer hover:bg-white/5 -mx-2 px-2 py-1 rounded transition-colors' : ''}`}
+              onClick={isClickable ? () => onCategoryClick(item.label) : undefined}
+              role={isClickable ? 'button' : undefined}
+              tabIndex={isClickable ? 0 : undefined}
+            >
               {/* Color indicator with glow */}
               <div 
                 className="rounded-full flex-shrink-0 mt-0.5"
@@ -241,7 +253,7 @@ export function EnhancedLegend({
               {/* Label, count, and description */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className={`text-sm font-medium ${textClass} leading-tight`}>
+                  <span className={`text-sm font-medium ${textClass} leading-tight ${isClickable ? 'underline decoration-dotted underline-offset-2' : ''}`}>
                     {item.label}
                   </span>
                   {item.count !== undefined && (
@@ -286,6 +298,13 @@ export function EnhancedLegend({
         <div className={`mt-3 pt-2 border-t ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'} flex justify-between`}>
           <span className={`text-xs ${subtextClass}`}>Total</span>
           <span className={`text-sm font-bold ${textClass}`}>{total.toLocaleString()}</span>
+        </div>
+      )}
+      
+      {/* Show if partial data in legend */}
+      {summedTotal < total && summedTotal > 0 && (
+        <div className={`mt-1 text-xs ${subtextClass} italic`}>
+          {summedTotal.toLocaleString()} of {total.toLocaleString()} categorized
         </div>
       )}
     </div>
@@ -525,6 +544,7 @@ export function EnhancedDotGrid({ data, config, className = '' }: DotGridProps) 
           position={legendPosition || 'top-right'}
           dotSize={Math.max(dotSize, 12)}
           title={`${data.length.toLocaleString()} records`}
+          totalRecords={data.length}
         />
       )}
       
