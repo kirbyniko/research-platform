@@ -319,6 +319,7 @@ export function InfographicAIAssistant({
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState('gpt-4o-mini');
+  const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
   const [costEstimate, setCostEstimate] = useState<{ input: number; output: number; total: number } | null>(null);
   const [generationStats, setGenerationStats] = useState<{ 
     tokensUsed?: number; 
@@ -373,11 +374,12 @@ export function InfographicAIAssistant({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: userPrompt,
+          prompt: userPrompt || (selectedStyle ? `Create an infographic using the ${selectedStyle} style` : 'Create a powerful data visualization'),
           dataAnalysis: analysis,
           recordTypeId,
-          sampleData: data.slice(0, 10), // Send sample for context
-          model: selectedModel
+          sampleData: data.slice(0, 20), // Send more samples for better context
+          model: selectedModel,
+          stylePreset: selectedStyle || undefined
         })
       });
       
@@ -402,7 +404,7 @@ export function InfographicAIAssistant({
     } finally {
       setIsGenerating(false);
     }
-  }, [analysis, userPrompt, projectSlug, recordTypeId, data, onGenerateInfographic, selectedModel]);
+  }, [analysis, userPrompt, projectSlug, recordTypeId, data, onGenerateInfographic, selectedModel, selectedStyle]);
   
   // Use a suggestion directly
   const handleUseSuggestion = useCallback((suggestion: VisualizationSuggestion) => {
@@ -425,6 +427,16 @@ export function InfographicAIAssistant({
     onGenerateInfographic(infographic);
   }, [onGenerateInfographic]);
   
+  // Style presets for different infographic styles
+  const stylePresets = [
+    { id: 'impact', name: 'Maximum Impact', emoji: '🔴', desc: 'Shocking, visceral, stark' },
+    { id: 'analytical', name: 'Data Deep-Dive', emoji: '📊', desc: 'Charts, breakdowns, thorough' },
+    { id: 'timeline', name: 'Temporal Journey', emoji: '📅', desc: 'Time-based, frequency' },
+    { id: 'personal', name: 'Human Stories', emoji: '👤', desc: 'Individual focus, families' },
+    { id: 'comparative', name: 'Scale Comparisons', emoji: '⚖️', desc: 'Multiple relatable comparisons' },
+    { id: 'minimal', name: 'Stark Minimal', emoji: '⚫', desc: 'Only 3 scenes, max impact' },
+  ];
+  
   return (
     <div className="bg-white rounded-xl shadow-lg p-6">
       <div className="flex items-center gap-3 mb-6">
@@ -439,6 +451,37 @@ export function InfographicAIAssistant({
           <h3 className="text-lg font-semibold">AI Infographic Assistant</h3>
           <p className="text-sm text-gray-500">Describe what you want to visualize</p>
         </div>
+      </div>
+      
+      {/* Style Presets - NEW! */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Style Preset <span className="text-gray-400 font-normal">(optional)</span>
+        </label>
+        <div className="grid grid-cols-3 gap-2">
+          {stylePresets.map(style => (
+            <button
+              key={style.id}
+              onClick={() => setSelectedStyle(selectedStyle === style.id ? null : style.id)}
+              className={`p-3 rounded-lg border-2 text-left transition-all ${
+                selectedStyle === style.id
+                  ? 'border-purple-500 bg-purple-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-lg">{style.emoji}</span>
+                <span className="font-medium text-sm">{style.name}</span>
+              </div>
+              <p className="text-xs text-gray-500">{style.desc}</p>
+            </button>
+          ))}
+        </div>
+        {selectedStyle && (
+          <p className="mt-2 text-xs text-purple-600">
+            ✓ {stylePresets.find(s => s.id === selectedStyle)?.name} style will guide the AI
+          </p>
+        )}
       </div>
       
       {/* Model selector */}

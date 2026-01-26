@@ -777,7 +777,7 @@ function ScrollytellingTab({
             {/* AI Refinement Panel */}
             {showRefine && canEdit && (
               <div className="p-6 border-b bg-purple-50">
-                <div className="max-w-2xl">
+                <div className="max-w-3xl">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
                       <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -786,23 +786,71 @@ function ScrollytellingTab({
                     </div>
                     <div>
                       <h3 className="font-semibold">Refine with AI</h3>
-                      <p className="text-sm text-gray-500">Describe what you&apos;d like to improve</p>
+                      <p className="text-sm text-gray-500">Use quick actions or describe your changes</p>
+                    </div>
+                  </div>
+                  
+                  {/* Quick Action Buttons */}
+                  <div className="mb-4">
+                    <p className="text-xs font-medium text-gray-500 mb-2">Quick improvements:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { label: '📐 Bigger visuals', value: 'Make all visualizations bigger with larger dots (20px) and more spacing' },
+                        { label: '🎨 Different colors', value: 'Use a different color scheme with more contrast. Try blues and reds.' },
+                        { label: '✍️ Less text', value: 'Reduce the narrative text, make it more punchy and impactful' },
+                        { label: '🚌 Different comparison', value: 'Use a different human-scale comparison - NOT school buses. Try airplanes, classrooms, or families.' },
+                        { label: '📊 Add breakdown', value: 'Add another scene with a pie chart or bar chart breakdown' },
+                        { label: '⏱️ Add frequency', value: 'Add a scene showing how often this happens (one every X days)' },
+                        { label: '💔 More emotional', value: 'Make it more emotionally impactful. Each icon is a person. Use somber language.' },
+                        { label: '📰 More analytical', value: 'Make it more journalistic and data-focused with specific percentages' },
+                      ].map((action) => (
+                        <button
+                          key={action.label}
+                          onClick={() => setRefineFeedback(prev => prev ? prev + '. ' + action.value : action.value)}
+                          className="px-3 py-1.5 text-sm bg-white border border-gray-200 rounded-full hover:border-purple-300 hover:bg-purple-50 transition"
+                        >
+                          {action.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Selected scene refinement */}
+                  <div className="mb-4">
+                    <p className="text-xs font-medium text-gray-500 mb-2">Or refine a specific scene:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(config.scenes as Array<{ id: string; narrativeText: string; visualizationType: string }>).map((scene, index) => (
+                        <button
+                          key={scene.id}
+                          onClick={() => setRefineFeedback(prev => prev ? prev + `. Scene ${index + 1}: ` : `Scene ${index + 1} (${scene.visualizationType}): `)}
+                          className="px-3 py-1.5 text-sm bg-gray-100 border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition flex items-center gap-2"
+                        >
+                          <span className="w-5 h-5 bg-blue-100 text-blue-600 rounded-full text-xs flex items-center justify-center">{index + 1}</span>
+                          <span className="text-gray-600">{scene.visualizationType}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
                   
                   <textarea
                     value={refineFeedback}
                     onChange={(e) => setRefineFeedback(e.target.value)}
-                    placeholder="Example: 'Make the visualizations bigger and more impactful. The dot grid in scene 2 should fill more of the screen. Add more emotional language to the narrative.'"
-                    className="w-full h-28 p-4 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none bg-white"
+                    placeholder="Combine quick actions above or write custom instructions. Example: 'Make the dot grid bigger, use airplane comparison instead of buses, and add more emotional narrative...'"
+                    className="w-full h-24 p-4 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none bg-white"
                   />
                   
                   <div className="mt-3 flex gap-3">
                     <button
-                      onClick={() => setShowRefine(false)}
+                      onClick={() => { setShowRefine(false); setRefineFeedback(''); }}
                       className="px-4 py-2 border rounded-lg hover:bg-white"
                     >
                       Cancel
+                    </button>
+                    <button
+                      onClick={() => setRefineFeedback('')}
+                      className="px-4 py-2 border rounded-lg hover:bg-white"
+                    >
+                      Clear
                     </button>
                     <button
                       onClick={handleRefine}
@@ -819,13 +867,9 @@ function ScrollytellingTab({
                           Refining...
                         </>
                       ) : (
-                        'Apply Improvements'
+                        '✨ Apply Improvements'
                       )}
                     </button>
-                  </div>
-                  
-                  <div className="mt-3 text-xs text-purple-600">
-                    💡 Tips: Ask for bigger visuals, different colors, shorter text, or specific field comparisons
                   </div>
                 </div>
               </div>

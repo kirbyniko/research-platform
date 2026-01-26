@@ -1,0 +1,347 @@
+import { NextRequest, NextResponse } from 'next/server';
+import pool from '@/lib/db';
+import OpenAI from 'openai';
+import {
+  buildSystemPrompt,
+  buildUserPrompt,
+  buildRefinementPrompt,
+  type PromptContext
+} from '@/lib/infographic-system';
+
+interface DataAnalysis {
+  totalRecords: number;
+  fields: {
+    name: string;
+    type: string;
+    uniqueValues?: number;
+    sampleValues?: unknown[];
+    dateRange?: { earliest: string; latest: string };
+    nullCount?: number;
+    totalCount?: number;
+  }[];
+  suggestedVisualizations: unknown[];
+}
+
+interface GenerateRequest {
+  prompt: string;
+  dataAnalysis: DataAnalysis;
+  recordTypeId?: number;
+  sampleData?: Record<string, unknown>[];
+  model?: string;
+  // Refinement support
+  previousConfig?: Record<string, unknown>;
+  refinementFeedback?: string;
+  // Style selection
+  stylePreset?: string;
+}
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  try {
+    const { slug } = await params;
+    const body: GenerateRequest = await request.json();
+    const { 
+      prompt, 
+      dataAnalysis, 
+      recordTypeId, 
+      sampleData, 
+      model = 'gpt-4o-mini',
+      previousConfig,
+      refinementFeedback,
+      stylePreset
+    } = body;
+    
+    // Validate model choice
+    const allowedModels = ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo'];
+    const selectedModel = allowedModels.includes(model) ? model : 'gpt-4o-mini';
+    
+    // For refinement, only feedback is required
+    const isRefinement = !!previousConfig && !!refinementFeedback;
+    
+    if (!isRefinement && (!prompt || !dataAnalysis)) {
+      return NextResponse.json(
+        { error: 'Missing required fields: prompt, dataAnalysis' },
+        { status: 400 }
+      );
+    }
+    
+    // Get project info
+    const projectResult = await pool.query(
+      'SELECT id, name FROM projects WHERE slug = $1',
+      [slug]
+    );
+    
+    if (projectResult.rows.length === 0) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+    
+    const project = projectResult.rows[0];
+    
+    // Get record type info if specified
+    let recordTypeName = 'records';
+    if (recordTypeId) {
+      const rtResult = await pool.query(
+        'SELECT name FROM record_types WHERE id = $1',
+        [recordTypeId]
+      );
+      if (rtResult.rows.length > 0) {
+        recordTypeName = rtResult.rows[0].name;
+      }
+    }
+    
+    // Analyze the data to provide richer context with DATA QUALITY info
+    const fieldInsights = dataAnalysis.fields.map(f => {
+      // Calculate fill rate if we have the counts, otherwise assume complete
+      const fillRate = (f.totalCount && f.nullCount !== undefined) 
+        ? ((f.totalCount - f.nullCount) / f.totalCount * 100).toFixed(0)
+        : '100';
+      let insight = `- ${f.name} (${f.type}) - ${fillRate}% filled`;
+      if (f.uniqueValues) insight += ` [${f.uniqueValues} unique values]`;
+      if (f.sampleValues?.length) insight += ` Examples: ${f.sampleValues.slice(0, 5).join(', ')}`;
+      if (f.dateRange) insight += ` Range: ${f.dateRange.earliest} to ${f.dateRange.latest}`;
+      // Add data quality warning
+      if (parseInt(fillRate) < 50) insight += ` ⚠️ LOW QUALITY - avoid`;
+      return insight;
+    }).join('\n');
+    
+    // Find good fields for visualization
+    const goodFields = dataAnalysis.fields.filter(f => {
+      const fillRate = (f.totalCount && f.nullCount !== undefined) 
+        ? (f.totalCount - f.nullCount) / f.totalCount 
+        : 1;
+      return fillRate > 0.7 && f.type === 'string' && f.uniqueValues && f.uniqueValues >= 2 && f.uniqueValues <= 15;
+    });
+    
+    const goodDateFields = dataAnalysis.fields.filter(f => {
+      const fillRate = (f.totalCount && f.nullCount !== undefined)
+        ? (f.totalCount - f.nullCount) / f.totalCount
+        : 1;
+      return fillRate > 0.7 && f.type === 'date';
+    });
+    
+    // Find the BEST field for colorBy (highest fill rate, good number of values)
+    const bestColorByField = goodFields.length > 0 
+      ? goodFields.sort((a, b) => {
+          // Prefer fields with 3-8 unique values (not too many, not too few)
+          const aScore = (a.uniqueValues && a.uniqueValues >= 3 && a.uniqueValues <= 8) ? 100 : 50;
+          const bScore = (b.uniqueValues && b.uniqueValues >= 3 && b.uniqueValues <= 8) ? 100 : 50;
+          return bScore - aScore;
+        })[0]
+      : null;
+    
+    // Get actual values for the recommended colorBy field from sample data
+    let colorByValues: string[] = [];
+    if (bestColorByField && sampleData && sampleData.length > 0) {
+      const valueSet = new Set<string>();
+      sampleData.forEach(record => {
+        const val = record[bestColorByField.name];
+        if (val !== null && val !== undefined && val !== '') {
+          valueSet.add(String(val));
+        }
+      });
+      colorByValues = Array.from(valueSet).slice(0, 10);
+    }
+    
+    // Build prompt context
+    const promptContext: PromptContext = {
+      projectName: project.name,
+      recordTypeName,
+      totalRecords: dataAnalysis.totalRecords,
+      fieldInsights,
+      bestColorByField: bestColorByField?.name || null,
+      colorByValues,
+      bestGroupByField: goodFields[0]?.name || null,
+      groupByFields: goodFields.map(f => f.name),
+      dateField: goodDateFields[0]?.name || null,
+      dateRange: goodDateFields[0]?.dateRange || null,
+      sampleData,
+      userPrompt: prompt,
+      selectedStyle: stylePreset
+    };
+    
+    // Build the prompts using the new system
+    const systemPrompt = buildSystemPrompt();
+    const userPromptForAI = isRefinement 
+      ? buildRefinementPrompt(promptContext, previousConfig!, refinementFeedback!)
+      : buildUserPrompt(promptContext);
+
+    // Check if OpenAI is configured
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(generateFallbackInfographic(dataAnalysis, prompt, recordTypeName));
+    }
+    
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    });
+    
+    const completion = await openai.chat.completions.create({
+      model: selectedModel,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPromptForAI }
+      ],
+      temperature: isRefinement ? 0.5 : 0.85, // Slightly higher temp for more variety
+      max_tokens: 2500,
+      response_format: { type: 'json_object' }
+    });
+    
+    const responseText = completion.choices[0]?.message?.content;
+    
+    if (!responseText) {
+      throw new Error('No response from AI');
+    }
+    
+    // Parse and validate the response
+    const generated = JSON.parse(responseText);
+    
+    // Ensure all scenes have proper IDs
+    if (generated.scenes) {
+      generated.scenes = generated.scenes.map((scene: Record<string, unknown>, index: number) => ({
+        ...scene,
+        id: scene.id || `scene-${index + 1}`
+      }));
+    }
+    
+    // Calculate and attach usage info
+    const usage = completion.usage;
+    if (usage) {
+      // Pricing per 1K tokens
+      const pricing: Record<string, { input: number; output: number }> = {
+        'gpt-4o-mini': { input: 0.00015, output: 0.0006 },
+        'gpt-4o': { input: 0.005, output: 0.015 },
+        'gpt-4-turbo': { input: 0.01, output: 0.03 }
+      };
+      const modelPricing = pricing[selectedModel] || pricing['gpt-4o-mini'];
+      const inputCost = (usage.prompt_tokens / 1000) * modelPricing.input;
+      const outputCost = (usage.completion_tokens / 1000) * modelPricing.output;
+      
+      generated.usage = {
+        prompt_tokens: usage.prompt_tokens,
+        completion_tokens: usage.completion_tokens,
+        total_tokens: usage.total_tokens,
+        cost: inputCost + outputCost,
+        model: selectedModel
+      };
+    }
+    
+    return NextResponse.json(generated);
+    
+  } catch (error) {
+    console.error('Infographic generation error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Generation failed' },
+      { status: 500 }
+    );
+  }
+}
+
+// Fallback when OpenAI isn't available
+function generateFallbackInfographic(
+  dataAnalysis: DataAnalysis,
+  prompt: string,
+  recordTypeName: string
+) {
+  const totalRecords = dataAnalysis.totalRecords;
+  const dateField = dataAnalysis.fields.find(f => f.type === 'date');
+  const categoryField = dataAnalysis.fields.find(
+    f => f.type === 'string' && f.uniqueValues && f.uniqueValues < 15
+  );
+  
+  // Generate color map if category field exists
+  const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'];
+  const colorMap: Record<string, string> = {};
+  
+  if (categoryField?.sampleValues) {
+    categoryField.sampleValues.forEach((val, i) => {
+      colorMap[String(val)] = colors[i % colors.length];
+    });
+  }
+  
+  // Calculate a time-based comparison if we have date data
+  let timeComparison = '';
+  if (dateField?.dateRange) {
+    const startYear = new Date(dateField.dateRange.earliest).getFullYear();
+    const endYear = new Date(dateField.dateRange.latest).getFullYear();
+    const years = Math.max(1, endYear - startYear);
+    const daysPerRecord = Math.round((years * 365) / totalRecords);
+    if (daysPerRecord >= 1) {
+      timeComparison = `One every ${daysPerRecord} days`;
+    }
+  }
+  
+  // Calculate various unit comparisons
+  const busCount = Math.round(totalRecords / 72);
+  const classroomCount = Math.round(totalRecords / 25);
+  const familyCount = Math.round(totalRecords / 4);
+  
+  // Pick a random comparison type
+  const comparisons = [
+    busCount > 1 ? `${busCount} school buses full of people` : null,
+    classroomCount > 1 ? `${classroomCount} classrooms of students` : null,
+    familyCount > 1 ? `${familyCount} families` : null,
+    timeComparison || null
+  ].filter(Boolean);
+  
+  const selectedComparison = comparisons[Math.floor(Math.random() * comparisons.length)] || 
+    `${totalRecords.toLocaleString()} individual people`;
+  
+  return {
+    title: `${recordTypeName} Overview`,
+    description: `An interactive visualization of ${totalRecords.toLocaleString()} ${recordTypeName}`,
+    theme: 'dark',
+    estimatedImpact: 'This visualization uses scale and human icons to create emotional connection',
+    scenes: [
+      {
+        id: 'scene-1',
+        narrativeText: `${totalRecords.toLocaleString()}.`,
+        narrativeSubtext: 'Each one represents a documented case.',
+        visualizationType: 'counter',
+        dataBinding: { type: 'count' },
+        visualizationConfig: {
+          fontSize: '10rem',
+          suffix: ''
+        },
+        emotionalTone: 'somber'
+      },
+      {
+        id: 'scene-2',
+        narrativeText: 'These are not just numbers.',
+        narrativeSubtext: 'Each icon represents one individual.',
+        visualizationType: 'humanGrid',
+        dataBinding: { type: 'records' },
+        visualizationConfig: {
+          dotsPerRow: Math.min(20, Math.ceil(Math.sqrt(totalRecords))),
+          dotSize: totalRecords > 500 ? 10 : 16,
+          colorBy: categoryField?.name,
+          colorMap,
+          showLegend: !!categoryField
+        },
+        emotionalTone: 'somber'
+      },
+      ...(categoryField ? [{
+        id: 'scene-3',
+        narrativeText: `Breakdown by ${categoryField.name}`,
+        narrativeSubtext: categoryField.sampleValues?.slice(0, 3).join(', ') + '...',
+        visualizationType: 'pieChart',
+        dataBinding: { type: 'groupBy', field: categoryField.name },
+        visualizationConfig: {
+          groupBy: categoryField.name
+        },
+        emotionalTone: 'neutral'
+      }] : []),
+      {
+        id: 'scene-4',
+        narrativeText: selectedComparison,
+        narrativeSubtext: 'That\'s what this number means.',
+        visualizationType: 'humanScale',
+        dataBinding: { type: 'count' },
+        visualizationConfig: {
+          comparison: selectedComparison
+        },
+        emotionalTone: 'somber'
+      }
+    ].filter(Boolean)
+  };
+}

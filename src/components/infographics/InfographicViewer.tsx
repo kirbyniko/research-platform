@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Users, User, Bus, School, Home, Building2 } from 'lucide-react';
+import { Users, User, Bus, School, Home, Building2, Plane, Train, Film, Music, Church } from 'lucide-react';
 import { 
   ScrollytellingEngine, 
   ScrollytellingResponsive,
@@ -561,54 +561,55 @@ function HumanScaleComparison({
   const mutedColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
   const iconColor = theme === 'dark' ? 'text-red-400' : 'text-red-600';
   
-  // Human-scale comparisons with Lucide icon components
-  const comparisons = [
-    { 
-      unit: 'school bus', 
-      count: 72, 
-      Icon: Bus, 
-      plural: 'school buses',
-      description: 'Standard school buses (72 capacity)'
-    },
-    { 
-      unit: 'classroom', 
-      count: 30, 
-      Icon: School, 
-      plural: 'classrooms',
-      description: 'Average classroom size'
-    },
-    { 
-      unit: 'family', 
-      count: 4, 
-      Icon: Users, 
-      plural: 'families',
-      description: 'Average family of 4'
-    },
-    { 
-      unit: 'neighborhood block', 
-      count: 150, 
-      Icon: Home, 
-      plural: 'neighborhood blocks',
-      description: 'Homes per city block'
-    },
-    { 
-      unit: 'apartment building', 
-      count: 200, 
-      Icon: Building2, 
-      plural: 'apartment buildings',
-      description: 'Large apartment complex'
-    },
+  // Extended comparison library - more variety!
+  const allComparisons = [
+    // Vehicles
+    { unit: 'school bus', count: 72, Icon: Bus, plural: 'school buses', description: 'Standard school buses (72 capacity)', category: 'vehicles' },
+    { unit: 'commercial airplane', count: 180, Icon: Plane, plural: 'commercial flights', description: 'Boeing 737 fully loaded', category: 'vehicles' },
+    { unit: 'city bus', count: 40, Icon: Bus, plural: 'city buses', description: 'Public transit bus', category: 'vehicles' },
+    { unit: 'subway car', count: 150, Icon: Train, plural: 'subway cars', description: 'Rush hour metro car', category: 'vehicles' },
+    // Spaces
+    { unit: 'classroom', count: 25, Icon: School, plural: 'classrooms', description: 'Average classroom (25 students)', category: 'spaces' },
+    { unit: 'movie theater', count: 200, Icon: Film, plural: 'movie theaters', description: 'Sold-out screening', category: 'spaces' },
+    { unit: 'church congregation', count: 300, Icon: Church, plural: 'church services', description: 'Sunday service attendance', category: 'spaces' },
+    { unit: 'concert venue', count: 5000, Icon: Music, plural: 'concerts', description: 'Medium concert hall', category: 'spaces' },
+    // Population
+    { unit: 'family', count: 4, Icon: Users, plural: 'families', description: 'Average family of 4', category: 'population' },
+    { unit: 'neighborhood', count: 2500, Icon: Home, plural: 'neighborhoods', description: 'Typical city neighborhood', category: 'population' },
+    { unit: 'apartment building', count: 200, Icon: Building2, plural: 'apartment buildings', description: 'Large residential complex', category: 'population' },
+    { unit: 'high school', count: 1500, Icon: School, plural: 'high schools', description: 'Entire student body', category: 'population' },
+    { unit: 'village', count: 1000, Icon: Home, plural: 'villages', description: 'Small rural community', category: 'population' },
   ];
   
-  // Find the best comparison that gives a reasonable number
-  const bestComparison = comparisons.find(c => {
+  // Filter to comparisons that give reasonable numbers (3-80 range ideal)
+  const viableComparisons = allComparisons.filter(c => {
     const result = value / c.count;
     return result >= 2 && result <= 100;
-  }) || comparisons[2]; // Default to families
+  });
+  
+  // Use seeded random based on value to ensure consistency but variety
+  const seed = value % viableComparisons.length;
+  const bestComparison = viableComparisons[seed] || allComparisons.find(c => c.unit === 'family') || allComparisons[0];
   
   const comparisonValue = Math.round(value / bestComparison.count);
-  const iconRepeat = Math.min(comparisonValue, 80); // Cap visual at 80
+  const iconRepeat = Math.min(comparisonValue, 60); // Cap visual at 60 for cleaner look
   const IconComp = bestComparison.Icon;
+  
+  // If custom comparison text is provided, try to detect what icon to use
+  let displayIcon = IconComp;
+  if (comparison) {
+    const lowerComparison = comparison.toLowerCase();
+    if (lowerComparison.includes('bus')) displayIcon = Bus;
+    else if (lowerComparison.includes('plane') || lowerComparison.includes('airplane') || lowerComparison.includes('flight')) displayIcon = Plane;
+    else if (lowerComparison.includes('classroom') || lowerComparison.includes('school')) displayIcon = School;
+    else if (lowerComparison.includes('family') || lowerComparison.includes('families')) displayIcon = Users;
+    else if (lowerComparison.includes('church') || lowerComparison.includes('congregation')) displayIcon = Church;
+    else if (lowerComparison.includes('concert') || lowerComparison.includes('venue')) displayIcon = Music;
+    else if (lowerComparison.includes('movie') || lowerComparison.includes('theater') || lowerComparison.includes('cinema')) displayIcon = Film;
+    else if (lowerComparison.includes('train') || lowerComparison.includes('subway') || lowerComparison.includes('metro')) displayIcon = Train;
+    else if (lowerComparison.includes('neighborhood') || lowerComparison.includes('block') || lowerComparison.includes('home')) displayIcon = Home;
+    else if (lowerComparison.includes('building') || lowerComparison.includes('apartment')) displayIcon = Building2;
+  }
   
   return (
     <div className="w-full h-full flex flex-col items-center justify-center p-4 md:p-8">
@@ -618,7 +619,7 @@ function HumanScaleComparison({
       </div>
       
       {/* Comparison text */}
-      <div className={`text-lg sm:text-xl md:text-2xl lg:text-3xl ${mutedColor} mb-4 md:mb-8 text-center px-4`}>
+      <div className={`text-lg sm:text-xl md:text-2xl lg:text-3xl ${mutedColor} mb-4 md:mb-8 text-center px-4 max-w-3xl`}>
         {comparison || `That's about ${comparisonValue.toLocaleString()} ${comparisonValue === 1 ? bestComparison.unit : bestComparison.plural}`}
       </div>
       
@@ -630,24 +631,26 @@ function HumanScaleComparison({
               key={i} 
               className={`${iconColor} transition-all duration-300`}
               style={{ 
-                animation: `fadeIn 0.3s ease-out ${Math.min(i * 0.02, 1)}s both`
+                animation: `fadeIn 0.3s ease-out ${Math.min(i * 0.03, 1.2)}s both`
               }}
             >
-              <IconComp className="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12" strokeWidth={1.5} />
+              {React.createElement(displayIcon, { className: "w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12", strokeWidth: 1.5 })}
             </div>
           ))}
-          {comparisonValue > 80 && (
+          {comparisonValue > 60 && (
             <span className={`text-base md:text-lg ${mutedColor} ml-2`}>
-              +{(comparisonValue - 80).toLocaleString()} more
+              +{(comparisonValue - 60).toLocaleString()} more
             </span>
           )}
         </div>
       </div>
       
-      {/* Key insight */}
-      <div className={`mt-4 md:mt-8 text-xs md:text-sm ${mutedColor} text-center max-w-md px-4`}>
-        Each icon represents {bestComparison.count.toLocaleString()} people ({bestComparison.description})
-      </div>
+      {/* Key insight - only show if no custom comparison */}
+      {!comparison && (
+        <div className={`mt-4 md:mt-8 text-xs md:text-sm ${mutedColor} text-center max-w-md px-4`}>
+          Each icon represents {bestComparison.count.toLocaleString()} people ({bestComparison.description})
+        </div>
+      )}
     </div>
   );
 }
