@@ -374,25 +374,35 @@ export type Permission =
   | 'manage_record_types'
   | 'manage_fields'
   | 'manage_members'
-  | 'manage_project';
+  | 'manage_project'
+  // Infographic permissions
+  | 'view_infographics'
+  | 'create_infographics'
+  | 'edit_infographics'
+  | 'publish_infographics'
+  | 'verify_infographics';
 
 export const ROLE_PERMISSIONS: Record<ProjectRole, Permission[]> = {
   owner: [
     'view', 'analyze', 'review', 'validate', 
     'manage_records', 'delete_records',
     'manage_record_types', 'manage_fields', 
-    'manage_members', 'manage_project'
+    'manage_members', 'manage_project',
+    'view_infographics', 'create_infographics', 'edit_infographics', 
+    'publish_infographics', 'verify_infographics'
   ],
   admin: [
     'view', 'analyze', 'review', 'validate',
     'manage_records', 'delete_records',
     'manage_record_types', 'manage_fields',
-    'manage_members'
+    'manage_members',
+    'view_infographics', 'create_infographics', 'edit_infographics',
+    'publish_infographics', 'verify_infographics'
   ],
-  reviewer: ['view', 'analyze', 'review', 'manage_records'],
-  validator: ['view', 'validate'],
-  analyst: ['view', 'analyze'],
-  viewer: ['view']
+  reviewer: ['view', 'analyze', 'review', 'manage_records', 'view_infographics', 'create_infographics'],
+  validator: ['view', 'validate', 'view_infographics', 'verify_infographics'],
+  analyst: ['view', 'analyze', 'view_infographics', 'create_infographics', 'edit_infographics'],
+  viewer: ['view', 'view_infographics']
 };
 
 // =====================================================
@@ -561,3 +571,263 @@ export interface ExtensionAuthContext {
   }>;
   currentProjectSlug?: string;
 }
+
+// =====================================================
+// INFOGRAPHIC TYPES
+// =====================================================
+
+export type InfographicScopeType = 'record' | 'record_type' | 'project';
+export type InfographicComponentType = 
+  | 'dot-grid' 
+  | 'scrollytelling' 
+  | 'counter' 
+  | 'comparison' 
+  | 'timeline'
+  | 'bar-chart'
+  | 'map';
+
+export type InfographicStatus = 'draft' | 'pending_review' | 'published' | 'archived';
+export type InfographicVerificationStatus = 'unverified' | 'pending' | 'verified' | 'disputed';
+
+export interface Infographic {
+  id: number;
+  project_id: number;
+  name: string;
+  slug: string;
+  description?: string;
+  
+  // Data scope
+  scope_type: InfographicScopeType;
+  record_id?: number;
+  record_type_id?: number;
+  
+  // Component configuration
+  component_type: InfographicComponentType;
+  config: InfographicConfig;
+  
+  // Narrative content
+  narrative_content: NarrativeBlock[];
+  
+  // Publishing
+  status: InfographicStatus;
+  is_public: boolean;
+  published_at?: string;
+  
+  // Verification
+  verification_status: InfographicVerificationStatus;
+  verified_by?: number;
+  verified_at?: string;
+  verification_notes?: string;
+  
+  // Embed settings
+  allow_embed: boolean;
+  embed_domains?: string[];
+  
+  // Metadata
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+  
+  // Joined data (optional)
+  project?: Project;
+  record_type?: RecordType;
+  creator?: { id: number; name: string; email: string };
+  verifier?: { id: number; name: string };
+}
+
+export interface NarrativeBlock {
+  id: string;
+  text: string;
+  position?: 'top' | 'bottom' | 'left' | 'right' | 'overlay';
+  trigger?: 'immediate' | 'scroll' | 'click';
+  scrollPercent?: number; // For scroll-triggered narratives
+  style?: {
+    fontSize?: string;
+    color?: string;
+    background?: string;
+    padding?: string;
+  };
+}
+
+// Base config shared by all components
+export interface InfographicConfigBase {
+  title?: string;
+  subtitle?: string;
+  backgroundColor?: string;
+  padding?: number;
+  animation?: {
+    enabled: boolean;
+    type: 'fade' | 'scale' | 'slide' | 'scatter';
+    duration: number;
+    staggerDelay?: number;
+  };
+}
+
+// Dot Grid specific config
+export interface DotGridConfig extends InfographicConfigBase {
+  dotSize: number;
+  dotSpacing: number;
+  dotColor: string;
+  dotShape?: 'circle' | 'square' | 'icon';
+  iconName?: string; // For icon shape
+  groupBy?: string; // Field to group by (e.g., 'year')
+  colorBy?: string; // Field to color by
+  colorScale?: Record<string, string>; // Value to color mapping
+  showLegend?: boolean;
+  legendPosition?: 'top' | 'bottom' | 'left' | 'right';
+  showCount?: boolean;
+  countFormat?: string;
+}
+
+// Counter/Ticker config
+export interface CounterConfig extends InfographicConfigBase {
+  fontSize: number;
+  fontWeight?: string;
+  color: string;
+  prefix?: string;
+  suffix?: string;
+  animateOnScroll?: boolean;
+  startValue?: number;
+  duration?: number;
+  showComparison?: boolean;
+  comparisonValue?: number;
+  comparisonLabel?: string;
+}
+
+// Scrollytelling config
+export interface ScrollytellingConfig extends InfographicConfigBase {
+  scenes: ScrollyScene[];
+  stickyContent?: 'visualization' | 'narrative';
+  transitionType?: 'fade' | 'slide' | 'morph';
+}
+
+export interface ScrollyScene {
+  id: string;
+  narrativeText: string;
+  visualizationType: 'dot-grid' | 'counter' | 'comparison' | 'highlight';
+  visualizationConfig: Record<string, unknown>;
+  filterRecords?: {
+    field: string;
+    operator: 'equals' | 'contains' | 'greater_than' | 'less_than' | 'between';
+    value: unknown;
+  };
+  highlightRecordIds?: number[];
+}
+
+// Timeline config
+export interface TimelineConfig extends InfographicConfigBase {
+  dateField: string;
+  labelField?: string;
+  orientation?: 'horizontal' | 'vertical';
+  showDots?: boolean;
+  showLines?: boolean;
+  dotColor?: string;
+  lineColor?: string;
+  groupBy?: string;
+}
+
+// Bar Chart config
+export interface BarChartConfig extends InfographicConfigBase {
+  groupBy: string;
+  valueField?: string; // If not provided, counts records
+  aggregation?: 'count' | 'sum' | 'average';
+  orientation?: 'horizontal' | 'vertical';
+  barColor?: string;
+  colorBy?: string;
+  colorScale?: Record<string, string>;
+  showLabels?: boolean;
+  showValues?: boolean;
+  sortBy?: 'value' | 'label' | 'custom';
+  sortDirection?: 'asc' | 'desc';
+}
+
+// Comparison config (side-by-side visualizations)
+export interface ComparisonConfig extends InfographicConfigBase {
+  leftPanel: {
+    label: string;
+    filter?: Record<string, unknown>;
+    config: DotGridConfig | CounterConfig;
+  };
+  rightPanel: {
+    label: string;
+    filter?: Record<string, unknown>;
+    config: DotGridConfig | CounterConfig;
+  };
+  showDifference?: boolean;
+}
+
+// Union type for all configs
+export type InfographicConfig = 
+  | DotGridConfig 
+  | CounterConfig 
+  | ScrollytellingConfig 
+  | TimelineConfig 
+  | BarChartConfig 
+  | ComparisonConfig;
+
+// Data source for aggregation
+export interface InfographicDataSource {
+  id: number;
+  infographic_id: number;
+  record_type_id: number;
+  filter_config?: Record<string, unknown>;
+  aggregation_type?: 'count' | 'sum' | 'average' | 'min' | 'max';
+  aggregation_field?: string;
+  group_by_field?: string;
+  created_at: string;
+}
+
+// Version tracking
+export interface InfographicVersion {
+  id: number;
+  infographic_id: number;
+  version_number: number;
+  config: InfographicConfig;
+  narrative_content?: NarrativeBlock[];
+  changed_by: number;
+  change_note?: string;
+  created_at: string;
+}
+
+// Comment/feedback
+export interface InfographicComment {
+  id: number;
+  infographic_id: number;
+  user_id: number;
+  comment: string;
+  comment_type: 'general' | 'verification' | 'suggestion' | 'issue';
+  is_resolved: boolean;
+  resolved_by?: number;
+  resolved_at?: string;
+  created_at: string;
+  updated_at: string;
+  user?: { id: number; name: string };
+}
+
+// API request types
+export interface CreateInfographicRequest {
+  name: string;
+  slug?: string;
+  description?: string;
+  scope_type: InfographicScopeType;
+  record_id?: number;
+  record_type_id?: number;
+  component_type: InfographicComponentType;
+  config?: InfographicConfig;
+  narrative_content?: NarrativeBlock[];
+}
+
+export interface UpdateInfographicRequest {
+  name?: string;
+  slug?: string;
+  description?: string;
+  component_type?: InfographicComponentType;
+  config?: InfographicConfig;
+  narrative_content?: NarrativeBlock[];
+  status?: InfographicStatus;
+  is_public?: boolean;
+  allow_embed?: boolean;
+  embed_domains?: string[];
+}
+

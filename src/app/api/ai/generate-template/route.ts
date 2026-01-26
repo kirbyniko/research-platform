@@ -136,18 +136,26 @@ export async function POST(request: NextRequest) {
     
     const systemPrompt = `You are a UI designer. Create a beautiful JSON template for displaying records.
 
-RULES:
+STRICT RULES:
 - Use ONLY these field slugs (nothing else): ${validSlugs.join(', ')}
 - Each slug used AT MOST once
 - Return ONLY valid JSON, no markdown or text
 - Use bold colors: blues (#1e40af, #3b82f6), teals (#0891b2), oranges (#ea580c), purples (#7c3aed)
 - Add backgrounds, padding, borders for visual impact
-- Create 2-3 sections with different layouts (hero, grid, sidebar)
+
+VALID SECTION TYPES (use EXACTLY one of these):
+1. "full-width" - single column
+2. "grid" - multi-column grid with columns: 2, 3, or 4
+3. "sidebar-left" - main content on right, sidebar on left
+4. "sidebar-right" - main content on left, sidebar on right
+5. "hero" - large header section
+
+Create 2-3 sections mixing these types.
 
 AVAILABLE FIELDS:
 ${JSON.stringify(fieldInfo, null, 2)}
 
-Return ONLY this JSON structure - no extra text:
+Return ONLY this JSON (no other text):
 {
   "version": 1,
   "page": { "maxWidth": "1200px", "padding": "2rem", "backgroundColor": "#ffffff" },
@@ -159,6 +167,14 @@ Return ONLY this JSON structure - no extra text:
       "padding": "3rem",
       "borderRadius": "12px",
       "items": [{ "id": "item-1", "fieldSlug": "field_slug_here", "hideIfEmpty": true, "style": { "color": "#ffffff", "fontSize": "2rem" } }]
+    },
+    {
+      "id": "section-2",
+      "type": "grid",
+      "columns": 2,
+      "gap": "1rem",
+      "padding": "1rem",
+      "items": [{ "id": "item-2", "fieldSlug": "another_field", "hideIfEmpty": true }]
     }
   ]
 }`;

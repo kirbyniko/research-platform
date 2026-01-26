@@ -220,6 +220,12 @@ export default function ProjectDashboard({ params }: { params: Promise<{ slug: s
             </div>
             <div className="flex gap-2">
               <Link
+                href={`/projects/${project.slug}/infographics`}
+                className="px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                📊 Infographics
+              </Link>
+              <Link
                 href={`/projects/${project.slug}/settings`}
                 className="px-4 py-2 border rounded hover:bg-gray-50"
               >

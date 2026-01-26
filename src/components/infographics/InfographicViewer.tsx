@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Users, User, Bus, School, Home, Building2 } from 'lucide-react';
 import { 
   ScrollytellingEngine, 
@@ -14,8 +14,9 @@ import {
   ScrollytellingImmersive
 } from './engine/ScrollytellingEngineV2';
 import { ImmersiveEngine } from './engine/ImmersiveEngine';
+import { AccumulativeEngine } from './engine/AccumulativeEngine';
 import { EnhancedDotGrid, EnhancedCounter, HumanGrid } from './visualizations/EnhancedVisualizations';
-import { InfographicAIAssistant, AIGeneratedInfographic, AIDataBinding } from './ai/InfographicAIAssistant';
+import { InfographicAIAssistant, AIGeneratedInfographic, AIDataBinding, analyzeData } from './ai/InfographicAIAssistant';
 import { resolveSceneData, resolveDataBinding } from './utils/resolveDataBindings';
 
 // ============================================================================
@@ -676,13 +677,26 @@ export function InfographicViewer({
     );
   }
   
-  const theme = infographic.theme || infographic.config.theme || 'dark'; // Default to dark for impact
+  const theme = infographic.theme || infographic.config.theme || 'dark';
   
-  // Always use the new ImmersiveEngine for best experience
-  // Other variants available for backwards compatibility
-  const useImmersive = variant !== 'legacy';
+  // Use AccumulativeEngine by default for smooth scroll experience
+  // Falls back to ImmersiveEngine for 'immersive' variant
+  if (variant === 'legacy') {
+    return (
+      <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-950' : 'bg-white'}`}>
+        <ScrollytellingResponsive
+          config={{
+            ...infographic.config,
+            theme
+          }}
+          data={data}
+          renderVisualization={renderVisualization}
+        />
+      </div>
+    );
+  }
   
-  if (useImmersive) {
+  if (variant === 'immersive') {
     return (
       <ImmersiveEngine
         config={{
@@ -697,18 +711,18 @@ export function InfographicViewer({
     );
   }
   
-  // Legacy fallback
+  // Default: AccumulativeEngine - smooth scroll, content stacks
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-950' : 'bg-white'}`}>
-      <ScrollytellingResponsive
-        config={{
-          ...infographic.config,
-          theme
-        }}
-        data={data}
-        renderVisualization={renderVisualization}
-      />
-    </div>
+    <AccumulativeEngine
+      config={{
+        scenes: infographic.config.scenes,
+        theme,
+        title: infographic.title,
+        showProgress: true
+      }}
+      data={data}
+      renderVisualization={renderVisualization}
+    />
   );
 }
 

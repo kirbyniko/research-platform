@@ -50,7 +50,13 @@ export default function RecordTypePage({
           if (projectData.project) setProject(projectData.project);
           else if (projectData.error) setError(projectData.error);
           
-          if (recordTypeData.recordType) setRecordType(recordTypeData.recordType);
+          if (recordTypeData.recordType) {
+            // Merge recordCount into recordType
+            setRecordType({
+              ...recordTypeData.recordType,
+              record_count: recordTypeData.recordCount
+            });
+          }
           else if (recordTypeData.error) setError(recordTypeData.error);
 
           // Check if user can delete record types
