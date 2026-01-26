@@ -299,8 +299,14 @@ export async function POST(
     }, { status: 201 });
   } catch (error) {
     console.error('Error creating infographic:', error);
+    
+    // Return detailed error message for debugging
+    const errorMessage = error instanceof Error ? error.message : 'Failed to create infographic';
     return NextResponse.json(
-      { error: 'Failed to create infographic' },
+      { 
+        error: errorMessage,
+        details: error instanceof Error ? error.stack : undefined
+      },
       { status: 500 }
     );
   }
